@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/workspaces/droneMk2/build/debug",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/workspaces/droneMk2/include -isystem /usr/include/eigen3 -isystem /opt/conda/include -g -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -fexceptions -o CMakeFiles/test_types.dir/tests/test_types.cpp.o -c /workspaces/droneMk2/tests/test_types.cpp",
+  "file": "/workspaces/droneMk2/tests/test_types.cpp",
+  "output": "CMakeFiles/test_types.dir/tests/test_types.cpp.o"
+},
+{
+  "directory": "/workspaces/droneMk2/build/debug",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/workspaces/droneMk2/include -isystem /usr/include/eigen3 -isystem /opt/conda/include -g -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -fexceptions -o CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o -c /workspaces/droneMk2/tests/test_shared_state.cpp",
+  "file": "/workspaces/droneMk2/tests/test_shared_state.cpp",
+  "output": "CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o"
+}
+]

@@ -1,0 +1,137 @@
+Start testing: May 13 18:45 UTC
+----------------------------------------------------------
+1/2 Testing: test_types
+1/2 Test: test_types
+Command: "/workspaces/droneMk2/build/debug/test_types"
+Directory: /workspaces/droneMk2/build/debug
+"test_types" start time: May 13 18:45 UTC
+Output:
+----------------------------------------------------------
+Running main() from /croot/yaml-cpp-split_1714510678659/work/test/gtest-1.11.0/googletest/src/gtest_main.cc
+[==========] Running 18 tests from 6 test suites.
+[----------] Global test environment set-up.
+[----------] 5 tests from TypesTest
+[ RUN      ] TypesTest.MetersIsExplicit
+[       OK ] TypesTest.MetersIsExplicit (0 ms)
+[ RUN      ] TypesTest.MetersPerSecIsExplicit
+[       OK ] TypesTest.MetersPerSecIsExplicit (0 ms)
+[ RUN      ] TypesTest.RadiansDegreesConversion
+[       OK ] TypesTest.RadiansDegreesConversion (0 ms)
+[ RUN      ] TypesTest.ScalarComparisons
+[       OK ] TypesTest.ScalarComparisons (0 ms)
+[ RUN      ] TypesTest.ScalarNegation
+[       OK ] TypesTest.ScalarNegation (0 ms)
+[----------] 5 tests from TypesTest (0 ms total)
+
+[----------] 1 test from PositionTest
+[ RUN      ] PositionTest.Norm
+[       OK ] PositionTest.Norm (0 ms)
+[----------] 1 test from PositionTest (0 ms total)
+
+[----------] 1 test from VelocityTest
+[ RUN      ] VelocityTest.Norm
+[       OK ] VelocityTest.Norm (0 ms)
+[----------] 1 test from VelocityTest (0 ms total)
+
+[----------] 7 tests from VelocityCmdTest
+[ RUN      ] VelocityCmdTest.ZeroIsValid
+[       OK ] VelocityCmdTest.ZeroIsValid (0 ms)
+[ RUN      ] VelocityCmdTest.NominalIsValid
+[       OK ] VelocityCmdTest.NominalIsValid (0 ms)
+[ RUN      ] VelocityCmdTest.TooFastHorizontalIsInvalid
+[       OK ] VelocityCmdTest.TooFastHorizontalIsInvalid (0 ms)
+[ RUN      ] VelocityCmdTest.TooFastDescentIsInvalid
+[       OK ] VelocityCmdTest.TooFastDescentIsInvalid (0 ms)
+[ RUN      ] VelocityCmdTest.TooFastClimbIsInvalid
+[       OK ] VelocityCmdTest.TooFastClimbIsInvalid (0 ms)
+[ RUN      ] VelocityCmdTest.NaNIsInvalid
+[       OK ] VelocityCmdTest.NaNIsInvalid (0 ms)
+[ RUN      ] VelocityCmdTest.InfIsInvalid
+[       OK ] VelocityCmdTest.InfIsInvalid (0 ms)
+[----------] 7 tests from VelocityCmdTest (0 ms total)
+
+[----------] 1 test from NavModeTest
+[ RUN      ] NavModeTest.ToStringCoversAllModes
+[       OK ] NavModeTest.ToStringCoversAllModes (0 ms)
+[----------] 1 test from NavModeTest (0 ms total)
+
+[----------] 3 tests from SensorHealthTest
+[ RUN      ] SensorHealthTest.AllOkIsOK
+[       OK ] SensorHealthTest.AllOkIsOK (0 ms)
+[ RUN      ] SensorHealthTest.NoGpsIsDegraded
+[       OK ] SensorHealthTest.NoGpsIsDegraded (0 ms)
+[ RUN      ] SensorHealthTest.NoGpsNoLidarIsCritical
+[       OK ] SensorHealthTest.NoGpsNoLidarIsCritical (0 ms)
+[----------] 3 tests from SensorHealthTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 18 tests from 6 test suites ran. (0 ms total)
+[  PASSED  ] 18 tests.
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"test_types" end time: May 13 18:45 UTC
+"test_types" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/2 Testing: test_shared_state
+2/2 Test: test_shared_state
+Command: "/workspaces/droneMk2/build/debug/test_shared_state"
+Directory: /workspaces/droneMk2/build/debug
+"test_shared_state" start time: May 13 18:45 UTC
+Output:
+----------------------------------------------------------
+Running main() from /croot/yaml-cpp-split_1714510678659/work/test/gtest-1.11.0/googletest/src/gtest_main.cc
+[==========] Running 13 tests from 4 test suites.
+[----------] Global test environment set-up.
+[----------] 5 tests from SharedStateTest
+[ RUN      ] SharedStateTest.DefaultPositionIsZero
+[       OK ] SharedStateTest.DefaultPositionIsZero (0 ms)
+[ RUN      ] SharedStateTest.WriteAndReadBack
+[       OK ] SharedStateTest.WriteAndReadBack (0 ms)
+[ RUN      ] SharedStateTest.IsFreshAfterWrite
+[       OK ] SharedStateTest.IsFreshAfterWrite (0 ms)
+[ RUN      ] SharedStateTest.IsNotFreshByDefault
+[       OK ] SharedStateTest.IsNotFreshByDefault (0 ms)
+[ RUN      ] SharedStateTest.ConcurrentReadWrite
+[       OK ] SharedStateTest.ConcurrentReadWrite (55 ms)
+[----------] 5 tests from SharedStateTest (56 ms total)
+
+[----------] 4 tests from SharedNavOutputTest
+[ RUN      ] SharedNavOutputTest.DefaultIsHold
+[       OK ] SharedNavOutputTest.DefaultIsHold (0 ms)
+[ RUN      ] SharedNavOutputTest.ValidCmdIsStored
+[       OK ] SharedNavOutputTest.ValidCmdIsStored (0 ms)
+[ RUN      ] SharedNavOutputTest.InvalidCmdFallsBackToHold
+[       OK ] SharedNavOutputTest.InvalidCmdFallsBackToHold (0 ms)
+[ RUN      ] SharedNavOutputTest.NaNCmdFallsBackToHold
+[       OK ] SharedNavOutputTest.NaNCmdFallsBackToHold (0 ms)
+[----------] 4 tests from SharedNavOutputTest (0 ms total)
+
+[----------] 2 tests from SharedFCStatusTest
+[ RUN      ] SharedFCStatusTest.DefaultNotReachable
+[       OK ] SharedFCStatusTest.DefaultNotReachable (0 ms)
+[ RUN      ] SharedFCStatusTest.UpdateAndRead
+[       OK ] SharedFCStatusTest.UpdateAndRead (0 ms)
+[----------] 2 tests from SharedFCStatusTest (0 ms total)
+
+[----------] 2 tests from InterfaceTest
+[ RUN      ] InterfaceTest.IsFreshViaInterface
+[       OK ] InterfaceTest.IsFreshViaInterface (0 ms)
+[ RUN      ] InterfaceTest.IsCmdFreshAfterSet
+[       OK ] InterfaceTest.IsCmdFreshAfterSet (0 ms)
+[----------] 2 tests from InterfaceTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 13 tests from 4 test suites ran. (56 ms total)
+[  PASSED  ] 13 tests.
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"test_shared_state" end time: May 13 18:45 UTC
+"test_shared_state" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: May 13 18:45 UTC

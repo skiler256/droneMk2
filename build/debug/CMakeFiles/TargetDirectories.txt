@@ -1,0 +1,5 @@
+/workspaces/droneMk2/build/debug/CMakeFiles/test_types.dir
+/workspaces/droneMk2/build/debug/CMakeFiles/test_shared_state.dir
+/workspaces/droneMk2/build/debug/CMakeFiles/test.dir
+/workspaces/droneMk2/build/debug/CMakeFiles/edit_cache.dir
+/workspaces/droneMk2/build/debug/CMakeFiles/rebuild_cache.dir
