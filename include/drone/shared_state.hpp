@@ -16,7 +16,7 @@
 #include <shared_mutex>
 #include <mutex>
 
-namespace drone {
+namespace CORE {
 
 // ─── SharedStateProvider ─────────────────────────────────────────────────────
 // Écrit par ① Drivers+Fusion, lu par tous les autres blocs.

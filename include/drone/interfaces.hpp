@@ -11,7 +11,9 @@
 
 #include "drone/types.hpp"
 
-namespace drone {
+using namespace TYPES;
+
+namespace CORE {
 
 // ─── IStateProvider ──────────────────────────────────────────────────────────
 // Fourni par : ① Drivers+Fusion → lu par : ② Navigation, ③ MAVLink, ④ Monitoring

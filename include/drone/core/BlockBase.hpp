@@ -12,19 +12,20 @@
 #include "drone/core/watchdog.hpp"
 #include <pthread.h>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <atomic>
 #include <iostream>
 
-namespace drone {
+namespace CORE {
 
 class BlockBase {
 public:
-    BlockBase(std::string name, int rt_priority, Ms watchdog_timeout,
+    BlockBase(std::string_view name, int rt_priority, Ms watchdog_timeout,
               Watchdog& watchdog)
-        : name_(std::move(name))
+        : watchdog_(watchdog)
+        , name_(std::move(name))
         , rt_priority_(rt_priority)
-        , watchdog_(watchdog)
     {
         // Enregistrement watchdog : la restart_fn relance start()
         watchdog_.registerComponent(name_, watchdog_timeout,

@@ -1,0 +1,16 @@
+{
+    "cmake.buildDirectory": "${workspaceFolder}/build/debug",
+    "cmake.buildType": "Debug",
+
+    "clangd.arguments": [
+        "--compile-commands-dir=/workspaces/droneMk2/build/debug"
+    ],
+    
+
+    "C_Cpp.intelliSenseEngine": "disabled",
+
+    "testMate.cpp.test.executables": "build/debug/test_*",
+
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+}

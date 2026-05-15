@@ -15,7 +15,9 @@
 #include <atomic>
 #include <iostream>
 
-namespace drone {
+using namespace TYPES;
+
+namespace CORE {
 
 class Watchdog final : public IWatchdogClient {
 public:
