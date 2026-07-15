@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrone_lib.a CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o
+/usr/bin/ranlib libdrone_lib.a

@@ -1,105 +1,107 @@
 #pragma once
-
-// ─────────────────────────────────────────────────────────────────────────────
-// drone/core/watchdog.hpp
-//
-// Chaque bloc appelle beat() dans sa boucle principale.
-// Le Watchdog surveille et relance les threads qui ne battent plus.
-// ─────────────────────────────────────────────────────────────────────────────
-
-#include "drone/interfaces.hpp"
+#include "drone/types.hpp"
+#include "drone/utilities.hpp"
 #include <functional>
-#include <unordered_map>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <iostream>
+#include <vector>
 
-using namespace TYPES;
-
-namespace CORE {
-
-class Watchdog final : public IWatchdogClient {
+class ComponentWatchdog {
 public:
-    struct Entry {
-        TimePoint              last_beat;
-        Ms                     timeout;
-        std::function<void()>  restart_fn;
-        int                    miss_count  = 0;
+
+    explicit ComponentWatchdog(int RTpriority):rt_priority_(RTpriority){
+         pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+
+        struct sched_param param;
+        param.sched_priority = rt_priority_;
+        pthread_attr_setschedparam(&attr, &param);
+        pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+
+        running_.store(true, std::memory_order_release);
+        pthread_create(&thread_, &attr, &ComponentWatchdog::threadEntry, this);
+        pthread_attr_destroy(&attr);
     };
 
-    static constexpr int MAX_RESTARTS = 3;
+    struct TaskHandle {
+        std::function<void()>    stop;
+        std::function<void()>    start;
+        TYPES::TimePoint lastHeartbeat;
+        TYPES::Ms                timeout;
+        TYPES::TaskID            id;
+        
+    };
 
-    // ── Enregistrement (avant start()) ───────────────────────────────────
-    void registerComponent(std::string         name,
-                           Ms                  timeout,
-                           std::function<void()> restart_fn) {
-        std::unique_lock lock(mutex_);
-        entries_[name] = Entry{
-            .last_beat  = Clock::now(),
-            .timeout    = timeout,
-            .restart_fn = std::move(restart_fn),
-        };
+    void registerTask(TYPES::TaskID        id,
+                      std::function<void()> start,
+                      std::function<void()> stop,
+                      TYPES::Ms             timeout)
+    {
+        tasks_.push_back({
+            .stop          = std::move(stop),
+            .start         = std::move(start),
+            .lastHeartbeat = TYPES::Clock::now(),
+            .timeout       = timeout,
+            .id            = id,
+        });
     }
 
-    // ── IWatchdogClient ───────────────────────────────────────────────────
-    void beat(std::string_view name) noexcept override {
-        std::unique_lock lock(mutex_);
-        auto it = entries_.find(std::string(name));
-        if (it != entries_.end()) {
-            it->second.last_beat  = Clock::now();
-            it->second.miss_count = 0;
-        }
-    }
-
-    // ── Cycle de vie ──────────────────────────────────────────────────────
-    void start() {
-        running_ = true;
-        thread_  = std::thread(&Watchdog::run, this);
-
-        // Le watchdog tourne à la priorité la plus haute
-        sched_param p{ .sched_priority = 95 };
-        pthread_setschedparam(thread_.native_handle(), SCHED_FIFO, &p);
-    }
-
-    void stop() {
-        running_ = false;
-        if (thread_.joinable()) thread_.join();
-    }
-
-private:
-    void run() {
-        while (running_) {
-            std::this_thread::sleep_for(Ms{100});
-
-            auto now = Clock::now();
-            std::unique_lock lock(mutex_);
-
-            for (auto& [name, entry] : entries_) {
-                if (now - entry.last_beat <= entry.timeout) continue;
-
-                entry.miss_count++;
-                std::cerr << "[watchdog] " << name
-                          << " mort (miss " << entry.miss_count << "/"
-                          << MAX_RESTARTS << ")\n";
-
-                if (entry.miss_count <= MAX_RESTARTS) {
-                    std::cerr << "[watchdog] Redémarrage de " << name << "\n";
-                    entry.last_beat = Clock::now(); // évite redémarrage en boucle
-                    entry.restart_fn();
-                } else {
-                    std::cerr << "[watchdog] CRITIQUE : " << name
-                              << " en échec permanent — failsafe actif\n";
-                    // ArduPilot prend la main via perte de heartbeat MAVLink
-                }
+    void heartbeat(TYPES::TaskID id) {
+        for (auto& t : tasks_) {
+            if (t.id == id) {
+                t.lastHeartbeat=TYPES::Clock::now();
+                return;
             }
         }
     }
 
-    mutable std::mutex                       mutex_;
-    std::unordered_map<std::string, Entry>   entries_;
-    std::thread                              thread_;
-    std::atomic_bool                         running_{false};
-};
+    void loop() {
+        auto now = TYPES::Clock::now();
 
-} // namespace drone
+        for (auto& t : tasks_) {
+            TYPES::TimePoint last = t.lastHeartbeat;
+            TYPES::Ms elapsed = UTILITIES::msBetween(last, now);
+
+            if (elapsed > t.timeout) {
+                handleDeadTask(t);
+            }
+        }
+    }
+
+private:
+
+static void* threadEntry(void* self) {
+        static_cast<ComponentWatchdog*>(self)->run();
+        return nullptr;
+    };
+
+        void run() {
+        while (running_.load(std::memory_order_acquire)) {
+            loop();
+        }
+    };
+
+    void handleDeadTask(TaskHandle& t) {
+        // Arrêt de la task fautive
+        t.stop();
+
+        // TODO : ring buffer restart Task — même logique que ComponentBase
+        // Si seuil dépassé → arrêt propre de tout le composant
+
+        t.start();
+        t.lastHeartbeat=TYPES::Clock::now();
+                              
+    }
+
+    void shutdown() {
+        // Arrêt propre de toutes les Tasks dans l'ordre inverse
+        for (auto it = tasks_.rbegin(); it != tasks_.rend(); ++it) {
+            it->stop();
+        }
+        _exit(1);
+    }
+
+    std::vector<TaskHandle> tasks_;
+    pthread_t          thread_     {};
+    std::atomic<bool>  running_    {false};
+    int                rt_priority_;
+};

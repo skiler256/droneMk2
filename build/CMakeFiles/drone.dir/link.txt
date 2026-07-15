@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/drone.dir/link.d CMakeFiles/drone.dir/src/main.cpp.o -o drone  libdrone_lib.a

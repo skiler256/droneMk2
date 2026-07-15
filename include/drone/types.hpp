@@ -15,8 +15,11 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <arm_neon.h>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <ctime>
 #include <expected>
 #include <string_view>
 
@@ -28,6 +31,8 @@ using Clock = std::chrono::steady_clock;
 using TimePoint = Clock::time_point;
 using Ms = std::chrono::milliseconds;
 using Us = std::chrono::microseconds;
+
+
 
 // ─── Types scalaires forts ──────────────────────────────────────────────────
 //
@@ -77,26 +82,30 @@ using Hz = Scalar<TagHz>; // fréquence en hertz
 
 // ─── Vecteurs 3D NED ────────────────────────────────────────────────────────
 
-struct Position {      // mètres, NED
-  Eigen::Vector3f ned; // ned.x=Nord, ned.y=Est, ned.z=Bas
+struct Position { // mètres, NED
+  Eigen::Vector3f ned = Eigen::Vector3f::Zero();
+  ; // ned.x=Nord, ned.y=Est, ned.z=Bas
   [[nodiscard]] Meters norm() const noexcept { return Meters{ned.norm()}; }
 };
 
 struct Velocity { // m/s, NED
-  Eigen::Vector3f ned;
+  Eigen::Vector3f ned = Eigen::Vector3f::Zero();
+  ;
   [[nodiscard]] MetersPerSec norm() const noexcept {
     return MetersPerSec{ned.norm()};
   }
 };
 
 struct Acceleration { // m/s², NED
-  Eigen::Vector3f ned;
+  Eigen::Vector3f ned = Eigen::Vector3f::Zero();
+  ;
 };
 
 // -- Vecteurs ------------------------------------------------
 
 struct magnetic_field {
-  Eigen::Vector3f B;
+  Eigen::Vector3f B = Eigen::Vector3f::Zero();
+  ;
   [[nodiscard]] Gauss norm() const noexcept { return Gauss{B.norm()}; }
 };
 // ─── Attitude ───────────────────────────────────────────────────────────────
@@ -258,4 +267,36 @@ enum class NavMode {
   return "UNKNOWN";
 }
 
-} // namespace TYPES
+// namespace TYPES
+
+enum class ComponentID : uint8_t {
+  MavlinkInterface = 0,
+  SensorFusion,
+  Navigation,
+  MissionControl,
+  SysMonitoring,
+  GlobalWatchdog,
+
+  Count // toujours en dernier : sert a dimensionner le tableau, jamais utilise
+        // comme index reel
+};
+
+enum class ComponentHealth : uint8_t {
+  IDLE = 0,
+  NOMINAL,
+  DEAD,
+  SICK,
+  DEGRADED,
+
+  Count
+};
+
+enum class shmError : uint8_t { 
+  timeout = 0, 
+  corrupt, 
+  Count
+ };
+
+using TaskID = uint8_t;
+
+}; // namespace TYPES
