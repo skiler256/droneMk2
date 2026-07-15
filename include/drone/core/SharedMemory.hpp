@@ -26,6 +26,7 @@ private:
 };
 
 struct SharedMemory {
+  std::atomic<bool> initialized {false};
   std::array<std::atomic<bool>, static_cast<uint8_t>(TYPES::ComponentID::Count)>
       writersFlags;
   uint32_t checksum;
@@ -104,17 +105,28 @@ private:
     return true;
   };
 
+  void init(){
+    mem_.checksum = computeChecksum();
+  }
+
   template <typename F>
   std::expected<void, TYPES::shmError> access(TYPES::ComponentID id,
                                               TYPES::Us timeout, F &&f) {
     if (UTILITIES::waitUntil([&]() { return isAvailable(); }, timeout))
 
     {
+
       WriterGuard guard(mem_.writersFlags[static_cast<uint8_t>(id)]);
+
+      if(!mem_.initialized.load(std::memory_order_acquire)){
+        init();
+        mem_.initialized.store(true, std::memory_order_release);
+      }
 
       if (mem_.checksum != computeChecksum()) {
         return std::unexpected(TYPES::shmError::corrupt);
       }
+
       std::forward<F>(f)();
       mem_.checksum = computeChecksum();
       return {};

@@ -4,7 +4,13 @@
 #include "drone/types.hpp"
 struct SharedNavMem {
     SharedCompMem compMem;
+
+    struct payload {
     int bloup;
+    };
+
+    payload data;
+
 };
 
 class SharedNavMemHandler : public SharedCompMemHandler {
@@ -14,14 +20,14 @@ class SharedNavMemHandler : public SharedCompMemHandler {
     nav_(nav){};
 
     int getBloup(){ // pour test
-        return nav_.bloup;
+        return nav_.data.bloup;
     }
 
     private:
     SharedNavMem& nav_;
 
       uint32_t computeChecksum() {
-return UTILITIES::crc32(comp_);
+return UTILITIES::crc32(nav_.data);
 };
 
 void reset(){};

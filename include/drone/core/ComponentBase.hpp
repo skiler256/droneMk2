@@ -8,10 +8,12 @@
 #include <expected>
 
 #define RT_PRIORITY_COMPONENT_WATCHDOG 80
+#define CORE_COMPONENT_WATCHDOG 3
 
 struct TaskConfig {
   TYPES::TaskID id;
   int RTpriority;
+  int core;
   TYPES::Hz loopFrequency;
   TYPES::Ms timeout;
 };
@@ -25,18 +27,19 @@ public:
   };
 
   void start() {
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-
-    struct sched_param param;
-    param.sched_priority = Tconfig.RTpriority;
-    pthread_attr_setschedparam(&attr, &param);
-    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-
     running_.store(true, std::memory_order_release);
-    pthread_create(&thread_, &attr, &Task::threadEntry, this);
-    pthread_attr_destroy(&attr);
+
+    auto result =
+        UTILITIES::launchRTThread([this] { run(); }, Tconfig.RTpriority,
+                                  Tconfig.core // à ajouter dans TaskConfig
+        );
+
+    if (!result) {
+      // errno dans result.error()
+      running_.store(false, std::memory_order_release);
+    } else {
+      thread_ = result.value();
+    }
   }
 
   void stop() {
@@ -60,7 +63,7 @@ private:
 
     // Conversion sécurisée Hz -> période
     auto period =
-        TYPES::Ms(static_cast<int64_t>(1'000.0f / Tconfig.loopFrequency.v));
+        TYPES::Us(static_cast<int64_t>(1'000'000.0f / Tconfig.loopFrequency.v));
 
     auto next_time = TYPES::Clock::now();
 
@@ -87,14 +90,15 @@ struct ComponenConfig {
   TYPES::Us shm_timeout{2000};
 
   TYPES::ComponentID id;
+  int CompCore;
 };
 
 class ComponentBase {
 public:
   explicit ComponentBase(ComponenConfig config, SharedCompMemHandler &compMem,
                          SharedSysStateMemHandler &sysState)
-      : localWD(RT_PRIORITY_COMPONENT_WATCHDOG), config_(config),
-        compMem_(compMem), sysState_(sysState) {
+      : localWD(RT_PRIORITY_COMPONENT_WATCHDOG, CORE_COMPONENT_WATCHDOG),
+        config_(config), compMem_(compMem), sysState_(sysState) {
     auto lastCold = compMem_.getColdtStartTs(config_.max_cold_start - 1);
     auto lastHot = compMem_.getHotStartTs(config_.max_hot_start - 1);
 

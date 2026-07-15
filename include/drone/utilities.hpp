@@ -109,4 +109,46 @@ uint32_t crc32(const T &value) {
   return crc32(&value, sizeof(T));
 }
 
+template <typename F>
+[[nodiscard]] std::expected<pthread_t, int>
+launchRTThread(F &&f, int rt_priority, int core) {
+
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+
+  pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+
+  struct sched_param param;
+  param.sched_priority = rt_priority;
+  pthread_attr_setschedparam(&attr, &param);
+  pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(core, &cpuset);
+  pthread_attr_setaffinity_np(&attr, sizeof(cpuset), &cpuset);
+
+  auto *callable = new std::decay_t<F>(std::forward<F>(f));
+
+  pthread_t thread;
+  int err = pthread_create(
+      &thread, &attr,
+      [](void *arg) -> void * {
+        auto *fn = static_cast<std::decay_t<F> *>(arg);
+        (*fn)();
+        delete fn;
+        return nullptr;
+      },
+      callable);
+
+  pthread_attr_destroy(&attr);
+
+  if (err != 0) {
+    delete callable;
+    return std::unexpected(err);
+  }
+
+  return thread;
+}
+
 }; // namespace UTILITIES

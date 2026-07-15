@@ -1,5 +1,6 @@
 CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/stdc-predef.h \
+ /home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
@@ -464,8 +465,9 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
- /home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp \
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp \
  /usr/include/c++/14/iostream

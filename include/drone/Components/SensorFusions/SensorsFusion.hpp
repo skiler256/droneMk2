@@ -1,36 +1,34 @@
 #pragma once
-#include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/core/ComponentBase.hpp"
 #include "drone/core/watchdog.hpp"
 #include "drone/types.hpp"
 
-class Navigation;
+class SensorFusions;
 
-class APTask : public Task {
+class GPSTask : public Task {
 public:
-  explicit APTask(Navigation &component, TaskConfig config,
+  explicit GPSTask(SensorFusions &component, TaskConfig config,
                   ComponentWatchdog &WD)
       : Task(config, WD), comp(component) {};
 
 private:
-  Navigation &comp;
+  SensorFusions &comp;
   void loop() override;
 };
 
-class Navigation : public ComponentBase {
+class SensorFusions : public ComponentBase {
 public:
-  explicit Navigation(ComponenConfig config, SharedSysStateMemHandler &sysState,
-                      SharedNavMemHandler &nav, SharedSFMemHandler& SF);
+  explicit SensorFusions(ComponenConfig config, SharedSysStateMemHandler &sysState,
+                      SharedSFMemHandler &SF);
 
-  SharedNavMemHandler &nav_;
   SharedSFMemHandler &SF_;
 
   int a;
   TYPES::TimePoint temps;
 
 private:
-  APTask TAP;
+  GPSTask TGPS;
 
   void restore();
   void init();

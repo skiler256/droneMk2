@@ -5,6 +5,8 @@ CMakeFiles/drone.dir/src/main.cpp.o
  /home/jules/droneMk2/src/main.cpp
  /home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp
  /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp

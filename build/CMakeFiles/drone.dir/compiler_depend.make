@@ -4,6 +4,8 @@
 CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
   /home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp \
   /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
+  /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp \
+  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
   /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
   /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
@@ -592,6 +594,10 @@ CMakeFiles/drone.dir/src/main.cpp.o:
 
 /usr/lib/linux/uapi/arm64/asm/types.h:
 
+/usr/lib/linux/uapi/arm64/asm/posix_types.h:
+
+/usr/lib/linux/uapi/arm64/asm/errno.h:
+
 /usr/include/c++/14/climits:
 
 /usr/include/aarch64-linux-gnu/bits/uio_lim.h:
@@ -800,6 +806,14 @@ CMakeFiles/drone.dir/src/main.cpp.o:
 
 /usr/include/eigen3/Eigen/src/Core/Select.h:
 
+/usr/include/aarch64-linux-gnu/bits/types/time_t.h:
+
+/usr/include/eigen3/Eigen/src/Core/ConditionEstimator.h:
+
+/usr/include/eigen3/Eigen/src/Core/Map.h:
+
+/usr/include/aarch64-linux-gnu/sys/select.h:
+
 /usr/include/c++/14/bits/node_handle.h:
 
 /usr/include/eigen3/Eigen/src/Geometry/Hyperplane.h:
@@ -818,15 +832,17 @@ CMakeFiles/drone.dir/src/main.cpp.o:
 
 /usr/include/c++/14/debug/assertions.h:
 
+/home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp:
+
 /usr/include/c++/14/bits/std_mutex.h:
 
 /usr/include/aarch64-linux-gnu/bits/struct_rwlock.h:
 
+/usr/include/aarch64-linux-gnu/c++/14/bits/atomic_word.h:
+
 /home/jules/droneMk2/include/drone/types.hpp:
 
 /usr/include/c++/14/clocale:
-
-/usr/include/aarch64-linux-gnu/c++/14/bits/atomic_word.h:
 
 /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
@@ -872,7 +888,33 @@ libdrone_lib.a:
 
 /usr/include/eigen3/Eigen/src/Core/GlobalFunctions.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
+/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
+
+/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
+
+/usr/include/c++/14/bits/cpp_type_traits.h:
+
+/usr/include/aarch64-linux-gnu/bits/fp-logb.h:
+
+/usr/include/c++/14/bits/concept_check.h:
+
+/usr/include/c++/14/bits/ostream.tcc:
+
+/usr/include/c++/14/bits/align.h:
+
+/usr/include/c++/14/ext/aligned_buffer.h:
+
+/usr/include/eigen3/Eigen/Geometry:
+
+/usr/include/aarch64-linux-gnu/bits/long-double.h:
+
+/usr/include/aarch64-linux-gnu/bits/posix1_lim.h:
+
+/usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h:
+
+/usr/include/c++/14/bits/ios_base.h:
+
+/usr/include/aarch64-linux-gnu/bits/fp-fast.h:
 
 /usr/include/c++/14/bits/max_size_type.h:
 
@@ -886,45 +928,11 @@ libdrone_lib.a:
 
 /usr/include/eigen3/Eigen/src/Householder/Householder.h:
 
-/usr/include/c++/14/bits/ostream.tcc:
-
-/usr/include/c++/14/bits/concept_check.h:
-
-/usr/include/c++/14/bits/align.h:
-
-/usr/include/c++/14/ext/aligned_buffer.h:
-
 /home/jules/droneMk2/include/drone/core/SharedMemory.hpp:
 
 /usr/include/eigen3/Eigen/src/Core/PlainObjectBase.h:
 
 /usr/include/wchar.h:
-
-/usr/include/c++/14/bits/cpp_type_traits.h:
-
-/usr/include/aarch64-linux-gnu/bits/fp-logb.h:
-
-/usr/include/eigen3/Eigen/Geometry:
-
-/usr/include/aarch64-linux-gnu/bits/long-double.h:
-
-/usr/include/aarch64-linux-gnu/bits/posix1_lim.h:
-
-/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
-
-/usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h:
-
-/usr/include/c++/14/bits/ios_base.h:
-
-/usr/include/aarch64-linux-gnu/bits/fp-fast.h:
-
-/usr/include/aarch64-linux-gnu/gnu/stubs.h:
-
-/home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp:
-
-/usr/include/eigen3/Eigen/src/Core/arch/NEON/GeneralBlockPanelKernel.h:
 
 /usr/include/eigen3/Eigen/src/Core/BooleanRedux.h:
 
@@ -950,39 +958,21 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp:
 
-/usr/include/c++/14/bits/chrono_io.h:
+/home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp:
 
-/home/jules/droneMk2/include/drone/core/ComponentBase.hpp:
+/usr/include/eigen3/Eigen/src/Core/arch/NEON/GeneralBlockPanelKernel.h:
 
-/usr/include/aarch64-linux-gnu/bits/mathcalls.h:
+/usr/include/aarch64-linux-gnu/gnu/stubs.h:
 
-/usr/include/aarch64-linux-gnu/bits/floatn.h:
+/usr/include/aarch64-linux-gnu/sys/single_threaded.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/time_t.h:
+/usr/include/aarch64-linux-gnu/bits/mathcalls-macros.h:
 
-/usr/include/eigen3/Eigen/src/Core/ConditionEstimator.h:
+/home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp:
 
-/usr/include/eigen3/Eigen/src/Core/Map.h:
+/usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h:
 
-/usr/include/aarch64-linux-gnu/sys/select.h:
-
-/home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp:
-
-/usr/include/c++/14/bits/specfun.h:
-
-/usr/include/eigen3/Eigen/Jacobi:
-
-/usr/include/aarch64-linux-gnu/bits/stat.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h:
-
-/usr/include/linux/sched/types.h:
-
-/usr/include/aarch64-linux-gnu/bits/statx.h:
-
-/home/jules/droneMk2/src/main.cpp:
-
-/usr/include/eigen3/Eigen/src/Core/CwiseNullaryOp.h:
+/usr/include/aarch64-linux-gnu/bits/wordsize.h:
 
 /usr/include/c++/14/bits/move.h:
 
@@ -994,7 +984,33 @@ libdrone_lib.a:
 
 /usr/include/eigen3/Eigen/src/Core/ArrayBase.h:
 
-/usr/lib/linux/uapi/arm64/asm/posix_types.h:
+/usr/include/c++/14/bits/chrono_io.h:
+
+/home/jules/droneMk2/include/drone/core/ComponentBase.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/mathcalls.h:
+
+/usr/include/aarch64-linux-gnu/bits/floatn.h:
+
+/home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/stat.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h:
+
+/usr/include/linux/sched/types.h:
+
+/usr/include/aarch64-linux-gnu/bits/statx.h:
+
+/usr/include/eigen3/Eigen/src/Core/CwiseNullaryOp.h:
+
+/home/jules/droneMk2/src/main.cpp:
+
+/usr/include/c++/14/bits/specfun.h:
+
+/usr/include/eigen3/Eigen/Jacobi:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
 
 /usr/include/aarch64-linux-gnu/sys/time.h:
 
@@ -1184,8 +1200,6 @@ libdrone_lib.a:
 
 /usr/include/c++/14/bits/exception.h:
 
-/usr/lib/linux/uapi/arm64/asm/errno.h:
-
 /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h:
 
 /usr/include/time.h:
@@ -1199,10 +1213,6 @@ libdrone_lib.a:
 /usr/include/c++/14/bits/stl_algobase.h:
 
 /usr/include/eigen3/Eigen/src/Core/BandMatrix.h:
-
-/usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h:
-
-/usr/include/aarch64-linux-gnu/bits/wordsize.h:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/c++config.h:
 
@@ -1245,10 +1255,6 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/sys/mman.h:
 
 /usr/include/eigen3/Eigen/src/Core/CommaInitializer.h:
-
-/usr/include/aarch64-linux-gnu/bits/mathcalls-macros.h:
-
-/usr/include/aarch64-linux-gnu/sys/single_threaded.h:
 
 /usr/include/c++/14/complex:
 
@@ -1454,9 +1460,9 @@ libdrone_lib.a:
 
 /usr/include/eigen3/Eigen/src/SVD/JacobiSVD.h:
 
-/usr/include/c++/14/bits/locale_classes.h:
-
 /usr/include/c++/14/bits/stl_uninitialized.h:
+
+/usr/include/c++/14/bits/locale_classes.h:
 
 /usr/include/eigen3/Eigen/src/SVD/UpperBidiagonalization.h:
 
