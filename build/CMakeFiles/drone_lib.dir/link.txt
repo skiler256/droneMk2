@@ -1,2 +1,2 @@
-/usr/bin/ar qc libdrone_lib.a CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o
+/usr/bin/ar qc libdrone_lib.a CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o" CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o
 /usr/bin/ranlib libdrone_lib.a

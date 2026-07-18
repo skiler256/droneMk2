@@ -178,6 +178,78 @@ test_shared_state/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/build
 .PHONY : test_shared_state/fast
 
+src/Drivers/LD06.o: src/Drivers/LD06.cpp.o
+.PHONY : src/Drivers/LD06.o
+
+# target to build an object file
+src/Drivers/LD06.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o
+.PHONY : src/Drivers/LD06.cpp.o
+
+src/Drivers/LD06.i: src/Drivers/LD06.cpp.i
+.PHONY : src/Drivers/LD06.i
+
+# target to preprocess a source file
+src/Drivers/LD06.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.i
+.PHONY : src/Drivers/LD06.cpp.i
+
+src/Drivers/LD06.s: src/Drivers/LD06.cpp.s
+.PHONY : src/Drivers/LD06.s
+
+# target to generate assembly for a file
+src/Drivers/LD06.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.s
+.PHONY : src/Drivers/LD06.cpp.s
+
+src/Drivers/LIS3MDL.o: src/Drivers/LIS3MDL.cpp.o
+.PHONY : src/Drivers/LIS3MDL.o
+
+# target to build an object file
+src/Drivers/LIS3MDL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o
+.PHONY : src/Drivers/LIS3MDL.cpp.o
+
+src/Drivers/LIS3MDL.i: src/Drivers/LIS3MDL.cpp.i
+.PHONY : src/Drivers/LIS3MDL.i
+
+# target to preprocess a source file
+src/Drivers/LIS3MDL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.i
+.PHONY : src/Drivers/LIS3MDL.cpp.i
+
+src/Drivers/LIS3MDL.s: src/Drivers/LIS3MDL.cpp.s
+.PHONY : src/Drivers/LIS3MDL.s
+
+# target to generate assembly for a file
+src/Drivers/LIS3MDL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.s
+.PHONY : src/Drivers/LIS3MDL.cpp.s
+
+src/Drivers/NEO-M8N.o: src/Drivers/NEO-M8N.cpp.o
+.PHONY : src/Drivers/NEO-M8N.o
+
+# target to build an object file
+src/Drivers/NEO-M8N.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o
+.PHONY : src/Drivers/NEO-M8N.cpp.o
+
+src/Drivers/NEO-M8N.i: src/Drivers/NEO-M8N.cpp.i
+.PHONY : src/Drivers/NEO-M8N.i
+
+# target to preprocess a source file
+src/Drivers/NEO-M8N.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.i
+.PHONY : src/Drivers/NEO-M8N.cpp.i
+
+src/Drivers/NEO-M8N.s: src/Drivers/NEO-M8N.cpp.s
+.PHONY : src/Drivers/NEO-M8N.s
+
+# target to generate assembly for a file
+src/Drivers/NEO-M8N.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s
+.PHONY : src/Drivers/NEO-M8N.cpp.s
+
 src/Navigation/Navigation.o: src/Navigation/Navigation.cpp.o
 .PHONY : src/Navigation/Navigation.o
 
@@ -311,6 +383,15 @@ help:
 	@echo "... drone_lib"
 	@echo "... test_shared_state"
 	@echo "... test_types"
+	@echo "... src/Drivers/LD06.o"
+	@echo "... src/Drivers/LD06.i"
+	@echo "... src/Drivers/LD06.s"
+	@echo "... src/Drivers/LIS3MDL.o"
+	@echo "... src/Drivers/LIS3MDL.i"
+	@echo "... src/Drivers/LIS3MDL.s"
+	@echo "... src/Drivers/NEO-M8N.o"
+	@echo "... src/Drivers/NEO-M8N.i"
+	@echo "... src/Drivers/NEO-M8N.s"
 	@echo "... src/Navigation/Navigation.o"
 	@echo "... src/Navigation/Navigation.i"
 	@echo "... src/Navigation/Navigation.s"

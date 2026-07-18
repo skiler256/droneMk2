@@ -18,6 +18,7 @@ class SharedNavMemHandler : public SharedCompMemHandler {
     explicit SharedNavMemHandler(TYPES::ComponentID id,TYPES::Us timeout,SharedNavMem& nav):
     SharedCompMemHandler(nav.compMem, id, timeout),
     nav_(nav){};
+    
 
     int getBloup(){ // pour test
         return nav_.data.bloup;

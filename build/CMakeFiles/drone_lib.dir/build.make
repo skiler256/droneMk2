@@ -100,19 +100,67 @@ CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/Navigation/Navigation.cpp -o CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.s
 
+CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o: CMakeFiles/drone_lib.dir/flags.make
+CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o: /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp
+CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o: CMakeFiles/drone_lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o -MF CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o.d -o CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o -c /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp
+
+CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp > CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.i
+
+CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp -o CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s
+
+CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o: CMakeFiles/drone_lib.dir/flags.make
+CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o: /home/jules/droneMk2/src/Drivers/LIS3MDL.cpp
+CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o: CMakeFiles/drone_lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o -MF CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o.d -o CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o -c /home/jules/droneMk2/src/Drivers/LIS3MDL.cpp
+
+CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/Drivers/LIS3MDL.cpp > CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.i
+
+CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/Drivers/LIS3MDL.cpp -o CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.s
+
+CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o: CMakeFiles/drone_lib.dir/flags.make
+CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o: /home/jules/droneMk2/src/Drivers/LD06.cpp
+CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o: CMakeFiles/drone_lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o -MF CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o.d -o CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o -c /home/jules/droneMk2/src/Drivers/LD06.cpp
+
+CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/Drivers/LD06.cpp > CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.i
+
+CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/Drivers/LD06.cpp -o CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.s
+
 # Object files for target drone_lib
 drone_lib_OBJECTS = \
 "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o" \
-"CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o"
+"CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o" \
+"CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o" \
+"CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o" \
+"CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o"
 
 # External object files for target drone_lib
 drone_lib_EXTERNAL_OBJECTS =
 
 libdrone_lib.a: CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o
 libdrone_lib.a: CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o
+libdrone_lib.a: CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o
+libdrone_lib.a: CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o
+libdrone_lib.a: CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o
 libdrone_lib.a: CMakeFiles/drone_lib.dir/build.make
 libdrone_lib.a: CMakeFiles/drone_lib.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX static library libdrone_lib.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library libdrone_lib.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/drone_lib.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/drone_lib.dir/link.txt --verbose=$(VERBOSE)
 

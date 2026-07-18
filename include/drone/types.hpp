@@ -32,8 +32,6 @@ using TimePoint = Clock::time_point;
 using Ms = std::chrono::milliseconds;
 using Us = std::chrono::microseconds;
 
-
-
 // ─── Types scalaires forts ──────────────────────────────────────────────────
 //
 // Chaque type encapsule un float et n'est constructible que de façon
@@ -291,12 +289,36 @@ enum class ComponentHealth : uint8_t {
   Count
 };
 
-enum class shmError : uint8_t { 
-  timeout = 0, 
-  corrupt, 
-  Count
- };
+enum class shmError : uint8_t { timeout = 0, corrupt, Count };
 
 using TaskID = uint8_t;
+
+// DriverError.hpp (ajout)
+enum class DriverError : std::uint8_t {
+  None = 0,
+  I2COpenFailed,
+  I2CAddressFailed,
+  I2CReadFailed,
+  I2CWriteFailed,
+  UARTOpenFailed,
+  UARTAttrGetFailed,
+  UARTAttrSetFailed,
+  UARTReadFailed,
+  UARTWriteFailed,
+  NotInitialized,
+  Timeout,
+  InvalidData,
+  ConfigFailed,
+  NoNewData, // <-- ajouté : aucun paquet complet reçu depuis le dernier
+             // update()
+};
+
+enum class DriverHealth : uint8_t {
+  Unconnected = 0,
+  Connected,
+  Dead,
+
+  Count
+};
 
 }; // namespace TYPES

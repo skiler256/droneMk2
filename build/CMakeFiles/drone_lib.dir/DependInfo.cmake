@@ -8,6 +8,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/jules/droneMk2/src/Drivers/LD06.cpp" "CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o.d"
+  "/home/jules/droneMk2/src/Drivers/LIS3MDL.cpp" "CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o.d"
+  "/home/jules/droneMk2/src/Drivers/NEO-M8N.cpp" "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o.d"
   "/home/jules/droneMk2/src/Navigation/Navigation.cpp" "CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o.d"
   "/home/jules/droneMk2/src/SensorsFusion/SensorFusion.cpp" "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o.d"
   )

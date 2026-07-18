@@ -56,6 +56,10 @@ add_library(drone_lib STATIC
     # src/MavlinkInterface/MavlinkInterface.cpp
     # src/SystemMonitoring/SystemMonitoring.cpp
     # src/Watchdog/GlobalWatchdog.cpp
+
+    src/Drivers/NEO-M8N.cpp
+    src/Drivers/LIS3MDL.cpp
+    src/Drivers/LD06.cpp
 )
 target_link_libraries     (drone_lib PUBLIC drone_core)
 target_include_directories(drone_lib PUBLIC include)

@@ -12,14 +12,14 @@ struct SharedSysStateMem {
       compHealth;
 };
 
-class SharedSysStateMemHandler : SharedMemoryHandler {
+class SharedSysStateMemHandler : public SharedMemoryHandler {
 public:
   explicit SharedSysStateMemHandler(SharedSysStateMem &state, TYPES::Us timeout)
       : SharedMemoryHandler(state.mem), state_(state), timeout_(timeout) {};
 
   std::optional<TYPES::ComponentHealth> getHealth(TYPES::ComponentID id) {
     return getArrayElement<TYPES::ComponentHealth>(
-        id, timeout_, static_cast<uint8_t>(id), state_.compHealth);
+        timeout_, static_cast<uint8_t>(id), state_.compHealth);
   };
 
   void setHealth(TYPES::ComponentID id, TYPES::ComponentHealth health) {

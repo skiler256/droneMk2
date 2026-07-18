@@ -52,7 +52,7 @@ protected:
 private:
   void recordStart(std::array<TYPES::TimePoint, 10> &history,
                    TYPES::TimePoint ts) {
-    auto fetch = getData(id_, timeout_, history);
+    auto fetch = getData(timeout_, history);
     if (!fetch)
       return;
     std::array<TYPES::TimePoint, 10> &history_ = fetch.value();
@@ -66,7 +66,7 @@ private:
 
   std::optional<TYPES::TimePoint>
   getStart(std::array<TYPES::TimePoint, 10> &history, size_t i) {
-    auto data = getData(id_, timeout_, history);
+    auto data = getData(timeout_, history);
     if (data)
       return data->at(i);
     return {};

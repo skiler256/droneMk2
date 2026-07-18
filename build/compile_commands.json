@@ -13,6 +13,24 @@
 },
 {
   "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o -c /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/NEO-M8N.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o -c /home/jules/droneMk2/src/Drivers/LIS3MDL.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/LIS3MDL.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o -c /home/jules/droneMk2/src/Drivers/LD06.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/LD06.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
   "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone.dir/src/main.cpp.o -c /home/jules/droneMk2/src/main.cpp",
   "file": "/home/jules/droneMk2/src/main.cpp",
   "output": "CMakeFiles/drone.dir/src/main.cpp.o"
