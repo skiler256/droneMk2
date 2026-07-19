@@ -1,137 +1,265 @@
-Start testing: May 20 18:39 CEST
+Start testing: Jul 19 17:15 CEST
 ----------------------------------------------------------
-1/2 Testing: test_types
-1/2 Test: test_types
+1/4 Testing: test_types
+1/4 Test: test_types
 Command: "/home/jules/droneMk2/build/test_types"
 Directory: /home/jules/droneMk2/build
-"test_types" start time: May 20 18:39 CEST
+"test_types" start time: Jul 19 17:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
-[==========] Running 18 tests from 6 test suites.
+[==========] Running 26 tests from 2 test suites.
 [----------] Global test environment set-up.
-[----------] 5 tests from TypesTest
+[----------] 24 tests from TypesTest
 [ RUN      ] TypesTest.MetersIsExplicit
 [       OK ] TypesTest.MetersIsExplicit (0 ms)
 [ RUN      ] TypesTest.MetersPerSecIsExplicit
 [       OK ] TypesTest.MetersPerSecIsExplicit (0 ms)
+[ RUN      ] TypesTest.GaussIsExplicit
+[       OK ] TypesTest.GaussIsExplicit (0 ms)
+[ RUN      ] TypesTest.HzIsExplicit
+[       OK ] TypesTest.HzIsExplicit (0 ms)
 [ RUN      ] TypesTest.RadiansDegreesConversion
 [       OK ] TypesTest.RadiansDegreesConversion (0 ms)
 [ RUN      ] TypesTest.ScalarComparisons
 [       OK ] TypesTest.ScalarComparisons (0 ms)
 [ RUN      ] TypesTest.ScalarNegation
 [       OK ] TypesTest.ScalarNegation (0 ms)
-[----------] 5 tests from TypesTest (0 ms total)
+[ RUN      ] TypesTest.DifferentTagsAreDifferentTypes
+[       OK ] TypesTest.DifferentTagsAreDifferentTypes (0 ms)
+[ RUN      ] TypesTest.PositionNorm
+[       OK ] TypesTest.PositionNorm (0 ms)
+[ RUN      ] TypesTest.VelocityNorm
+[       OK ] TypesTest.VelocityNorm (0 ms)
+[ RUN      ] TypesTest.AccelerationDefaultsToZero
+[       OK ] TypesTest.AccelerationDefaultsToZero (0 ms)
+[ RUN      ] TypesTest.MagneticFieldNorm
+[       OK ] TypesTest.MagneticFieldNorm (0 ms)
+[ RUN      ] TypesTest.Vec3IsTriviallyCopyable
+[       OK ] TypesTest.Vec3IsTriviallyCopyable (0 ms)
+[ RUN      ] TypesTest.Vec3AsEigenMatchesComponents
+[       OK ] TypesTest.Vec3AsEigenMatchesComponents (0 ms)
+[ RUN      ] TypesTest.QuatDefaultsToIdentity
+[       OK ] TypesTest.QuatDefaultsToIdentity (0 ms)
+[ RUN      ] TypesTest.QuatYaw90Degrees
+[       OK ] TypesTest.QuatYaw90Degrees (0 ms)
+[ RUN      ] TypesTest.WaypointDefaults
+[       OK ] TypesTest.WaypointDefaults (0 ms)
+[ RUN      ] TypesTest.VectorTypesDefaultToZero
+[       OK ] TypesTest.VectorTypesDefaultToZero (0 ms)
+[ RUN      ] TypesTest.ClockAdvances
+[       OK ] TypesTest.ClockAdvances (1 ms)
+[ RUN      ] TypesTest.MsUsConversion
+[       OK ] TypesTest.MsUsConversion (0 ms)
+[ RUN      ] TypesTest.ResultAliasWrapsExpected
+[       OK ] TypesTest.ResultAliasWrapsExpected (0 ms)
+[ RUN      ] TypesTest.ComponentIDCountIsLastAndSized
+[       OK ] TypesTest.ComponentIDCountIsLastAndSized (0 ms)
+[ RUN      ] TypesTest.ShmErrorNoneIsZero
+[       OK ] TypesTest.ShmErrorNoneIsZero (0 ms)
+[ RUN      ] TypesTest.DriverHealthValuesAreDistinct
+[       OK ] TypesTest.DriverHealthValuesAreDistinct (0 ms)
+[----------] 24 tests from TypesTest (1 ms total)
 
-[----------] 1 test from PositionTest
-[ RUN      ] PositionTest.Norm
-[       OK ] PositionTest.Norm (0 ms)
-[----------] 1 test from PositionTest (0 ms total)
-
-[----------] 1 test from VelocityTest
-[ RUN      ] VelocityTest.Norm
-[       OK ] VelocityTest.Norm (0 ms)
-[----------] 1 test from VelocityTest (0 ms total)
-
-[----------] 7 tests from VelocityCmdTest
-[ RUN      ] VelocityCmdTest.ZeroIsValid
-[       OK ] VelocityCmdTest.ZeroIsValid (0 ms)
-[ RUN      ] VelocityCmdTest.NominalIsValid
-[       OK ] VelocityCmdTest.NominalIsValid (0 ms)
-[ RUN      ] VelocityCmdTest.TooFastHorizontalIsInvalid
-[       OK ] VelocityCmdTest.TooFastHorizontalIsInvalid (0 ms)
-[ RUN      ] VelocityCmdTest.TooFastDescentIsInvalid
-[       OK ] VelocityCmdTest.TooFastDescentIsInvalid (0 ms)
-[ RUN      ] VelocityCmdTest.TooFastClimbIsInvalid
-[       OK ] VelocityCmdTest.TooFastClimbIsInvalid (0 ms)
-[ RUN      ] VelocityCmdTest.NaNIsInvalid
-[       OK ] VelocityCmdTest.NaNIsInvalid (0 ms)
-[ RUN      ] VelocityCmdTest.InfIsInvalid
-[       OK ] VelocityCmdTest.InfIsInvalid (0 ms)
-[----------] 7 tests from VelocityCmdTest (0 ms total)
-
-[----------] 1 test from NavModeTest
+[----------] 2 tests from NavModeTest
 [ RUN      ] NavModeTest.ToStringCoversAllModes
 [       OK ] NavModeTest.ToStringCoversAllModes (0 ms)
-[----------] 1 test from NavModeTest (0 ms total)
-
-[----------] 3 tests from SensorHealthTest
-[ RUN      ] SensorHealthTest.AllOkIsOK
-[       OK ] SensorHealthTest.AllOkIsOK (0 ms)
-[ RUN      ] SensorHealthTest.NoGpsIsDegraded
-[       OK ] SensorHealthTest.NoGpsIsDegraded (0 ms)
-[ RUN      ] SensorHealthTest.NoGpsNoLidarIsCritical
-[       OK ] SensorHealthTest.NoGpsNoLidarIsCritical (0 ms)
-[----------] 3 tests from SensorHealthTest (0 ms total)
+[ RUN      ] NavModeTest.DistinctModesHaveDistinctStrings
+[       OK ] NavModeTest.DistinctModesHaveDistinctStrings (0 ms)
+[----------] 2 tests from NavModeTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 18 tests from 6 test suites ran. (0 ms total)
-[  PASSED  ] 18 tests.
+[==========] 26 tests from 2 test suites ran. (1 ms total)
+[  PASSED  ] 26 tests.
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_types" end time: May 20 18:39 CEST
+"test_types" end time: Jul 19 17:15 CEST
 "test_types" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-2/2 Testing: test_shared_state
-2/2 Test: test_shared_state
+2/4 Testing: test_shared_state
+2/4 Test: test_shared_state
 Command: "/home/jules/droneMk2/build/test_shared_state"
 Directory: /home/jules/droneMk2/build
-"test_shared_state" start time: May 20 18:39 CEST
+"test_shared_state" start time: Jul 19 17:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
-[==========] Running 13 tests from 4 test suites.
+[==========] Running 15 tests from 4 test suites.
 [----------] Global test environment set-up.
-[----------] 5 tests from SharedStateTest
-[ RUN      ] SharedStateTest.DefaultPositionIsZero
-[       OK ] SharedStateTest.DefaultPositionIsZero (0 ms)
-[ RUN      ] SharedStateTest.WriteAndReadBack
-[       OK ] SharedStateTest.WriteAndReadBack (0 ms)
-[ RUN      ] SharedStateTest.IsFreshAfterWrite
-[       OK ] SharedStateTest.IsFreshAfterWrite (0 ms)
-[ RUN      ] SharedStateTest.IsNotFreshByDefault
-[       OK ] SharedStateTest.IsNotFreshByDefault (0 ms)
-[ RUN      ] SharedStateTest.ConcurrentReadWrite
-[       OK ] SharedStateTest.ConcurrentReadWrite (62 ms)
-[----------] 5 tests from SharedStateTest (62 ms total)
+[----------] 3 tests from SharedMemoryErrorTest
+[ RUN      ] SharedMemoryErrorTest.NoErrorByDefault
+[       OK ] SharedMemoryErrorTest.NoErrorByDefault (0 ms)
+[ RUN      ] SharedMemoryErrorTest.SuccessDoesNotClearPendingError
+[       OK ] SharedMemoryErrorTest.SuccessDoesNotClearPendingError (1 ms)
+[ RUN      ] SharedMemoryErrorTest.ConsumeErrorResetsToNone
+[       OK ] SharedMemoryErrorTest.ConsumeErrorResetsToNone (1 ms)
+[----------] 3 tests from SharedMemoryErrorTest (2 ms total)
 
-[----------] 4 tests from SharedNavOutputTest
-[ RUN      ] SharedNavOutputTest.DefaultIsHold
-[       OK ] SharedNavOutputTest.DefaultIsHold (0 ms)
-[ RUN      ] SharedNavOutputTest.ValidCmdIsStored
-[       OK ] SharedNavOutputTest.ValidCmdIsStored (0 ms)
-[ RUN      ] SharedNavOutputTest.InvalidCmdFallsBackToHold
-[       OK ] SharedNavOutputTest.InvalidCmdFallsBackToHold (0 ms)
-[ RUN      ] SharedNavOutputTest.NaNCmdFallsBackToHold
-[       OK ] SharedNavOutputTest.NaNCmdFallsBackToHold (0 ms)
-[----------] 4 tests from SharedNavOutputTest (0 ms total)
+[----------] 2 tests from SharedMemoryConcurrencyTest
+[ RUN      ] SharedMemoryConcurrencyTest.ConcurrentSetHealthDoesNotLoseUpdates
+[       OK ] SharedMemoryConcurrencyTest.ConcurrentSetHealthDoesNotLoseUpdates (0 ms)
+[ RUN      ] SharedMemoryConcurrencyTest.ConcurrentReadersNeverSeeCorruption
+[       OK ] SharedMemoryConcurrencyTest.ConcurrentReadersNeverSeeCorruption (50 ms)
+[----------] 2 tests from SharedMemoryConcurrencyTest (51 ms total)
 
-[----------] 2 tests from SharedFCStatusTest
-[ RUN      ] SharedFCStatusTest.DefaultNotReachable
-[       OK ] SharedFCStatusTest.DefaultNotReachable (0 ms)
-[ RUN      ] SharedFCStatusTest.UpdateAndRead
-[       OK ] SharedFCStatusTest.UpdateAndRead (0 ms)
-[----------] 2 tests from SharedFCStatusTest (0 ms total)
+[----------] 2 tests from SharedCompMemHistoryTest
+[ RUN      ] SharedCompMemHistoryTest.CorruptedRestartHistoryIsDetected
+[       OK ] SharedCompMemHistoryTest.CorruptedRestartHistoryIsDetected (0 ms)
+[ RUN      ] SharedCompMemHistoryTest.RecordStartSelfHealsOnCorruption
+[       OK ] SharedCompMemHistoryTest.RecordStartSelfHealsOnCorruption (0 ms)
+[----------] 2 tests from SharedCompMemHistoryTest (0 ms total)
 
-[----------] 2 tests from InterfaceTest
-[ RUN      ] InterfaceTest.IsFreshViaInterface
-[       OK ] InterfaceTest.IsFreshViaInterface (0 ms)
-[ RUN      ] InterfaceTest.IsCmdFreshAfterSet
-[       OK ] InterfaceTest.IsCmdFreshAfterSet (0 ms)
-[----------] 2 tests from InterfaceTest (0 ms total)
+[----------] 8 tests from DiagCodeTest
+[ RUN      ] DiagCodeTest.MinorCodeAppearsAtFrontOfRing
+[       OK ] DiagCodeTest.MinorCodeAppearsAtFrontOfRing (0 ms)
+[ RUN      ] DiagCodeTest.MajorCodeStaysActiveDespiteMinorTraffic
+[       OK ] DiagCodeTest.MajorCodeStaysActiveDespiteMinorTraffic (0 ms)
+[ RUN      ] DiagCodeTest.ClearCodeRemovesFromActiveSet
+[       OK ] DiagCodeTest.ClearCodeRemovesFromActiveSet (0 ms)
+[ RUN      ] DiagCodeTest.MinorRingOverwritesOldestEntries
+[       OK ] DiagCodeTest.MinorRingOverwritesOldestEntries (0 ms)
+[ RUN      ] DiagCodeTest.CodesAreIsolatedPerComponent
+[       OK ] DiagCodeTest.CodesAreIsolatedPerComponent (0 ms)
+[ RUN      ] DiagCodeTest.UnknownCodeFallsBackToMinor
+[       OK ] DiagCodeTest.UnknownCodeFallsBackToMinor (0 ms)
+[ RUN      ] DiagCodeTest.CorruptedCodeStorageIsDetected
+[       OK ] DiagCodeTest.CorruptedCodeStorageIsDetected (0 ms)
+[ RUN      ] DiagCodeTest.UnrelatedWriteDoesNotMaskAnotherComponentsCorruption
+[       OK ] DiagCodeTest.UnrelatedWriteDoesNotMaskAnotherComponentsCorruption (0 ms)
+[----------] 8 tests from DiagCodeTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 13 tests from 4 test suites ran. (62 ms total)
-[  PASSED  ] 13 tests.
+[==========] 15 tests from 4 test suites ran. (53 ms total)
+[  PASSED  ] 15 tests.
 <end of output>
 Test time =   0.06 sec
 ----------------------------------------------------------
 Test Passed.
-"test_shared_state" end time: May 20 18:39 CEST
+"test_shared_state" end time: Jul 19 17:15 CEST
 "test_shared_state" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: May 20 18:39 CEST
+3/4 Testing: test_watchdog
+3/4 Test: test_watchdog
+Command: "/home/jules/droneMk2/build/test_watchdog"
+Directory: /home/jules/droneMk2/build
+"test_watchdog" start time: Jul 19 17:15 CEST
+Output:
+----------------------------------------------------------
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 15 tests from 7 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from ComponentWatchdogDeathTest
+[ RUN      ] ComponentWatchdogDeathTest.EscalatesToExitAfterTooManyRestarts
+[       OK ] ComponentWatchdogDeathTest.EscalatesToExitAfterTooManyRestarts (6 ms)
+[----------] 1 test from ComponentWatchdogDeathTest (6 ms total)
+
+[----------] 1 test from TaskDeathTest
+[ RUN      ] TaskDeathTest.ConstructorWiresRestartThresholdCorrectly
+[       OK ] TaskDeathTest.ConstructorWiresRestartThresholdCorrectly (4 ms)
+[----------] 1 test from TaskDeathTest (4 ms total)
+
+[----------] 4 tests from ComponentWatchdogTest
+[ RUN      ] ComponentWatchdogTest.RestartsBelowThresholdDoNotEscalate
+[       OK ] ComponentWatchdogTest.RestartsBelowThresholdDoNotEscalate (4 ms)
+[ RUN      ] ComponentWatchdogTest.RestartWindowPruningPreventsEscalation
+[       OK ] ComponentWatchdogTest.RestartWindowPruningPreventsEscalation (150 ms)
+[ RUN      ] ComponentWatchdogTest.HeartbeatPreventsRestart
+[       OK ] ComponentWatchdogTest.HeartbeatPreventsRestart (0 ms)
+[ RUN      ] ComponentWatchdogTest.PicksUpShmErrorsFromRegisteredSources
+[       OK ] ComponentWatchdogTest.PicksUpShmErrorsFromRegisteredSources (0 ms)
+[----------] 4 tests from ComponentWatchdogTest (154 ms total)
+
+[----------] 1 test from TaskTest
+[ RUN      ] TaskTest.ConstructorWiresRestartConfigIntoWatchdog
+[       OK ] TaskTest.ConstructorWiresRestartConfigIntoWatchdog (2 ms)
+[----------] 1 test from TaskTest (2 ms total)
+
+[----------] 4 tests from ComponentBaseTest
+[ RUN      ] ComponentBaseTest.FreshStartIsNominal
+[       OK ] ComponentBaseTest.FreshStartIsNominal (10 ms)
+[ RUN      ] ComponentBaseTest.SingleHotStartIsDegraded
+[       OK ] ComponentBaseTest.SingleHotStartIsDegraded (10 ms)
+[ RUN      ] ComponentBaseTest.TooManyHotStartsEscalatesToSick
+[       OK ] ComponentBaseTest.TooManyHotStartsEscalatesToSick (10 ms)
+[ RUN      ] ComponentBaseTest.RecentColdStartIsDead
+[       OK ] ComponentBaseTest.RecentColdStartIsDead (10 ms)
+[----------] 4 tests from ComponentBaseTest (40 ms total)
+
+[----------] 2 tests from TaskRealExecutionTest
+[ RUN      ] TaskRealExecutionTest.LoopRunsAtConfiguredFrequency
+[       OK ] TaskRealExecutionTest.LoopRunsAtConfiguredFrequency (110 ms)
+[ RUN      ] TaskRealExecutionTest.WatchdogRestartsATransientlyStalledTask
+[       OK ] TaskRealExecutionTest.WatchdogRestartsATransientlyStalledTask (410 ms)
+[----------] 2 tests from TaskRealExecutionTest (520 ms total)
+
+[----------] 2 tests from ComponentWatchdogRealThreadTest
+[ RUN      ] ComponentWatchdogRealThreadTest.DetectsAndRestartsATrulyDeadTask
+[       OK ] ComponentWatchdogRealThreadTest.DetectsAndRestartsATrulyDeadTask (160 ms)
+[ RUN      ] ComponentWatchdogRealThreadTest.RespectsHeartbeatFromAnotherThread
+[       OK ] ComponentWatchdogRealThreadTest.RespectsHeartbeatFromAnotherThread (160 ms)
+[----------] 2 tests from ComponentWatchdogRealThreadTest (320 ms total)
+
+[----------] Global test environment tear-down
+[==========] 15 tests from 7 test suites ran. (1048 ms total)
+[  PASSED  ] 15 tests.
+<end of output>
+Test time =   1.05 sec
+----------------------------------------------------------
+Test Passed.
+"test_watchdog" end time: Jul 19 17:15 CEST
+"test_watchdog" time elapsed: 00:00:01
+----------------------------------------------------------
+
+4/4 Testing: test_global_watchdog
+4/4 Test: test_global_watchdog
+Command: "/home/jules/droneMk2/build/test_global_watchdog"
+Directory: /home/jules/droneMk2/build
+"test_global_watchdog" start time: Jul 19 17:15 CEST
+Output:
+----------------------------------------------------------
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from GlobalWatchdogTest
+[ RUN      ] GlobalWatchdogTest.SpawnsChildrenWithCorrectRolesAndCleansUpShm
+[       OK ] GlobalWatchdogTest.SpawnsChildrenWithCorrectRolesAndCleansUpShm (160 ms)
+[ RUN      ] GlobalWatchdogTest.RespawnsChildrenThatDie
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+[       OK ] GlobalWatchdogTest.RespawnsChildrenThatDie (310 ms)
+[ RUN      ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren
+[       OK ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren (160 ms)
+[----------] 3 tests from GlobalWatchdogTest (631 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (631 ms total)
+[  PASSED  ] 3 tests.
+<end of output>
+Test time =   0.63 sec
+----------------------------------------------------------
+Test Passed.
+"test_global_watchdog" end time: Jul 19 17:15 CEST
+"test_global_watchdog" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 19 17:15 CEST

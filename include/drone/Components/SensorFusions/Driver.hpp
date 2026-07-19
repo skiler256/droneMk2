@@ -129,9 +129,7 @@ struct GPSData {
 };
 
 struct MagData {
-  double x{0.0}; // milliGauss
-  double y{0.0};
-  double z{0.0};
+  TYPES::MagneticField field{}; // Gauss, repère capteur
 };
 
 struct LidarData {

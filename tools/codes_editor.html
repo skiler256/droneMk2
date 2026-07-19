@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Codes — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+    --critical: #ff5c5c;
+    --info: #4f8cff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  h1 { font-size: 1.1rem; margin: 0 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .toolbar {
+    display: flex; gap: .5rem; margin-bottom: .75rem; flex-wrap: wrap;
+  }
+  .toolbar input[type="search"] {
+    flex: 1 1 180px;
+  }
+  .toolbar select { flex: 0 1 140px; }
+  .result-count { color: var(--muted); font-size: .75rem; margin-bottom: .5rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; }
+  tr:hover td { background: rgba(127,127,127,.06); }
+  .code { font-weight: 700; }
+  .badge {
+    display: inline-block; padding: .1rem .4rem; border-radius: 4px;
+    font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  }
+  .badge.major { background: rgba(255,92,92,.15); color: var(--critical); }
+  .badge.minor { background: rgba(79,140,255,.15); color: var(--info); }
+  .actions { white-space: nowrap; }
+  .icon-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 5px; padding: .2rem .45rem; font-size: .75rem;
+    cursor: pointer; font-family: inherit; margin-right: .3rem;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); opacity: 1; }
+  .icon-btn.danger:hover { color: var(--critical); border-color: var(--critical); }
+  form { display: flex; flex-direction: column; gap: .6rem; }
+  label { font-size: .75rem; color: var(--muted); display: block; margin-bottom: .2rem; }
+  input, select, textarea {
+    width: 100%; padding: .4rem .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: .85rem;
+  }
+  textarea { resize: vertical; min-height: 3rem; }
+  button {
+    padding: .5rem; border-radius: 6px; border: none;
+    background: var(--accent); color: white; font-weight: 600;
+    font-family: inherit; cursor: pointer; font-size: .85rem;
+  }
+  button:hover { opacity: .9; }
+  .btn-row { display: flex; gap: .5rem; }
+  .btn-row button { flex: 1; }
+  .btn-secondary { background: transparent; border: 1px solid var(--border) !important; color: var(--text); }
+  .preview-code { font-size: 1.4rem; font-weight: 700; letter-spacing: .05em; }
+  .form-title { font-size: .8rem; color: var(--muted); text-transform: uppercase; margin-bottom: .3rem; }
+  .error { color: var(--critical); font-size: .8rem; min-height: 1.2em; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .empty { color: var(--muted); font-style: italic; padding: 1rem 0; }
+</style>
+</head>
+<body>
+  <h1>Dictionnaire de codes — droneMk2</h1>
+  <div class="subtitle">Édite INDEX.csv. Régénère codes.hpp après modif : <code>cmake --build build/</code></div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="toolbar">
+        <input type="search" id="search" placeholder="Rechercher (code, nom, description...)">
+        <select id="filterComponent"><option value="">Tous composants</option></select>
+        <select id="filterCategory"><option value="">Toutes catégories</option></select>
+        <select id="filterSeverity"><option value="">Toutes sévérités</option></select>
+      </div>
+      <div class="result-count" id="resultCount"></div>
+      <table id="table">
+        <thead>
+          <tr>
+            <th>Code</th><th>Composant</th><th>Catégorie</th><th>Nom</th>
+            <th>Description</th><th>Sévérité</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty" class="empty" style="display:none">Aucun code ne correspond.</div>
+    </div>
+
+    <div class="panel">
+      <div class="form-title" id="formTitle">Ajouter un code</div>
+      <form id="form">
+        <div>
+          <label>Aperçu</label>
+          <div class="preview-code" id="preview">—</div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="component">Composant</label>
+            <select id="component" required></select>
+          </div>
+          <div>
+            <label for="category">Catégorie</label>
+            <select id="category" required></select>
+          </div>
+        </div>
+        <div>
+          <label for="number">Numéro (auto si vide)</label>
+          <input id="number" type="number" min="0" max="999" placeholder="auto">
+        </div>
+        <div>
+          <label for="name">Nom court</label>
+          <input id="name" type="text" placeholder="batt_low" required>
+        </div>
+        <div>
+          <label for="description">Description</label>
+          <textarea id="description" placeholder="tension batterie faible" required></textarea>
+        </div>
+        <div>
+          <label for="severity">Sévérité</label>
+          <select id="severity" required></select>
+        </div>
+        <div class="error" id="error"></div>
+        <div class="btn-row">
+          <button type="button" id="cancelEdit" class="btn-secondary" style="display:none">Annuler</button>
+          <button type="submit" id="submitBtn">Ajouter le code</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+let meta = null;
+let codes = [];
+let editingCode = null; // code (string) en cours d'édition, ou null = mode ajout
+
+async function loadMeta() {
+  meta = await (await fetch('/api/meta')).json();
+
+  const compSel = document.getElementById('component');
+  compSel.innerHTML = Object.entries(meta.components)
+    .map(([label, name]) => `<option value="${label}">${label} — ${name}</option>`).join('');
+  const catSel = document.getElementById('category');
+  catSel.innerHTML = Object.entries(meta.categories)
+    .map(([label, name]) => `<option value="${label}">${label} — ${name}</option>`).join('');
+  const sevSel = document.getElementById('severity');
+  sevSel.innerHTML = meta.severities.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  const filterComp = document.getElementById('filterComponent');
+  filterComp.innerHTML += Object.entries(meta.components)
+    .map(([label, name]) => `<option value="${label}">${label} — ${name}</option>`).join('');
+  const filterCat = document.getElementById('filterCategory');
+  filterCat.innerHTML += Object.entries(meta.categories)
+    .map(([label, name]) => `<option value="${label}">${label} — ${name}</option>`).join('');
+  const filterSev = document.getElementById('filterSeverity');
+  filterSev.innerHTML += meta.severities.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  await updatePreview();
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const fComp = document.getElementById('filterComponent').value;
+  const fCat = document.getElementById('filterCategory').value;
+  const fSev = document.getElementById('filterSeverity').value;
+
+  return codes.filter(c => {
+    if (fComp && c.component_label !== fComp) return false;
+    if (fCat && c.category_label !== fCat) return false;
+    if (fSev && c.severity !== fSev) return false;
+    if (q) {
+      const haystack = `${c.code} ${c.name} ${c.description} ${c.component_name} ${c.category_name}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTable() {
+  const filtered = applyFilters();
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  const count = document.getElementById('resultCount');
+
+  count.textContent = `${filtered.length} / ${codes.length} code(s)`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = filtered.map(c => `
+    <tr>
+      <td class="code">${c.code}</td>
+      <td>${c.component_name}</td>
+      <td>${c.category_name}</td>
+      <td>${c.name}</td>
+      <td>${c.description}</td>
+      <td><span class="badge ${c.is_major ? 'major' : 'minor'}">${c.severity}</span></td>
+      <td class="actions">
+        <button type="button" class="icon-btn" data-edit="${c.code}">Modifier</button>
+        <button type="button" class="icon-btn danger" data-delete="${c.code}">Supprimer</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => startEdit(btn.dataset.edit)));
+  tbody.querySelectorAll('[data-delete]').forEach(btn =>
+    btn.addEventListener('click', () => deleteCode(btn.dataset.delete)));
+}
+
+async function loadCodes() {
+  codes = await (await fetch('/api/codes')).json();
+  renderTable();
+}
+
+async function updatePreview() {
+  const component = document.getElementById('component').value;
+  const category = document.getElementById('category').value;
+  const numberInput = document.getElementById('number');
+  let number = numberInput.value;
+  if (!number) {
+    if (editingCode) {
+      // En édition, ne pas auto-suggérer un nouveau numéro par défaut —
+      // l'utilisateur doit changer explicitement s'il veut renuméroter.
+      number = editingCode.slice(3);
+    } else {
+      const res = await fetch(`/api/next_number?component=${component}&category=${category}`);
+      number = (await res.json()).number;
+      numberInput.placeholder = String(number).padStart(3, '0');
+    }
+  }
+  const numStr = String(number).padStart(3, '0');
+  document.getElementById('preview').textContent = `${component}${category}${numStr}`;
+}
+
+document.getElementById('component').addEventListener('change', updatePreview);
+document.getElementById('category').addEventListener('change', updatePreview);
+document.getElementById('number').addEventListener('input', updatePreview);
+document.getElementById('search').addEventListener('input', renderTable);
+document.getElementById('filterComponent').addEventListener('change', renderTable);
+document.getElementById('filterCategory').addEventListener('change', renderTable);
+document.getElementById('filterSeverity').addEventListener('change', renderTable);
+
+function startEdit(code) {
+  const c = codes.find(x => x.code === code);
+  if (!c) return;
+  editingCode = code;
+
+  document.getElementById('component').value = c.component_label;
+  document.getElementById('category').value = c.category_label;
+  document.getElementById('number').value = c.number;
+  document.getElementById('name').value = c.name;
+  document.getElementById('description').value = c.description;
+  document.getElementById('severity').value = c.severity;
+  document.getElementById('error').textContent = '';
+
+  document.getElementById('formTitle').textContent = `Modifier ${code}`;
+  document.getElementById('submitBtn').textContent = 'Enregistrer';
+  document.getElementById('cancelEdit').style.display = '';
+
+  updatePreview();
+  document.getElementById('component').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetForm() {
+  editingCode = null;
+  document.getElementById('form').reset();
+  document.getElementById('formTitle').textContent = 'Ajouter un code';
+  document.getElementById('submitBtn').textContent = 'Ajouter le code';
+  document.getElementById('cancelEdit').style.display = 'none';
+  document.getElementById('error').textContent = '';
+  updatePreview();
+}
+
+document.getElementById('cancelEdit').addEventListener('click', resetForm);
+
+async function deleteCode(code) {
+  if (!confirm(`Supprimer ${code} ? Cette action modifie INDEX.csv immédiatement.`)) return;
+  const res = await fetch(`/api/codes/${encodeURIComponent(code)}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'erreur inconnue');
+    return;
+  }
+  codes = data;
+  if (editingCode === code) resetForm();
+  renderTable();
+}
+
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('error');
+  errorEl.textContent = '';
+
+  const payload = {
+    component: document.getElementById('component').value,
+    category: document.getElementById('category').value,
+    number: document.getElementById('number').value || null,
+    name: document.getElementById('name').value,
+    description: document.getElementById('description').value,
+    severity: document.getElementById('severity').value,
+  };
+
+  const url = editingCode ? `/api/codes/${encodeURIComponent(editingCode)}` : '/api/codes';
+  const method = editingCode ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    errorEl.textContent = data.error || 'erreur inconnue';
+    return;
+  }
+
+  codes = data;
+  resetForm();
+  renderTable();
+});
+
+loadMeta().then(loadCodes);
+</script>
+</body>
+</html>

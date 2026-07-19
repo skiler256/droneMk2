@@ -27,9 +27,17 @@ class SharedNavMemHandler : public SharedCompMemHandler {
     private:
     SharedNavMem& nav_;
 
-      uint32_t computeChecksum() {
-return UTILITIES::crc32(nav_.data);
+      uint32_t computeChecksum(TYPES::ComponentID) {
+return UTILITIES::crc32(nav_.data) ^ historyChecksum();
 };
 
-void reset(){};
+void reset(TYPES::ComponentID id){
+    // Seul le propriétaire peut reconstruire sa propre shm.
+    if(id == TYPES::ComponentID::Navigation){
+        nav_.data = SharedNavMem::payload{};
+        sanitizeHistory(comp_.HotStartHistory);
+        sanitizeHistory(comp_.ColdStartHistory);
+        updateChecksum(id);
+    }
+};
 };

@@ -62,9 +62,17 @@ private:
     keepRunning_.store(false, std::memory_order_release);
   }
 
+  // sigaction() (pas std::signal()) : sur Linux/glibc signal() active
+  // SA_RESTART par défaut, ce qui relance waitpid() au lieu de le faire
+  // échouer avec EINTR — monitorLoop() resterait bloqué indéfiniment.
   void installSignalHandler() {
-    std::signal(SIGINT, signalHandler);
-    std::signal(SIGTERM, signalHandler);
+    struct sigaction sa {};
+    sa.sa_handler = signalHandler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; // pas de SA_RESTART
+
+    sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
   }
 
   [[nodiscard]] bool publishAll() {
@@ -88,7 +96,8 @@ private:
                         *navShm_.ptr);
     sfHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
                        *sfShm_.ptr);
-    sysHandler_.emplace(*sysShm_.ptr, TYPES::Us(2000));
+    sysHandler_.emplace(*sysShm_.ptr, TYPES::ComponentID::GlobalWatchdog,
+                        TYPES::Us(2000));
 
     return true;
   }
@@ -109,18 +118,30 @@ private:
   }
 
   void monitorLoop() {
+    // waitpid(-1, ..., 0) bloque jusqu'à ce qu'UN enfant change d'état —
+    // pas de poll, réveil immédiat par le kernel.
     while (keepRunning_.load(std::memory_order_acquire)) {
+      int status = 0;
+      pid_t pid = waitpid(-1, &status, 0);
+
+      if (pid == -1)
+        continue; // EINTR (signal reçu) ou ECHILD : on reboucle
+
       for (auto &child : children_) {
-        int status = 0;
-        pid_t res = waitpid(child.pid, &status, WNOHANG);
-        if (res == child.pid) {
-          std::cerr << "GlobalWatchdog: " << child.role
-                    << " est mort, reset writer flags + respawn\n";
-          resetAll(child.id);
-          child = spawn(child.id, child.role);
+        if (child.pid == pid) {
+          if (!keepRunning_.load(std::memory_order_acquire)) {
+            // Ctrl+C envoie le signal à tout le groupe, donc à cet enfant
+            // aussi : ne pas le respawn, juste noter qu'il est déjà mort.
+            child.pid = -1;
+          } else {
+            std::cerr << "GlobalWatchdog: " << child.role
+                      << " est mort, reset writer flags + respawn\n";
+            resetAll(child.id);
+            child = spawn(child.id, child.role);
+          }
+          break;
         }
       }
-      sleep(1); // provisoire : a remplacer par un vrai thread RT plus tard
     }
   }
 

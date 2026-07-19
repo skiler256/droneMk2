@@ -31,6 +31,8 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/share/cmake-3.31/Modules/FindGTest.cmake"
   "/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake"
   "/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake"
+  "/usr/share/cmake-3.31/Modules/FindPython/Support.cmake"
+  "/usr/share/cmake-3.31/Modules/FindPython3.cmake"
   "/usr/share/cmake-3.31/Modules/FindThreads.cmake"
   "/usr/share/cmake-3.31/Modules/GoogleTest.cmake"
   "/usr/share/cmake-3.31/Modules/Internal/CMakeCXXLinkerInformation.cmake"
@@ -64,8 +66,12 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
+  "CMakeFiles/generate_codes.dir/DependInfo.cmake"
   "CMakeFiles/drone_lib.dir/DependInfo.cmake"
   "CMakeFiles/drone.dir/DependInfo.cmake"
   "CMakeFiles/test_types.dir/DependInfo.cmake"
   "CMakeFiles/test_shared_state.dir/DependInfo.cmake"
+  "CMakeFiles/test_watchdog.dir/DependInfo.cmake"
+  "CMakeFiles/test_stub_child.dir/DependInfo.cmake"
+  "CMakeFiles/test_global_watchdog.dir/DependInfo.cmake"
   )

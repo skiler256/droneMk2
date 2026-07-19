@@ -127,6 +127,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named generate_codes
+
+# Build rule for target.
+generate_codes: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 generate_codes
+.PHONY : generate_codes
+
+# fast build rule for target.
+generate_codes/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_codes.dir/build.make CMakeFiles/generate_codes.dir/build
+.PHONY : generate_codes/fast
+
+#=============================================================================
 # Target rules for targets named drone_lib
 
 # Build rule for target.
@@ -177,6 +190,45 @@ test_shared_state: cmake_check_build_system
 test_shared_state/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/build
 .PHONY : test_shared_state/fast
+
+#=============================================================================
+# Target rules for targets named test_watchdog
+
+# Build rule for target.
+test_watchdog: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_watchdog
+.PHONY : test_watchdog
+
+# fast build rule for target.
+test_watchdog/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/build
+.PHONY : test_watchdog/fast
+
+#=============================================================================
+# Target rules for targets named test_stub_child
+
+# Build rule for target.
+test_stub_child: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_stub_child
+.PHONY : test_stub_child
+
+# fast build rule for target.
+test_stub_child/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/build
+.PHONY : test_stub_child/fast
+
+#=============================================================================
+# Target rules for targets named test_global_watchdog
+
+# Build rule for target.
+test_global_watchdog: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_global_watchdog
+.PHONY : test_global_watchdog
+
+# fast build rule for target.
+test_global_watchdog/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/build
+.PHONY : test_global_watchdog/fast
 
 src/Drivers/LD06.o: src/Drivers/LD06.cpp.o
 .PHONY : src/Drivers/LD06.o
@@ -322,6 +374,54 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone.dir/build.make CMakeFiles/drone.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+tests/helpers/stub_child.o: tests/helpers/stub_child.cpp.o
+.PHONY : tests/helpers/stub_child.o
+
+# target to build an object file
+tests/helpers/stub_child.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.o
+.PHONY : tests/helpers/stub_child.cpp.o
+
+tests/helpers/stub_child.i: tests/helpers/stub_child.cpp.i
+.PHONY : tests/helpers/stub_child.i
+
+# target to preprocess a source file
+tests/helpers/stub_child.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.i
+.PHONY : tests/helpers/stub_child.cpp.i
+
+tests/helpers/stub_child.s: tests/helpers/stub_child.cpp.s
+.PHONY : tests/helpers/stub_child.s
+
+# target to generate assembly for a file
+tests/helpers/stub_child.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.s
+.PHONY : tests/helpers/stub_child.cpp.s
+
+tests/test_global_watchdog.o: tests/test_global_watchdog.cpp.o
+.PHONY : tests/test_global_watchdog.o
+
+# target to build an object file
+tests/test_global_watchdog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o
+.PHONY : tests/test_global_watchdog.cpp.o
+
+tests/test_global_watchdog.i: tests/test_global_watchdog.cpp.i
+.PHONY : tests/test_global_watchdog.i
+
+# target to preprocess a source file
+tests/test_global_watchdog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.i
+.PHONY : tests/test_global_watchdog.cpp.i
+
+tests/test_global_watchdog.s: tests/test_global_watchdog.cpp.s
+.PHONY : tests/test_global_watchdog.s
+
+# target to generate assembly for a file
+tests/test_global_watchdog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.s
+.PHONY : tests/test_global_watchdog.cpp.s
+
 tests/test_shared_state.o: tests/test_shared_state.cpp.o
 .PHONY : tests/test_shared_state.o
 
@@ -370,6 +470,30 @@ tests/test_types.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/tests/test_types.cpp.s
 .PHONY : tests/test_types.cpp.s
 
+tests/test_watchdog.o: tests/test_watchdog.cpp.o
+.PHONY : tests/test_watchdog.o
+
+# target to build an object file
+tests/test_watchdog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o
+.PHONY : tests/test_watchdog.cpp.o
+
+tests/test_watchdog.i: tests/test_watchdog.cpp.i
+.PHONY : tests/test_watchdog.i
+
+# target to preprocess a source file
+tests/test_watchdog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.i
+.PHONY : tests/test_watchdog.cpp.i
+
+tests/test_watchdog.s: tests/test_watchdog.cpp.s
+.PHONY : tests/test_watchdog.s
+
+# target to generate assembly for a file
+tests/test_watchdog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.s
+.PHONY : tests/test_watchdog.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -379,10 +503,14 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test"
+	@echo "... generate_codes"
 	@echo "... drone"
 	@echo "... drone_lib"
+	@echo "... test_global_watchdog"
 	@echo "... test_shared_state"
+	@echo "... test_stub_child"
 	@echo "... test_types"
+	@echo "... test_watchdog"
 	@echo "... src/Drivers/LD06.o"
 	@echo "... src/Drivers/LD06.i"
 	@echo "... src/Drivers/LD06.s"
@@ -401,12 +529,21 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... tests/helpers/stub_child.o"
+	@echo "... tests/helpers/stub_child.i"
+	@echo "... tests/helpers/stub_child.s"
+	@echo "... tests/test_global_watchdog.o"
+	@echo "... tests/test_global_watchdog.i"
+	@echo "... tests/test_global_watchdog.s"
 	@echo "... tests/test_shared_state.o"
 	@echo "... tests/test_shared_state.i"
 	@echo "... tests/test_shared_state.s"
 	@echo "... tests/test_types.o"
 	@echo "... tests/test_types.i"
 	@echo "... tests/test_types.s"
+	@echo "... tests/test_watchdog.o"
+	@echo "... tests/test_watchdog.i"
+	@echo "... tests/test_watchdog.s"
 .PHONY : help
 
 

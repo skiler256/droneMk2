@@ -34,76 +34,75 @@
 //   return 0;
 // };
 
-// #include "drone/Components/Navigation/Navigation.hpp"
-// #include "drone/Components/SensorFusions/SensorsFusion.hpp"
-// #include "drone/core/GlobalWatchdog.hpp"
-// #include "drone/shm.hpp"
-// #include "drone/types.hpp"
+#include "drone/Components/Navigation/Navigation.hpp"
+#include "drone/Components/SensorFusions/SensorsFusion.hpp"
+#include "drone/core/GlobalWatchdog.hpp"
+#include "drone/shm.hpp"
+#include "drone/types.hpp"
 
-// #include <iostream>
-// #include <string_view>
-// #include <unistd.h>
+#include <iostream>
+#include <string_view>
+#include <unistd.h>
 
-// using namespace TYPES;
+using namespace TYPES;
 
-// namespace {
+namespace {
 
-// int runNavigation() {
-//   auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
-//   auto sf  = attachSharedMemory<SharedSFMem>(kSFShmPath);
-//   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
+int runNavigation() {
+  auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
+  auto sf  = attachSharedMemory<SharedSFMem>(kSFShmPath);
+  auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
 
-//   if (!nav || !sf || !sys) {
-//     std::cerr << "Navigation: echec attach shm\n";
-//     return 1;
-//   }
+  if (!nav || !sf || !sys) {
+    std::cerr << "Navigation: echec attach shm\n";
+    return 1;
+  }
 
-//   SharedNavMemHandler navHandler(ComponentID::Navigation, Us(2000),
-//   *nav->ptr); SharedSFMemHandler sfHandler(ComponentID::SensorFusion,
-//   Us(2000), *sf->ptr); SharedSysStateMemHandler sysHandler(*sys->ptr,
-//   Us(2000));
+  SharedNavMemHandler navHandler(ComponentID::Navigation, Us(2000),  *nav->ptr); 
+  SharedSFMemHandler sfHandler(ComponentID::Navigation,  Us(2000), *sf->ptr); 
+  SharedSysStateMemHandler sysHandler(*sys->ptr,ComponentID::Navigation,  Us(2000));
 
-//   ComponenConfig config{.id = ComponentID::Navigation, .CompCore = 0};
-//   Navigation composant(config, sysHandler, navHandler, sfHandler);
+  ComponenConfig config{.id = ComponentID::Navigation, .CompCore = 0};
+  Navigation composant(config, sysHandler, navHandler, sfHandler);
 
-//   while (true) sleep(2);
-//   return 0;
-// }
+  while (true) sleep(2);
+  return 0;
+}
 
-// int runSensorFusion() {
-//   auto sf  = attachSharedMemory<SharedSFMem>(kSFShmPath);
-//   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
+int runSensorFusion() {
+  auto sf  = attachSharedMemory<SharedSFMem>(kSFShmPath);
+  auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
 
-//   if (!sf || !sys) {
-//     std::cerr << "SensorFusion: echec attach shm\n";
-//     return 1;
-//   }
+  if (!sf || !sys) {
+    std::cerr << "SensorFusion: echec attach shm\n";
+    return 1;
+  }
 
-//   SharedSFMemHandler sfHandler(ComponentID::SensorFusion, Us(2000),
-//   *sf->ptr); SharedSysStateMemHandler sysHandler(*sys->ptr, Us(2000));
+  SharedSFMemHandler sfHandler(ComponentID::SensorFusion, Us(2000),*sf->ptr); 
+  SharedSysStateMemHandler sysHandler(*sys->ptr,ComponentID::SensorFusion,  Us(2000));
 
-//   ComponenConfig config{.id = ComponentID::SensorFusion, .CompCore = 0};
-//   SensorFusions composant(config, sysHandler, sfHandler);
+  ComponenConfig config{.id = ComponentID::SensorFusion, .CompCore = 0};
+  SensorFusions composant(config, sysHandler, sfHandler);
 
-//   while (true) sleep(2);
-//   return 0;
-// }
+  while (true) sleep(2);
+  return 0;
+}
 
-// } // namespace
+} // namespace
 
-// int main(int argc, char **argv) {
-//   std::string_view role = (argc > 1) ? argv[1] : "globalwatchdog";
+int main(int argc, char **argv) {
+  std::string_view role = (argc > 1) ? argv[1] : "globalwatchdog";
 
-//   if (role == "navigation")
-//     return runNavigation();
-//   if (role == "sensorfusion")
-//     return runSensorFusion();
+  if (role == "navigation")
+    return runNavigation();
+  if (role == "sensorfusion")
+    return runSensorFusion();
 
-//   // point d'entree par defaut : process parent
-//   GlobalWatchdog gwd(argv[0]);
-//   gwd.run();
-//   return 0;
-// }
+  // point d'entree par defaut : process parent
+  GlobalWatchdog gwd(argv[0]);
+  gwd.run();
+  return 0;
+}
 
 // #include "drone/Components/Drivers/NEO-M8N.hpp"
 
@@ -290,125 +289,125 @@
 //   return 0;
 // };
 
-#include "drone/Components/Drivers/LD06.hpp"
+// #include "drone/Components/Drivers/LD06.hpp"
 
-#include <algorithm>
-#include <chrono>
-#include <cstdio>
-#include <iomanip>
-#include <iostream>
-#include <thread>
+// #include <algorithm>
+// #include <chrono>
+// #include <cstdio>
+// #include <iomanip>
+// #include <iostream>
+// #include <thread>
 
-namespace {
+// namespace {
 
-const char* errorToString(TYPES::DriverError err) {
-    switch (err) {
-        case TYPES::DriverError::None:             return "None";
-        case TYPES::DriverError::I2COpenFailed:     return "I2COpenFailed";
-        case TYPES::DriverError::I2CAddressFailed:  return "I2CAddressFailed";
-        case TYPES::DriverError::I2CReadFailed:     return "I2CReadFailed";
-        case TYPES::DriverError::I2CWriteFailed:    return "I2CWriteFailed";
-        case TYPES::DriverError::UARTOpenFailed:    return "UARTOpenFailed";
-        case TYPES::DriverError::UARTAttrGetFailed: return "UARTAttrGetFailed";
-        case TYPES::DriverError::UARTAttrSetFailed: return "UARTAttrSetFailed";
-        case TYPES::DriverError::UARTReadFailed:    return "UARTReadFailed";
-        case TYPES::DriverError::UARTWriteFailed:   return "UARTWriteFailed";
-        case TYPES::DriverError::NotInitialized:    return "NotInitialized";
-        case TYPES::DriverError::Timeout:           return "Timeout";
-        case TYPES::DriverError::InvalidData:       return "InvalidData";
-        case TYPES::DriverError::ConfigFailed:      return "ConfigFailed";
-        case TYPES::DriverError::NoNewData:         return "NoNewData";
-    }
-    return "Unknown";
-}
+// const char* errorToString(TYPES::DriverError err) {
+//     switch (err) {
+//         case TYPES::DriverError::None:             return "None";
+//         case TYPES::DriverError::I2COpenFailed:     return "I2COpenFailed";
+//         case TYPES::DriverError::I2CAddressFailed:  return "I2CAddressFailed";
+//         case TYPES::DriverError::I2CReadFailed:     return "I2CReadFailed";
+//         case TYPES::DriverError::I2CWriteFailed:    return "I2CWriteFailed";
+//         case TYPES::DriverError::UARTOpenFailed:    return "UARTOpenFailed";
+//         case TYPES::DriverError::UARTAttrGetFailed: return "UARTAttrGetFailed";
+//         case TYPES::DriverError::UARTAttrSetFailed: return "UARTAttrSetFailed";
+//         case TYPES::DriverError::UARTReadFailed:    return "UARTReadFailed";
+//         case TYPES::DriverError::UARTWriteFailed:   return "UARTWriteFailed";
+//         case TYPES::DriverError::NotInitialized:    return "NotInitialized";
+//         case TYPES::DriverError::Timeout:           return "Timeout";
+//         case TYPES::DriverError::InvalidData:       return "InvalidData";
+//         case TYPES::DriverError::ConfigFailed:      return "ConfigFailed";
+//         case TYPES::DriverError::NoNewData:         return "NoNewData";
+//     }
+//     return "Unknown";
+// }
 
-// Représente une distance (mm) par une barre proportionnelle, tronquée à maxBarLen.
-std::string distanceBar(std::uint16_t distanceMm, int maxBarLen, std::uint16_t maxRangeMm) {
-    if (distanceMm == 0) {
-        return "  (pas de mesure)";
-    }
-    int len = static_cast<int>((static_cast<double>(distanceMm) / maxRangeMm) * maxBarLen);
-    len = std::clamp(len, 1, maxBarLen);
-    return std::string(static_cast<std::size_t>(len), '#');
-}
+// // Représente une distance (mm) par une barre proportionnelle, tronquée à maxBarLen.
+// std::string distanceBar(std::uint16_t distanceMm, int maxBarLen, std::uint16_t maxRangeMm) {
+//     if (distanceMm == 0) {
+//         return "  (pas de mesure)";
+//     }
+//     int len = static_cast<int>((static_cast<double>(distanceMm) / maxRangeMm) * maxBarLen);
+//     len = std::clamp(len, 1, maxBarLen);
+//     return std::string(static_cast<std::size_t>(len), '#');
+// }
 
-void printRadar(const LidarData& scan, std::uint64_t scanCount, std::uint64_t crcErrorCount) {
-    std::cout << "\033[2J\033[H"; // clear écran (ANSI)
+// void printRadar(const LidarData& scan, std::uint64_t scanCount, std::uint64_t crcErrorCount) {
+//     std::cout << "\033[2J\033[H"; // clear écran (ANSI)
 
-    constexpr int kSectorSizeDeg = 10;
-    constexpr int kNumSectors = 360 / kSectorSizeDeg;
-    constexpr int kMaxBarLen = 40;
-    constexpr std::uint16_t kMaxRangeMm = 8000; // 8m, échelle d'affichage seulement
+//     constexpr int kSectorSizeDeg = 10;
+//     constexpr int kNumSectors = 360 / kSectorSizeDeg;
+//     constexpr int kMaxBarLen = 40;
+//     constexpr std::uint16_t kMaxRangeMm = 8000; // 8m, échelle d'affichage seulement
 
-    std::cout << "======================= LD06 Lidar — Scan #" << scanCount << " =======================\n";
+//     std::cout << "======================= LD06 Lidar — Scan #" << scanCount << " =======================\n";
 
-    std::uint16_t minDist = 0xFFFF;
-    int minDistAngle = -1;
-    std::uint16_t maxDist = 0;
-    int validPoints = 0;
+//     std::uint16_t minDist = 0xFFFF;
+//     int minDistAngle = -1;
+//     std::uint16_t maxDist = 0;
+//     int validPoints = 0;
 
-    for (int sector = 0; sector < kNumSectors; ++sector) {
-        // Moyenne (sur les points valides) des distances du secteur pour lisser l'affichage.
-        std::uint32_t sum = 0;
-        int count = 0;
-        for (int a = sector * kSectorSizeDeg; a < (sector + 1) * kSectorSizeDeg; ++a) {
-            std::uint16_t d = scan.distance_mm[static_cast<std::size_t>(a)];
-            if (d > 0) {
-                sum += d;
-                ++count;
-                ++validPoints;
-                if (d < minDist) { minDist = d; minDistAngle = a; }
-                if (d > maxDist) { maxDist = d; }
-            }
-        }
+//     for (int sector = 0; sector < kNumSectors; ++sector) {
+//         // Moyenne (sur les points valides) des distances du secteur pour lisser l'affichage.
+//         std::uint32_t sum = 0;
+//         int count = 0;
+//         for (int a = sector * kSectorSizeDeg; a < (sector + 1) * kSectorSizeDeg; ++a) {
+//             std::uint16_t d = scan.distance_mm[static_cast<std::size_t>(a)];
+//             if (d > 0) {
+//                 sum += d;
+//                 ++count;
+//                 ++validPoints;
+//                 if (d < minDist) { minDist = d; minDistAngle = a; }
+//                 if (d > maxDist) { maxDist = d; }
+//             }
+//         }
 
-        std::uint16_t avgDist = count > 0 ? static_cast<std::uint16_t>(sum / static_cast<std::uint32_t>(count)) : 0;
+//         std::uint16_t avgDist = count > 0 ? static_cast<std::uint16_t>(sum / static_cast<std::uint32_t>(count)) : 0;
 
-        std::cout << std::setw(3) << (sector * kSectorSizeDeg) << "deg | "
-                   << std::setw(5) << (avgDist > 0 ? std::to_string(avgDist) + "mm" : "  --  ") << " | "
-                   << distanceBar(avgDist, kMaxBarLen, kMaxRangeMm) << "\n";
-    }
+//         std::cout << std::setw(3) << (sector * kSectorSizeDeg) << "deg | "
+//                    << std::setw(5) << (avgDist > 0 ? std::to_string(avgDist) + "mm" : "  --  ") << " | "
+//                    << distanceBar(avgDist, kMaxBarLen, kMaxRangeMm) << "\n";
+//     }
 
-    std::cout << "-------------------------------------------------------------------------\n";
-    std::cout << "Points valides   : " << validPoints << " / 360\n";
-    if (minDistAngle >= 0) {
-        std::cout << "Obstacle le + proche : " << minDist << " mm  a " << minDistAngle << " deg\n";
-    } else {
-        std::cout << "Obstacle le + proche : aucun\n";
-    }
-    std::cout << "Distance max     : " << maxDist << " mm\n";
-    std::cout << "Erreurs CRC (total) : " << crcErrorCount << "\n";
-    std::cout << "===========================================================================\n";
-}
+//     std::cout << "-------------------------------------------------------------------------\n";
+//     std::cout << "Points valides   : " << validPoints << " / 360\n";
+//     if (minDistAngle >= 0) {
+//         std::cout << "Obstacle le + proche : " << minDist << " mm  a " << minDistAngle << " deg\n";
+//     } else {
+//         std::cout << "Obstacle le + proche : aucun\n";
+//     }
+//     std::cout << "Distance max     : " << maxDist << " mm\n";
+//     std::cout << "Erreurs CRC (total) : " << crcErrorCount << "\n";
+//     std::cout << "===========================================================================\n";
+// }
 
-} // namespace
+// } // namespace
 
-int main() {
-    LD06 lidar("/dev/ttyAMA2");
+// int main() {
+//     LD06 lidar("/dev/ttyAMA2");
 
-    std::cout << "Initialisation du LD06...\n";
-    if (auto err = lidar.init()) {
-        std::cerr << "Echec init(): " << errorToString(*err) << "\n";
-        return 1;
-    }
-    std::cout << "LD06 initialise. En attente d'un tour complet...\n";
+//     std::cout << "Initialisation du LD06...\n";
+//     if (auto err = lidar.init()) {
+//         std::cerr << "Echec init(): " << errorToString(*err) << "\n";
+//         return 1;
+//     }
+//     std::cout << "LD06 initialise. En attente d'un tour complet...\n";
 
-    std::uint64_t scanCount = 0;
-    std::uint64_t crcErrorCount = 0;
+//     std::uint64_t scanCount = 0;
+//     std::uint64_t crcErrorCount = 0;
 
-    while (true) {
-        auto result = lidar.update();
+//     while (true) {
+//         auto result = lidar.update();
 
-        if (result.has_value()) {
-            ++scanCount;
-            printRadar(*result, scanCount, crcErrorCount);
-        } else if (result.error() == TYPES::DriverError::InvalidData) {
-            ++crcErrorCount;
-            // Pas d'affichage à chaque paquet jeté, juste le compteur global (voir tableau).
-        } else if (result.error() != TYPES::DriverError::NoNewData) {
-            std::cerr << "\n[Erreur update()] " << errorToString(result.error()) << "\n";
-        }
+//         if (result.has_value()) {
+//             ++scanCount;
+//             printRadar(*result, scanCount, crcErrorCount);
+//         } else if (result.error() == TYPES::DriverError::InvalidData) {
+//             ++crcErrorCount;
+//             // Pas d'affichage à chaque paquet jeté, juste le compteur global (voir tableau).
+//         } else if (result.error() != TYPES::DriverError::NoNewData) {
+//             std::cerr << "\n[Erreur update()] " << errorToString(result.error()) << "\n";
+//         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5)); // le LD06 débite vite (~4500 pts/s)
-    }
-}
+//         std::this_thread::sleep_for(std::chrono::milliseconds(5)); // le LD06 débite vite (~4500 pts/s)
+//     }
+// }

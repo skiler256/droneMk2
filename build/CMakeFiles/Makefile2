@@ -63,17 +63,25 @@ CMAKE_BINARY_DIR = /home/jules/droneMk2/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
+all: CMakeFiles/generate_codes.dir/all
 all: CMakeFiles/drone_lib.dir/all
 all: CMakeFiles/drone.dir/all
 all: CMakeFiles/test_types.dir/all
 all: CMakeFiles/test_shared_state.dir/all
+all: CMakeFiles/test_watchdog.dir/all
+all: CMakeFiles/test_stub_child.dir/all
+all: CMakeFiles/test_global_watchdog.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
+codegen: CMakeFiles/generate_codes.dir/codegen
 codegen: CMakeFiles/drone_lib.dir/codegen
 codegen: CMakeFiles/drone.dir/codegen
 codegen: CMakeFiles/test_types.dir/codegen
 codegen: CMakeFiles/test_shared_state.dir/codegen
+codegen: CMakeFiles/test_watchdog.dir/codegen
+codegen: CMakeFiles/test_stub_child.dir/codegen
+codegen: CMakeFiles/test_global_watchdog.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -81,17 +89,53 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
+clean: CMakeFiles/generate_codes.dir/clean
 clean: CMakeFiles/drone_lib.dir/clean
 clean: CMakeFiles/drone.dir/clean
 clean: CMakeFiles/test_types.dir/clean
 clean: CMakeFiles/test_shared_state.dir/clean
+clean: CMakeFiles/test_watchdog.dir/clean
+clean: CMakeFiles/test_stub_child.dir/clean
+clean: CMakeFiles/test_global_watchdog.dir/clean
 .PHONY : clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/generate_codes.dir
+
+# All Build rule for target.
+CMakeFiles/generate_codes.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_codes.dir/build.make CMakeFiles/generate_codes.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_codes.dir/build.make CMakeFiles/generate_codes.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=9 "Built target generate_codes"
+.PHONY : CMakeFiles/generate_codes.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/generate_codes.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 1
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/generate_codes.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/generate_codes.dir/rule
+
+# Convenience name for target.
+generate_codes: CMakeFiles/generate_codes.dir/rule
+.PHONY : generate_codes
+
+# codegen rule for target.
+CMakeFiles/generate_codes.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_codes.dir/build.make CMakeFiles/generate_codes.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=9 "Finished codegen for target generate_codes"
+.PHONY : CMakeFiles/generate_codes.dir/codegen
+
+# clean rule for target.
+CMakeFiles/generate_codes.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_codes.dir/build.make CMakeFiles/generate_codes.dir/clean
+.PHONY : CMakeFiles/generate_codes.dir/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/drone_lib.dir
 
 # All Build rule for target.
-CMakeFiles/drone_lib.dir/all:
+CMakeFiles/drone_lib.dir/all: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=3,4,5,6,7,8 "Built target drone_lib"
@@ -99,7 +143,7 @@ CMakeFiles/drone_lib.dir/all:
 
 # Build rule for subdir invocation for target.
 CMakeFiles/drone_lib.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 6
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 7
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/drone_lib.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
 .PHONY : CMakeFiles/drone_lib.dir/rule
@@ -109,7 +153,7 @@ drone_lib: CMakeFiles/drone_lib.dir/rule
 .PHONY : drone_lib
 
 # codegen rule for target.
-CMakeFiles/drone_lib.dir/codegen:
+CMakeFiles/drone_lib.dir/codegen: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/codegen
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=3,4,5,6,7,8 "Finished codegen for target drone_lib"
 .PHONY : CMakeFiles/drone_lib.dir/codegen
@@ -124,6 +168,7 @@ CMakeFiles/drone_lib.dir/clean:
 
 # All Build rule for target.
 CMakeFiles/drone.dir/all: CMakeFiles/drone_lib.dir/all
+CMakeFiles/drone.dir/all: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone.dir/build.make CMakeFiles/drone.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone.dir/build.make CMakeFiles/drone.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=1,2 "Built target drone"
@@ -131,7 +176,7 @@ CMakeFiles/drone.dir/all: CMakeFiles/drone_lib.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/drone.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 9
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/drone.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
 .PHONY : CMakeFiles/drone.dir/rule
@@ -141,7 +186,7 @@ drone: CMakeFiles/drone.dir/rule
 .PHONY : drone
 
 # codegen rule for target.
-CMakeFiles/drone.dir/codegen:
+CMakeFiles/drone.dir/codegen: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone.dir/build.make CMakeFiles/drone.dir/codegen
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=1,2 "Finished codegen for target drone"
 .PHONY : CMakeFiles/drone.dir/codegen
@@ -156,14 +201,15 @@ CMakeFiles/drone.dir/clean:
 
 # All Build rule for target.
 CMakeFiles/test_types.dir/all: CMakeFiles/drone_lib.dir/all
+CMakeFiles/test_types.dir/all: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=11,12 "Built target test_types"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=16,17 "Built target test_types"
 .PHONY : CMakeFiles/test_types.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_types.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 9
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_types.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_types.dir/rule
@@ -173,9 +219,9 @@ test_types: CMakeFiles/test_types.dir/rule
 .PHONY : test_types
 
 # codegen rule for target.
-CMakeFiles/test_types.dir/codegen:
+CMakeFiles/test_types.dir/codegen: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=11,12 "Finished codegen for target test_types"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=16,17 "Finished codegen for target test_types"
 .PHONY : CMakeFiles/test_types.dir/codegen
 
 # clean rule for target.
@@ -188,14 +234,15 @@ CMakeFiles/test_types.dir/clean:
 
 # All Build rule for target.
 CMakeFiles/test_shared_state.dir/all: CMakeFiles/drone_lib.dir/all
+CMakeFiles/test_shared_state.dir/all: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=9,10 "Built target test_shared_state"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=12,13 "Built target test_shared_state"
 .PHONY : CMakeFiles/test_shared_state.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_shared_state.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 9
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_shared_state.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_shared_state.dir/rule
@@ -205,15 +252,115 @@ test_shared_state: CMakeFiles/test_shared_state.dir/rule
 .PHONY : test_shared_state
 
 # codegen rule for target.
-CMakeFiles/test_shared_state.dir/codegen:
+CMakeFiles/test_shared_state.dir/codegen: CMakeFiles/generate_codes.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=9,10 "Finished codegen for target test_shared_state"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=12,13 "Finished codegen for target test_shared_state"
 .PHONY : CMakeFiles/test_shared_state.dir/codegen
 
 # clean rule for target.
 CMakeFiles/test_shared_state.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/clean
 .PHONY : CMakeFiles/test_shared_state.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_watchdog.dir
+
+# All Build rule for target.
+CMakeFiles/test_watchdog.dir/all: CMakeFiles/drone_lib.dir/all
+CMakeFiles/test_watchdog.dir/all: CMakeFiles/generate_codes.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=18,19 "Built target test_watchdog"
+.PHONY : CMakeFiles/test_watchdog.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_watchdog.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 9
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_watchdog.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_watchdog.dir/rule
+
+# Convenience name for target.
+test_watchdog: CMakeFiles/test_watchdog.dir/rule
+.PHONY : test_watchdog
+
+# codegen rule for target.
+CMakeFiles/test_watchdog.dir/codegen: CMakeFiles/generate_codes.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=18,19 "Finished codegen for target test_watchdog"
+.PHONY : CMakeFiles/test_watchdog.dir/codegen
+
+# clean rule for target.
+CMakeFiles/test_watchdog.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/clean
+.PHONY : CMakeFiles/test_watchdog.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_stub_child.dir
+
+# All Build rule for target.
+CMakeFiles/test_stub_child.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=14,15 "Built target test_stub_child"
+.PHONY : CMakeFiles/test_stub_child.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_stub_child.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_stub_child.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_stub_child.dir/rule
+
+# Convenience name for target.
+test_stub_child: CMakeFiles/test_stub_child.dir/rule
+.PHONY : test_stub_child
+
+# codegen rule for target.
+CMakeFiles/test_stub_child.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=14,15 "Finished codegen for target test_stub_child"
+.PHONY : CMakeFiles/test_stub_child.dir/codegen
+
+# clean rule for target.
+CMakeFiles/test_stub_child.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/clean
+.PHONY : CMakeFiles/test_stub_child.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_global_watchdog.dir
+
+# All Build rule for target.
+CMakeFiles/test_global_watchdog.dir/all: CMakeFiles/drone_lib.dir/all
+CMakeFiles/test_global_watchdog.dir/all: CMakeFiles/test_stub_child.dir/all
+CMakeFiles/test_global_watchdog.dir/all: CMakeFiles/generate_codes.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=10,11 "Built target test_global_watchdog"
+.PHONY : CMakeFiles/test_global_watchdog.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_global_watchdog.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 11
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_global_watchdog.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_global_watchdog.dir/rule
+
+# Convenience name for target.
+test_global_watchdog: CMakeFiles/test_global_watchdog.dir/rule
+.PHONY : test_global_watchdog
+
+# codegen rule for target.
+CMakeFiles/test_global_watchdog.dir/codegen: CMakeFiles/test_stub_child.dir/all
+CMakeFiles/test_global_watchdog.dir/codegen: CMakeFiles/generate_codes.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=10,11 "Finished codegen for target test_global_watchdog"
+.PHONY : CMakeFiles/test_global_watchdog.dir/codegen
+
+# clean rule for target.
+CMakeFiles/test_global_watchdog.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/clean
+.PHONY : CMakeFiles/test_global_watchdog.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

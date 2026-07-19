@@ -73,10 +73,12 @@ std::expected<MagData, TYPES::DriverError> LIS3MDL::update() {
   const auto rawY = static_cast<std::int16_t>(data[3] << 8 | data[2]);
   const auto rawZ = static_cast<std::int16_t>(data[5] << 8 | data[4]);
 
+  // kScale8G est en mG/LSB (cf. déclaration) : /1000 pour convertir en Gauss,
+  // l'unité de TYPES::MagneticField.
   MagData out{};
-  out.x = rawX * kScale8G;
-  out.y = rawY * kScale8G;
-  out.z = rawZ * kScale8G;
+  out.field.B.x = static_cast<float>(rawX * kScale8G / 1000.0);
+  out.field.B.y = static_cast<float>(rawY * kScale8G / 1000.0);
+  out.field.B.z = static_cast<float>(rawZ * kScale8G / 1000.0);
 
   return out;
 }

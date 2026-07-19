@@ -18,7 +18,7 @@ private:
   void loop() override;
 };
 
-class Navigation : public ComponentBase {
+class Navigation : public ComponentBase<1> {
 public:
   explicit Navigation(ComponenConfig config, SharedSysStateMemHandler &sysState,
                       SharedNavMemHandler &nav, SharedSFMemHandler& SF);
@@ -31,7 +31,4 @@ public:
 
 private:
   APTask TAP;
-
-  void restore();
-  void init();
 };

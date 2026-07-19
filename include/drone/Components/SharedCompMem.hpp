@@ -45,17 +45,33 @@ protected:
   TYPES::ComponentID id_;
   TYPES::Us timeout_;
 
-  //   uint32_t computeChecksum() {
-  // return crc32(comp_);
-  // }; rien a foutre la
+  // A combiner avec le checksum du payload de la sous-classe, sinon une
+  // corruption de l'historique de redémarrage passe inaperçue.
+  uint32_t historyChecksum() {
+    return UTILITIES::crc32(comp_.HotStartHistory) ^
+           UTILITIES::crc32(comp_.ColdStartHistory);
+  };
+
+  // Filet partiel : ne détecte que les horodatages dans le futur
+  // (impossibles). TimePoint{} (slot jamais utilisé) n'est pas corrompu.
+  void sanitizeHistory(
+      std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history) {
+    auto now = TYPES::Clock::now();
+    for (auto &ts : history) {
+      if (ts > now)
+        ts = TYPES::TimePoint{};
+    }
+  };
 
 private:
-  void recordStart(std::array<TYPES::TimePoint, 10> &history,
+  void recordStart(std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history,
                    TYPES::TimePoint ts) {
-    auto fetch = getData(timeout_, history);
+    // repairOnCorrupt=true : intention d'écriture malgré le getData interne.
+    auto fetch = getData(id_, timeout_, history, /*repairOnCorrupt=*/true);
     if (!fetch)
       return;
-    std::array<TYPES::TimePoint, 10> &history_ = fetch.value();
+    std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history_ =
+        fetch.value();
     for (size_t i = MAX_COMPONENT_RESTART - 1; i > 0; --i) {
       history_[i] = history_[i - 1];
     }
@@ -65,8 +81,8 @@ private:
   };
 
   std::optional<TYPES::TimePoint>
-  getStart(std::array<TYPES::TimePoint, 10> &history, size_t i) {
-    auto data = getData(timeout_, history);
+  getStart(std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history, size_t i) {
+    auto data = getData(id_, timeout_, history);
     if (data)
       return data->at(i);
     return {};

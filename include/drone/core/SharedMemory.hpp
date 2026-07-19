@@ -1,7 +1,6 @@
 #pragma once
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
-#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -13,22 +12,24 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+// RAII : release uniquement, l'acquisition (CAS) est faite par l'appelant.
 class WriterGuard {
 public:
-  explicit WriterGuard(std::atomic<bool> &flag) : flag_(flag) {
-    flag_.store(true, std::memory_order_acquire);
+  explicit WriterGuard(std::atomic<TYPES::ComponentID> &owner) : owner_(owner) {}
+
+  ~WriterGuard() {
+    owner_.store(TYPES::ComponentID::Count, std::memory_order_release);
   }
 
-  ~WriterGuard() { flag_.store(false, std::memory_order_release); }
-
 private:
-  std::atomic<bool> &flag_;
+  std::atomic<TYPES::ComponentID> &owner_;
 };
 
 struct SharedMemory {
   std::atomic<bool> initialized{false};
-  std::array<std::atomic<bool>, static_cast<uint8_t>(TYPES::ComponentID::Count)>
-      writersFlags;
+  // Free == ComponentID::Count. Sert à la fois de verrou (CAS) et de
+  // registre d'identité du détenteur.
+  std::atomic<TYPES::ComponentID> owner{TYPES::ComponentID::Count};
   uint32_t checksum;
 };
 
@@ -37,118 +38,130 @@ public:
   explicit SharedMemoryHandler(SharedMemory &mem) : mem_(mem) {};
   virtual ~SharedMemoryHandler() = default;
 
+  // Appelé par GlobalWatchdog à la mort d'un composant : ne libère que si
+  // `id` détenait vraiment le verrou (sinon no-op, pas de vol possible).
   void resetWriterFlag(TYPES::ComponentID id) {
-    mem_.writersFlags[static_cast<uint8_t>(id)].store(
-        false, std::memory_order_release);
+    TYPES::ComponentID expected = id;
+    mem_.owner.compare_exchange_strong(expected, TYPES::ComponentID::Count,
+                                       std::memory_order_acq_rel);
+  };
+
+  // Sticky : un succès ne l'efface pas, seule la consommation le fait.
+  [[nodiscard]] TYPES::shmError consumeError() noexcept {
+    return lastError_.exchange(TYPES::shmError::None,
+                               std::memory_order_acq_rel);
   };
 
 protected:
   SharedMemory &mem_;
-  std::optional<TYPES::shmError>
-      error; // le handler enregistre les problèmes d'acces shm
 
-  virtual uint32_t computeChecksum() = 0;
-  virtual void reset() = 0;
+  // `id` transite jusqu'ici pour permettre un checksum PAR COMPOSANT sur
+  // les segments multi-écrivains (override checksumValid/updateChecksum ET
+  // computeChecksum ci-dessous) — sans ça, reset(id) d'un writer revalide
+  // silencieusement la corruption d'un slot qu'il n'a pas touché, en
+  // recalculant un checksum global sur des données jamais vérifiées.
+  virtual uint32_t computeChecksum(TYPES::ComponentID id) = 0;
+  virtual void reset(TYPES::ComponentID id) = 0;
 
+  // Défaut : un seul checksum pour tout le payload (id ignoré) — correct
+  // pour un segment mono-propriétaire (Nav/SF/CompMem). À override pour un
+  // segment multi-écrivains (cf. SharedSysStateMem).
+  virtual bool checksumValid(TYPES::ComponentID id) {
+    return mem_.checksum == computeChecksum(id);
+  }
+  virtual void updateChecksum(TYPES::ComponentID id) {
+    mem_.checksum = computeChecksum(id);
+  }
+
+  // `id` : identité de l'appelant (jeton de verrou, pas forcément le sujet
+  // lu/écrit). `repairOnCorrupt` : à true seulement pour un read-modify-write
+  // interne à une écriture (ex: recordStart), jamais pour une lecture pure.
   template <typename T>
-  [[nodiscard]] std::optional<T> getData(TYPES::Us timeout, T &t) {
+  [[nodiscard]] std::optional<T> getData(TYPES::ComponentID id, TYPES::Us timeout,
+                                         T &t, bool repairOnCorrupt = false) {
     T data;
-    auto fetch = nonLockedAccess(timeout, [&data, &t] { data = t; });
+    auto fetch = lockedAccess(id, timeout, repairOnCorrupt,
+                              [&data, &t] { data = t; });
     if (!fetch) {
-      error.emplace(fetch.error());
+      recordError(fetch.error());
       return {};
-    } else {
-      error.reset();
-      return data;
     }
+    return data;
   };
 
   template <typename T>
   void setData(TYPES::ComponentID id, TYPES::Us timeout, T &t, T &value) {
 
-    auto fetch = lockedAccess(id, timeout, [&value, &t] { t = value; });
+    auto fetch = lockedAccess(id, timeout, /*repairOnCorrupt=*/true,
+                              [&value, &t] { t = value; });
     if (!fetch) {
-      error.emplace(fetch.error());
-    } else {
-      error.reset();
+      recordError(fetch.error());
     }
   };
 
   template <typename T, typename A>
-  std::optional<T> getArrayElement(TYPES::Us timeout, size_t i, A &array) {
+  std::optional<T> getArrayElement(TYPES::ComponentID id, TYPES::Us timeout,
+                                   size_t i, A &array) {
     std::optional<T> data;
-    auto fetch = getData(timeout, array);
+    auto fetch = getData(id, timeout, array);
     if (!fetch)
       return data;
     return data.emplace(fetch->at(i));
   };
 
+  // Lit-modifie-écrit sous un seul verrou : évite le lost-update d'un
+  // getData()+setData() séparé.
   template <typename T, typename A>
   void setArrayElement(TYPES::ComponentID id, TYPES::Us timeout, size_t i, T &t,
                        A &array) {
-
-    auto fetch = getData(timeout, array);
-    if (!fetch)
-      return;
-    A &array_ = fetch.value();
-    array_[i] = t;
-    setData(id, timeout, array, array_);
+    auto fetch = lockedAccess(id, timeout, /*repairOnCorrupt=*/true,
+                              [&] { array[i] = t; });
+    if (!fetch) {
+      recordError(fetch.error());
+    }
   };
 
 private:
-  bool isAvailable() {
-    for (const auto &flag : mem_.writersFlags) {
-      if (flag)
-        return false;
-    }
-    return true;
+  std::atomic<TYPES::shmError> lastError_{TYPES::shmError::None};
+
+  void recordError(TYPES::shmError e) noexcept {
+    lastError_.store(e, std::memory_order_release);
   };
 
-  void init() { mem_.checksum = computeChecksum(); }
-
+  // Voie d'accès unique (lecture ET écriture) : même CAS `owner`, donc pas
+  // de fenêtre check-then-set et pas de lecture concurrente à une écriture.
+  // `id` doit être l'identité réelle de l'appelant, pas le sujet lu/écrit
+  // (sinon GlobalWatchdog ne peut pas libérer le verrou au crash du bon
+  // process — deadlock permanent).
   template <typename F>
-  std::expected<void, TYPES::shmError> nonLockedAccess(TYPES::Us timeout,
-                                                       F &&f) {
-    if (UTILITIES::waitUntil([&]() { return isAvailable(); }, timeout))
+  std::expected<void, TYPES::shmError>
+  lockedAccess(TYPES::ComponentID id, TYPES::Us timeout, bool repairOnCorrupt,
+              F &&f) {
+    auto tryAcquire = [&] {
+      TYPES::ComponentID expected = TYPES::ComponentID::Count;
+      return mem_.owner.compare_exchange_strong(expected, id,
+                                                std::memory_order_acq_rel);
+    };
+
+    if (UTILITIES::waitUntil(tryAcquire, timeout))
 
     {
 
+      WriterGuard guard(mem_.owner);
+
       if (!mem_.initialized.load(std::memory_order_acquire)) {
-        init();
+        updateChecksum(id);
         mem_.initialized.store(true, std::memory_order_release);
       }
 
-      if (mem_.checksum != computeChecksum()) {
+      if (!checksumValid(id)) {
+        if (repairOnCorrupt)
+          reset(id);
         return std::unexpected(TYPES::shmError::corrupt);
       }
 
       std::forward<F>(f)();
-      mem_.checksum = computeChecksum();
-      return {};
-    } else
-      return std::unexpected(TYPES::shmError::timeout);
-  };
-
-  template <typename F>
-  std::expected<void, TYPES::shmError> lockedAccess(TYPES::ComponentID id,
-                                                    TYPES::Us timeout, F &&f) {
-    if (UTILITIES::waitUntil([&]() { return isAvailable(); }, timeout))
-
-    {
-
-      WriterGuard guard(mem_.writersFlags[static_cast<uint8_t>(id)]);
-
-      if (!mem_.initialized.load(std::memory_order_acquire)) {
-        init();
-        mem_.initialized.store(true, std::memory_order_release);
-      }
-
-      if (mem_.checksum != computeChecksum()) {
-        return std::unexpected(TYPES::shmError::corrupt);
-      }
-
-      std::forward<F>(f)();
-      mem_.checksum = computeChecksum();
+      updateChecksum(id);
       return {};
     } else
       return std::unexpected(TYPES::shmError::timeout);

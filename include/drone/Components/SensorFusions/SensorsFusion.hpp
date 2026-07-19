@@ -17,19 +17,17 @@ private:
   void loop() override;
 };
 
-class SensorFusions : public ComponentBase {
+class SensorFusions : public ComponentBase<1> {
 public:
   explicit SensorFusions(ComponenConfig config, SharedSysStateMemHandler &sysState,
                       SharedSFMemHandler &SF);
 
   SharedSFMemHandler &SF_;
+  SharedSysStateMemHandler &sysState_; // pour raiseCode/clearCode depuis les Task
 
   int a;
   TYPES::TimePoint temps;
 
 private:
   GPSTask TGPS;
-
-  void restore();
-  void init();
 };

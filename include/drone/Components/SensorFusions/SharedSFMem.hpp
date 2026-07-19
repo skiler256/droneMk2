@@ -17,7 +17,7 @@ public:
       : SharedCompMemHandler(SF.compMem, id, timeout), SF_(SF) {};
 
   int getBlip() { // pour test
-    auto fetch = getData(timeout_, SF_.data.blip);
+    auto fetch = getData(id_, timeout_, SF_.data.blip);
     if (!fetch)
       return -1;
     return fetch.value();
@@ -28,7 +28,17 @@ public:
 private:
   SharedSFMem &SF_;
 
-  uint32_t computeChecksum() { return UTILITIES::crc32(SF_.data); };
+  uint32_t computeChecksum(TYPES::ComponentID) {
+    return UTILITIES::crc32(SF_.data) ^ historyChecksum();
+  };
 
-  void reset() {};
+  // Seul le propriétaire peut reconstruire sa propre shm.
+  void reset(TYPES::ComponentID id) {
+    if (id == TYPES::ComponentID::SensorFusion) {
+      SF_.data = SharedSFMem::payload{};
+      sanitizeHistory(comp_.HotStartHistory);
+      sanitizeHistory(comp_.ColdStartHistory);
+      updateChecksum(id);
+    }
+  };
 };

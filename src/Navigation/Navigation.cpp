@@ -9,7 +9,7 @@ using namespace TYPES;
 Navigation::Navigation(ComponenConfig config,
                        SharedSysStateMemHandler &sysState,
                        SharedNavMemHandler &nav, SharedSFMemHandler& SF)
-    : ComponentBase(config, nav, sysState), nav_(nav),SF_(SF), temps(Clock::now()),
+    : ComponentBase<1>(config, nav, sysState), nav_(nav),SF_(SF), temps(Clock::now()),
       TAP(*this,
           {.id = 0,
            .RTpriority = 70,
@@ -19,19 +19,9 @@ Navigation::Navigation(ComponenConfig config,
           localWD)
 
 {
-  if (hotstart) {
-    restore();
-    init();
-  } else if (coldstart) {
-    init();
-  }
+  registerTask(TAP);
+  activate();
 };
-
-void Navigation::restore() {
-
-};
-
-void Navigation::init() { TAP.start(); };
 
 void APTask::loop() {
   // Ms dure = UTILITIES::msBetween(comp.temps, Clock::now());

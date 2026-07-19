@@ -1,0 +1,7 @@
+Code;Component;Category;Name;Description;Criticity
+FCP001;Flight Controller;Power;batt_low;tension batterie faible;Critical
+NVA001;Navigation;Action;landing_cat_1;atterissage d'urgence, FC autonome;Critical
+NVA002;Navigation;Action;landing_cat_2;atterissage assité par LIDAR;Info
+NVA003;Navigation;Action;landing_cat_3;atterissage guidé;Info
+SFS001;Sensor Fusion;Sensor;GPS_lock;signal gps vérouillé;Info
+SFS002;Sensor Fusion;Sensor;GPS_lost;signal gps perdu;Critical
