@@ -67,11 +67,13 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/generate_codes.dir/DependInfo.cmake"
+  "CMakeFiles/generate_telemetry.dir/DependInfo.cmake"
   "CMakeFiles/drone_lib.dir/DependInfo.cmake"
   "CMakeFiles/drone.dir/DependInfo.cmake"
   "CMakeFiles/test_types.dir/DependInfo.cmake"
   "CMakeFiles/test_shared_state.dir/DependInfo.cmake"
   "CMakeFiles/test_watchdog.dir/DependInfo.cmake"
+  "CMakeFiles/test_telemetry.dir/DependInfo.cmake"
   "CMakeFiles/test_stub_child.dir/DependInfo.cmake"
   "CMakeFiles/test_global_watchdog.dir/DependInfo.cmake"
   )

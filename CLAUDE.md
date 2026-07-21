@@ -123,11 +123,31 @@ restarts en Y secondes"), pas de compteurs absolus.
 
 ## Comment je veux travailler avec toi (Claude Code)
 
-- **Pas de vibe coding.** Je ne veux pas d'exécution autonome de tâches en
-  chaîne pendant que je suis absent. Mode interactif : je pose une question
-  ou une tâche précise, tu réponds ou proposes un diff, je valide.
-- Usage principal : **review, refactor, tests**, pas génération de features
-  entières sans supervision.
+- **L'architecture et la philosophie du système, c'est mon terrain.** Je
+  veux faire le travail de software engineer moi-même — pas une archi
+  préfaite par toi qui "ressemble à tout et rien". Sur une question de
+  design, présente les options avec leurs tradeoffs, je tranche, tu
+  implémentes ce qui a été décidé. Ne comble jamais un vide d'archi
+  toi-même parce que c'est plus simple ou plus rapide — pose la question.
+- **Le répétitif/mécanique, c'est ton terrain.** Dictionnaires de codes,
+  tables de paquets, boilerplate de sérialisation : plutôt que de me faire
+  éditer des gros tableaux à la main, construis-moi un outil (générateur,
+  éditeur web) pour que je puisse le faire moi-même en continu, avec ou
+  sans toi. `tools/gen_codes.py`+`codes_editor.py` et
+  `tools/gen_telemetry.py`+même éditeur sont le modèle à suivre pour tout
+  nouveau format répétitif.
+- **Dis-moi quand tu vois un bug, un manque de feature, un trou de sécu —
+  toujours.** Je veux apprendre, donc signale plutôt que de rester
+  silencieux ou de corriger sans le dire. Je valide, tu implémentes ta
+  remarque ensuite.
+- **Diffs petits et digestes.** Je relis chaque modification pour chasser
+  les bugs/manques — un gros bloc de 8 fichiers d'un coup est dur à
+  auditer sérieusement. Découpe le travail en morceaux reviewables, même
+  après un feu vert global sur la direction générale, et marque une pause
+  entre chaque morceau significatif plutôt que d'enchaîner.
+- **Pas de vibe coding.** Pas d'exécution autonome de tâches en chaîne
+  pendant que je suis absent. Mode interactif : je pose une question ou
+  une tâche précise, tu réponds ou proposes un diff, je valide.
 - Toujours passer par le confirm avant d'éditer un fichier ou d'exécuter une
   commande (build, test, SITL) — sauf instruction contraire explicite dans
   le message.
@@ -135,13 +155,21 @@ restarts en Y secondes"), pas de compteurs absolus.
   tu peux l'écrire directement dans le fichier concerné après lecture du
   contexte, en suivant le pattern déjà utilisé pour `toString(NavMode)` /
   `toString(SensorsT)` dans `types.hpp`.
-- Sur les questions d'architecture, pousse-moi vers la solution la plus
-  simple qui respecte les contraintes déjà actées ci-dessus. Signale-moi
-  si une de mes demandes contredit une décision déjà prise plus haut dans
-  ce fichier, plutôt que de l'appliquer silencieusement.
+- Signale-moi si une de mes demandes contredit une décision déjà prise plus
+  haut dans ce fichier, plutôt que de l'appliquer silencieusement.
 - Workflow perso : je fonctionne par pics de productivité, j'ai besoin de
   petites tâches actives avec critères d'acceptation clairs plutôt que de
   gros blocs vagues.
+- **Contexte perso** : je prépare une prépa pour des études d'ingénieur
+  (pas forcément soft) — je touche à la méca/élec/RF/soft depuis ~5 ans,
+  je veux rester polyvalent. Ce projet me sert aussi à apprendre le dev en
+  milieu critique/aéro, donc les explications sur le "pourquoi" d'un choix
+  d'archi sont bienvenues, pas juste le "quoi". J'ai déjà de bonnes bases
+  en C++ (petits projets perso avant celui-ci).
+- J'ai un SDD qui couvre l'archi globale (découpage composant/Task, double
+  watchdog, IPC, interfaces pour faciliter le SITL...) mais il n'est pas
+  exhaustif — normal qu'il manque des détails qu'on tranche au fil de
+  l'implémentation.
 
 ## État actuel — prochaine tâche
 

@@ -91,12 +91,31 @@
   .error { color: var(--critical); font-size: .8rem; min-height: 1.2em; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
   .empty { color: var(--muted); font-style: italic; padding: 1rem 0; }
+  .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+  .tab-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 6px; padding: .4rem .8rem; font-size: .82rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .tab-btn.active { color: var(--text); border-color: var(--accent); background: rgba(79,140,255,.1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .warning { color: var(--muted); font-size: .75rem; margin-top: .3rem; }
+  .field-row { display: grid; grid-template-columns: 1fr 100px auto; gap: .4rem; margin-bottom: .4rem; align-items: center; }
+  .field-row button { padding: .3rem; font-size: .75rem; }
+  .mono-small { font-size: .72rem; color: var(--muted); }
 </style>
 </head>
 <body>
-  <h1>Dictionnaire de codes — droneMk2</h1>
-  <div class="subtitle">Édite INDEX.csv. Régénère codes.hpp après modif : <code>cmake --build build/</code></div>
+  <h1>Dictionnaire de codes &amp; paquets télémétrie — droneMk2</h1>
+  <div class="subtitle">Édite INDEX.csv / TELEMETRY.csv. Régénère les headers après modif : <code>cmake --build build/</code></div>
 
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-tab="codes">Codes</button>
+    <button type="button" class="tab-btn" data-tab="packets">Paquets télémétrie</button>
+  </div>
+
+  <div id="tab-codes" class="tab-panel active">
   <div class="layout">
     <div class="panel">
       <div class="toolbar">
@@ -158,6 +177,75 @@
         </div>
       </form>
     </div>
+  </div>
+  </div>
+
+  <div id="tab-packets" class="tab-panel">
+  <div class="layout">
+    <div class="panel">
+      <div class="result-count" id="pktResultCount"></div>
+      <table id="pktTable">
+        <thead>
+          <tr>
+            <th>ID</th><th>PacketID</th><th>Dir</th><th>Priorité</th>
+            <th>Taux</th><th>Redond.</th><th>Liens</th><th>Taille</th><th>Champs</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="pktTbody"></tbody>
+      </table>
+      <div id="pktEmpty" class="empty" style="display:none">Aucun paquet.</div>
+    </div>
+
+    <div class="panel">
+      <div class="form-title" id="pktFormTitle">Ajouter un paquet</div>
+      <div class="warning">
+        Un nouveau paquet est toujours ajouté EN FIN de liste — son PacketID
+        (position dans TELEMETRY.csv) ne bouge jamais après coup, pour ne
+        pas casser un binaire déjà compilé. Supprimer un paquet décale les
+        ID de ceux qui suivent.
+      </div>
+      <form id="pktForm">
+        <div>
+          <label for="pktPacketId">PacketID (identifiant texte)</label>
+          <input id="pktPacketId" type="text" placeholder="MY_PACKET" required>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="pktDirection">Direction</label>
+            <select id="pktDirection" required></select>
+          </div>
+          <div>
+            <label for="pktPriority">Priorité</label>
+            <select id="pktPriority" required></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="pktRateHz">Taux (Hz, 0 = événementiel)</label>
+            <input id="pktRateHz" type="number" min="0" value="0" required>
+          </div>
+          <div>
+            <label for="pktRedundancyHz">Redondance (Hz, si événementiel)</label>
+            <input id="pktRedundancyHz" type="number" min="0" value="0" required>
+          </div>
+        </div>
+        <div>
+          <label for="pktLinks">Liens</label>
+          <select id="pktLinks" required></select>
+        </div>
+        <div>
+          <label>Champs</label>
+          <div id="pktFields"></div>
+          <button type="button" id="pktAddField" class="btn-secondary">+ champ</button>
+        </div>
+        <div class="error" id="pktError"></div>
+        <div class="btn-row">
+          <button type="button" id="pktCancelEdit" class="btn-secondary" style="display:none">Annuler</button>
+          <button type="submit" id="pktSubmitBtn">Ajouter le paquet</button>
+        </div>
+      </form>
+    </div>
+  </div>
   </div>
 
 <script>
@@ -356,6 +444,178 @@ document.getElementById('form').addEventListener('submit', async (e) => {
 });
 
 loadMeta().then(loadCodes);
+
+// ─── Onglets ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ─── Paquets télémétrie ──────────────────────────────────────────────────
+let pktMeta = null;
+let packets = [];
+let editingPacket = null; // packet_id (string) en cours d'édition, ou null = ajout
+
+function fieldRowHTML(name = '', type = 'f32') {
+  const types = (pktMeta ? pktMeta.field_types : ['f32']);
+  return `<div class="field-row">
+    <input type="text" class="pkt-field-name" placeholder="nom" value="${name}">
+    <select class="pkt-field-type">${types.map(t => `<option value="${t}" ${t === type ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    <button type="button" class="icon-btn danger pkt-remove-field">×</button>
+  </div>`;
+}
+
+function addFieldRow(name = '', type = 'f32') {
+  const container = document.getElementById('pktFields');
+  container.insertAdjacentHTML('beforeend', fieldRowHTML(name, type));
+  container.lastElementChild.querySelector('.pkt-remove-field')
+    .addEventListener('click', (e) => e.target.closest('.field-row').remove());
+}
+
+document.getElementById('pktAddField').addEventListener('click', () => addFieldRow());
+
+async function loadPacketMeta() {
+  pktMeta = await (await fetch('/api/packets/meta')).json();
+  document.getElementById('pktDirection').innerHTML =
+    pktMeta.directions.map(d => `<option value="${d}">${d}</option>`).join('');
+  document.getElementById('pktPriority').innerHTML =
+    pktMeta.priorities.map(p => `<option value="${p}">${p}</option>`).join('');
+  document.getElementById('pktLinks').innerHTML =
+    pktMeta.links.map(l => `<option value="${l}">${l}</option>`).join('');
+}
+
+function renderPacketTable() {
+  const tbody = document.getElementById('pktTbody');
+  const empty = document.getElementById('pktEmpty');
+  document.getElementById('pktResultCount').textContent = `${packets.length} paquet(s)`;
+
+  if (packets.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = packets.map(p => `
+    <tr>
+      <td class="mono-small">${p.id}</td>
+      <td class="code">${p.packet_id}</td>
+      <td>${p.direction}</td>
+      <td>${p.priority}</td>
+      <td>${p.is_event ? 'event' : p.rate_hz + 'Hz'}</td>
+      <td>${p.redundancy_hz ? p.redundancy_hz + 'Hz' : '—'}</td>
+      <td>${p.links}</td>
+      <td>${p.size}o</td>
+      <td class="mono-small">${p.fields.map(f => `${f.name}:${f.type}`).join(', ') || '—'}</td>
+      <td class="actions">
+        <button type="button" class="icon-btn" data-pkt-edit="${p.packet_id}">Modifier</button>
+        <button type="button" class="icon-btn danger" data-pkt-delete="${p.packet_id}">Supprimer</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-pkt-edit]').forEach(btn =>
+    btn.addEventListener('click', () => startEditPacket(btn.dataset.pktEdit)));
+  tbody.querySelectorAll('[data-pkt-delete]').forEach(btn =>
+    btn.addEventListener('click', () => deletePacket(btn.dataset.pktDelete)));
+}
+
+async function loadPackets() {
+  packets = await (await fetch('/api/packets')).json();
+  renderPacketTable();
+}
+
+function startEditPacket(packetId) {
+  const p = packets.find(x => x.packet_id === packetId);
+  if (!p) return;
+  editingPacket = packetId;
+
+  document.getElementById('pktPacketId').value = p.packet_id;
+  document.getElementById('pktDirection').value = p.direction;
+  document.getElementById('pktPriority').value = p.priority;
+  document.getElementById('pktRateHz').value = p.rate_hz;
+  document.getElementById('pktRedundancyHz').value = p.redundancy_hz;
+  document.getElementById('pktLinks').value = p.links;
+  document.getElementById('pktFields').innerHTML = '';
+  p.fields.forEach(f => addFieldRow(f.name, f.type));
+  document.getElementById('pktError').textContent = '';
+
+  document.getElementById('pktFormTitle').textContent = `Modifier ${packetId}`;
+  document.getElementById('pktSubmitBtn').textContent = 'Enregistrer';
+  document.getElementById('pktCancelEdit').style.display = '';
+
+  document.getElementById('pktPacketId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetPacketForm() {
+  editingPacket = null;
+  document.getElementById('pktForm').reset();
+  document.getElementById('pktFields').innerHTML = '';
+  document.getElementById('pktFormTitle').textContent = 'Ajouter un paquet';
+  document.getElementById('pktSubmitBtn').textContent = 'Ajouter le paquet';
+  document.getElementById('pktCancelEdit').style.display = 'none';
+  document.getElementById('pktError').textContent = '';
+}
+
+document.getElementById('pktCancelEdit').addEventListener('click', resetPacketForm);
+
+async function deletePacket(packetId) {
+  if (!confirm(`Supprimer ${packetId} ? Décale les PacketID de tous ceux qui suivent — à éviter après un déploiement réel.`)) return;
+  const res = await fetch(`/api/packets/${encodeURIComponent(packetId)}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'erreur inconnue');
+    return;
+  }
+  packets = data;
+  if (editingPacket === packetId) resetPacketForm();
+  renderPacketTable();
+}
+
+document.getElementById('pktForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('pktError');
+  errorEl.textContent = '';
+
+  const fields = [...document.querySelectorAll('#pktFields .field-row')].map(row => ({
+    name: row.querySelector('.pkt-field-name').value.trim(),
+    type: row.querySelector('.pkt-field-type').value,
+  })).filter(f => f.name);
+
+  const payload = {
+    packet_id: document.getElementById('pktPacketId').value.trim().toUpperCase(),
+    direction: document.getElementById('pktDirection').value,
+    priority: document.getElementById('pktPriority').value,
+    rate_hz: document.getElementById('pktRateHz').value,
+    redundancy_hz: document.getElementById('pktRedundancyHz').value,
+    links: document.getElementById('pktLinks').value,
+    fields,
+  };
+
+  const url = editingPacket ? `/api/packets/${encodeURIComponent(editingPacket)}` : '/api/packets';
+  const method = editingPacket ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    errorEl.textContent = data.error || 'erreur inconnue';
+    return;
+  }
+
+  packets = data;
+  resetPacketForm();
+  renderPacketTable();
+});
+
+loadPacketMeta().then(loadPackets);
 </script>
 </body>
 </html>

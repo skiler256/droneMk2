@@ -61,10 +61,39 @@ add_custom_command(
 # OUTPUT/DEPENDS — sinon no-op rapide).
 add_custom_target(generate_codes ALL DEPENDS ${CODES_HPP})
 
+# ─── Format de paquets télémétrie (TELEM::) ───────────────────────────────────
+# Même principe que codes.hpp ci-dessus : telemetry.hpp est généré depuis
+# TELEMETRY.csv, source de vérité unique partagée entre TelMainTask et
+# TelSecTask (et lisible côté GCS Python).
+set(TELEMETRY_CSV ${CMAKE_SOURCE_DIR}/TELEMETRY.csv)
+set(TELEMETRY_HPP ${CMAKE_SOURCE_DIR}/include/drone/generated/telemetry.hpp)
+
+add_custom_command(
+    OUTPUT  ${TELEMETRY_HPP}
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/gen_telemetry.py
+            --csv ${TELEMETRY_CSV} --out ${TELEMETRY_HPP}
+    DEPENDS ${TELEMETRY_CSV}
+            ${CMAKE_SOURCE_DIR}/tools/gen_telemetry.py
+            ${CMAKE_SOURCE_DIR}/tools/telemetry_common.py
+    COMMENT "Génération de telemetry.hpp depuis TELEMETRY.csv"
+    VERBATIM
+)
+add_custom_target(generate_telemetry ALL DEPENDS ${TELEMETRY_HPP})
+
 # ─── drone_core : headers publics + Eigen ────────────────────────────────────
 add_library(drone_core INTERFACE)
 target_include_directories(drone_core INTERFACE include)
 target_link_libraries     (drone_core INTERFACE Eigen3::Eigen)
+
+# ─── mavlink/c_library_v2 (submodule, dialecte ardupilotmega) ────────────────
+# Headers C purs déjà générés, pas de mavgen à lancer nous-mêmes.
+# ardupilotmega/mavlink.h inclut common.h par héritage de dialecte.
+add_library(mavlink_c_library INTERFACE)
+# SYSTEM : ces headers génèrent des warnings (-Waddress-of-packed-member
+# sur les structs empaquetées) qui deviendraient des erreurs avec notre
+# -Werror sinon — on ne les possède pas, pas question de les corriger.
+target_include_directories(mavlink_c_library SYSTEM INTERFACE
+    third_party/mavlink/c_library_v2/ardupilotmega)
 
 # ════════════════════════════════════════════════════════════════════════════
 # drone_lib — TOUT le code source des composants, en une seule bibliothèque.
@@ -78,24 +107,26 @@ add_library(drone_lib STATIC
     src/SensorsFusion/SensorFusion.cpp
     src/Navigation/Navigation.cpp
     # src/MissionControl/MissionControl.cpp
-    # src/MavlinkInterface/MavlinkInterface.cpp
-    # src/SystemMonitoring/SystemMonitoring.cpp
+    src/MavlinkInterface/MavlinkInterface.cpp
+    src/SystemMonitoring/SystemMonitoring.cpp
+    src/SystemMonitoring/UdpTelemetryDriver.cpp
+    src/SystemMonitoring/UdpVideoDriver.cpp
     # src/Watchdog/GlobalWatchdog.cpp
 
     src/Drivers/NEO-M8N.cpp
     src/Drivers/LIS3MDL.cpp
     src/Drivers/LD06.cpp
 )
-target_link_libraries     (drone_lib PUBLIC drone_core)
+target_link_libraries     (drone_lib PUBLIC drone_core mavlink_c_library)
 target_include_directories(drone_lib PUBLIC include)
-add_dependencies          (drone_lib generate_codes)
+add_dependencies          (drone_lib generate_codes generate_telemetry)
 
 # ════════════════════════════════════════════════════════════════════════════
 # BINAIRE PRINCIPAL — un seul exécutable, dispatch interne par argv
 # ════════════════════════════════════════════════════════════════════════════
 add_executable(drone src/main.cpp)
 target_link_libraries(drone PRIVATE drone_lib)
-add_dependencies(drone generate_codes)
+add_dependencies(drone generate_codes generate_telemetry)
 
 # ════════════════════════════════════════════════════════════════════════════
 # TESTS
@@ -110,13 +141,14 @@ macro(drone_test TARGET SRC)
     add_executable        (${TARGET} ${SRC})
     target_link_libraries (${TARGET} PRIVATE drone_lib GTest::gtest_main ${ARGN})
     target_compile_options(${TARGET} PRIVATE -fexceptions)
-    add_dependencies      (${TARGET} generate_codes)
+    add_dependencies      (${TARGET} generate_codes generate_telemetry)
     add_test              (NAME ${TARGET} COMMAND ${TARGET})
 endmacro()
 
 drone_test(test_types        tests/test_types.cpp)
 drone_test(test_shared_state tests/test_shared_state.cpp)
 drone_test(test_watchdog     tests/test_watchdog.cpp)
+drone_test(test_telemetry    tests/test_telemetry.cpp)
 # drone_test(test_navigation   tests/test_navigation.cpp)
 # drone_test(test_kalman       tests/test_kalman.cpp)
 # drone_test(test_mavlink      tests/test_mavlink.cpp)

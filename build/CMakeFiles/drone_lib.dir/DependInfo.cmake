@@ -13,6 +13,9 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/jules/droneMk2/src/Drivers/NEO-M8N.cpp" "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o.d"
   "/home/jules/droneMk2/src/Navigation/Navigation.cpp" "CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o.d"
   "/home/jules/droneMk2/src/SensorsFusion/SensorFusion.cpp" "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o.d"
+  "/home/jules/droneMk2/src/SystemMonitoring/SystemMonitoring.cpp" "CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o.d"
+  "/home/jules/droneMk2/src/SystemMonitoring/UdpTelemetryDriver.cpp" "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o.d"
+  "/home/jules/droneMk2/src/SystemMonitoring/UdpVideoDriver.cpp" "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o" "gcc" "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

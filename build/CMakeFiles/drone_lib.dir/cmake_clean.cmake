@@ -9,6 +9,12 @@ file(REMOVE_RECURSE
   "CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o.d"
   "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o"
   "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o.d"
+  "CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o"
+  "CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o.d"
+  "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o"
+  "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o.d"
+  "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o"
+  "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o.d"
   "libdrone_lib.a"
   "libdrone_lib.pdb"
 )

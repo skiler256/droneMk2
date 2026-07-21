@@ -5,6 +5,7 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o: /home/jule
   /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
+  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
   /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
   /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
   /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
@@ -789,11 +790,7 @@ test_global_watchdog: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/SVD/BDCSVD.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so:
-
-/usr/include/c++/14/bits/std_abs.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/RotationBase.h:
+/usr/include/eigen3/Eigen/src/QR/FullPivHouseholderQR.h:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/ctype_inline.h:
 
@@ -927,8 +924,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/eigen3/Eigen/src/Core/DenseBase.h:
 
-/usr/include/eigen3/Eigen/src/QR/FullPivHouseholderQR.h:
-
 /usr/include/eigen3/Eigen/src/Core/arch/NEON/TypeCasting.h:
 
 /usr/include/asm-generic/posix_types.h:
@@ -979,10 +974,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/c++/14/bits/stream_iterator.h:
 
-/usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
-
-/usr/include/ctype.h:
-
 /usr/include/aarch64-linux-gnu/c++/14/bits/cpu_defines.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/wint_t.h:
@@ -1019,6 +1010,18 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/eigen3/Eigen/src/Core/util/ReenableStupidWarnings.h:
 
+/usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
+
+/usr/include/c++/14/cstdint:
+
+/usr/include/gtest/internal/gtest-string.h:
+
+/usr/include/eigen3/Eigen/src/Core/NumTraits.h:
+
+/usr/include/aarch64-linux-gnu/bits/uio_lim.h:
+
+/usr/include/c++/14/climits:
+
 /usr/include/c++/14/bits/node_handle.h:
 
 /usr/include/c++/14/clocale:
@@ -1034,12 +1037,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h:
 
 /usr/include/c++/14/debug/assertions.h:
-
-/usr/include/c++/14/bits/refwrap.h:
-
-/usr/include/aarch64-linux-gnu/bits/sigevent-consts.h:
-
-/usr/include/aarch64-linux-gnu/bits/sigaction.h:
 
 /usr/include/c++/14/tr1/beta_function.tcc:
 
@@ -1127,26 +1124,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
 
-/usr/include/eigen3/Eigen/src/Core/functors/AssignmentFunctors.h:
-
-/usr/include/c++/14/condition_variable:
-
-/usr/include/eigen3/Eigen/src/Core/Fuzzy.h:
-
-/usr/include/aarch64-linux-gnu/bits/byteswap.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/include/limits.h:
-
-/usr/include/c++/14/fstream:
-
-/usr/include/aarch64-linux-gnu/bits/procfs-extra.h:
-
-/usr/include/aarch64-linux-gnu/bits/atomic_wide_counter.h:
-
-/usr/include/eigen3/Eigen/src/Householder/Householder.h:
-
 /usr/include/c++/14/bits/max_size_type.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h:
@@ -1154,6 +1131,12 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/c++/14/bits/enable_special_members.h:
 
 /usr/include/aarch64-linux-gnu/bits/mman-shared.h:
+
+/usr/include/aarch64-linux-gnu/bits/procfs-extra.h:
+
+/usr/include/aarch64-linux-gnu/bits/atomic_wide_counter.h:
+
+/usr/include/eigen3/Eigen/src/Householder/Householder.h:
 
 /home/jules/droneMk2/include/drone/core/SharedMemory.hpp:
 
@@ -1166,6 +1149,12 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/sched.h:
 
 /home/jules/droneMk2/include/drone/generated/codes.hpp:
+
+/usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
+
+/usr/include/ctype.h:
+
+/home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp:
 
 /usr/include/aarch64-linux-gnu/sys/procfs.h:
 
@@ -1199,6 +1188,20 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/c++/14/cerrno:
 
+/usr/include/eigen3/Eigen/src/Core/functors/AssignmentFunctors.h:
+
+/usr/include/c++/14/condition_variable:
+
+/usr/include/eigen3/Eigen/src/Core/Fuzzy.h:
+
+/usr/include/aarch64-linux-gnu/bits/byteswap.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
+
+/usr/lib/gcc/aarch64-linux-gnu/14/include/limits.h:
+
+/usr/include/c++/14/fstream:
+
 /usr/include/c++/14/bits/move.h:
 
 /usr/include/c++/14/tr1/ell_integral.tcc:
@@ -1228,6 +1231,14 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/gtest/gtest-typed-test.h:
 
 /usr/include/c++/14/sstream:
+
+/usr/include/eigen3/Eigen/src/plugins/CommonCwiseUnaryOps.h:
+
+/usr/include/eigen3/Eigen/src/Core/functors/BinaryFunctors.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h:
+
+/usr/include/c++/14/bits/refwrap.h:
 
 /usr/include/c++/14/set:
 
@@ -1286,6 +1297,10 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/eigen3/Eigen/src/Core/CwiseUnaryOp.h:
 
 /usr/include/aarch64-linux-gnu/bits/getopt_core.h:
+
+/usr/include/aarch64-linux-gnu/bits/sigevent-consts.h:
+
+/usr/include/aarch64-linux-gnu/bits/sigaction.h:
 
 /usr/include/aarch64-linux-gnu/bits/sigcontext.h:
 
@@ -1443,6 +1458,12 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h:
 
+/usr/include/linux/limits.h:
+
+/usr/include/eigen3/Eigen/src/Core/MathFunctions.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h:
+
 /usr/include/aarch64-linux-gnu/bits/types/struct_iovec.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_sched_param.h:
@@ -1503,23 +1524,11 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/eigen3/Eigen/src/LU/Determinant.h:
 
-/usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
+/usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so:
 
-/usr/include/c++/14/cstdint:
+/usr/include/c++/14/bits/std_abs.h:
 
-/usr/include/gtest/internal/gtest-string.h:
-
-/usr/include/eigen3/Eigen/src/Core/NumTraits.h:
-
-/usr/include/eigen3/Eigen/src/plugins/CommonCwiseUnaryOps.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h:
-
-/usr/include/eigen3/Eigen/src/Core/functors/BinaryFunctors.h:
-
-/usr/include/aarch64-linux-gnu/bits/uio_lim.h:
-
-/usr/include/c++/14/climits:
+/usr/include/eigen3/Eigen/src/Geometry/RotationBase.h:
 
 /usr/include/c++/14/bits/std_mutex.h:
 
@@ -1810,12 +1819,6 @@ libdrone_lib.a:
 /usr/include/eigen3/Eigen/src/Core/IndexedView.h:
 
 /usr/include/eigen3/Eigen/src/Core/arch/Default/GenericPacketMathFunctionsFwd.h:
-
-/usr/include/linux/limits.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h:
-
-/usr/include/eigen3/Eigen/src/Core/MathFunctions.h:
 
 /usr/include/aarch64-linux-gnu/bits/types.h:
 

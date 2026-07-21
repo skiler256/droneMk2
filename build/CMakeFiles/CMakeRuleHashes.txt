@@ -1,3 +1,5 @@
 # Hashes of file build rules.
 aeb969a97aad7f91d6249afb312fd3b8 /home/jules/droneMk2/include/drone/generated/codes.hpp
+0891ec43c04b59572eba614282a01a63 /home/jules/droneMk2/include/drone/generated/telemetry.hpp
 9ff7bc0c5ad408cc77b0effe1a99229d CMakeFiles/generate_codes
+9ff7bc0c5ad408cc77b0effe1a99229d CMakeFiles/generate_telemetry

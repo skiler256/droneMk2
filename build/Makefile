@@ -140,6 +140,19 @@ generate_codes/fast:
 .PHONY : generate_codes/fast
 
 #=============================================================================
+# Target rules for targets named generate_telemetry
+
+# Build rule for target.
+generate_telemetry: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 generate_telemetry
+.PHONY : generate_telemetry
+
+# fast build rule for target.
+generate_telemetry/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_telemetry.dir/build.make CMakeFiles/generate_telemetry.dir/build
+.PHONY : generate_telemetry/fast
+
+#=============================================================================
 # Target rules for targets named drone_lib
 
 # Build rule for target.
@@ -203,6 +216,19 @@ test_watchdog: cmake_check_build_system
 test_watchdog/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/build
 .PHONY : test_watchdog/fast
+
+#=============================================================================
+# Target rules for targets named test_telemetry
+
+# Build rule for target.
+test_telemetry: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_telemetry
+.PHONY : test_telemetry
+
+# fast build rule for target.
+test_telemetry/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/build
+.PHONY : test_telemetry/fast
 
 #=============================================================================
 # Target rules for targets named test_stub_child
@@ -350,6 +376,78 @@ src/SensorsFusion/SensorFusion.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.s
 .PHONY : src/SensorsFusion/SensorFusion.cpp.s
 
+src/SystemMonitoring/SystemMonitoring.o: src/SystemMonitoring/SystemMonitoring.cpp.o
+.PHONY : src/SystemMonitoring/SystemMonitoring.o
+
+# target to build an object file
+src/SystemMonitoring/SystemMonitoring.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o
+.PHONY : src/SystemMonitoring/SystemMonitoring.cpp.o
+
+src/SystemMonitoring/SystemMonitoring.i: src/SystemMonitoring/SystemMonitoring.cpp.i
+.PHONY : src/SystemMonitoring/SystemMonitoring.i
+
+# target to preprocess a source file
+src/SystemMonitoring/SystemMonitoring.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.i
+.PHONY : src/SystemMonitoring/SystemMonitoring.cpp.i
+
+src/SystemMonitoring/SystemMonitoring.s: src/SystemMonitoring/SystemMonitoring.cpp.s
+.PHONY : src/SystemMonitoring/SystemMonitoring.s
+
+# target to generate assembly for a file
+src/SystemMonitoring/SystemMonitoring.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.s
+.PHONY : src/SystemMonitoring/SystemMonitoring.cpp.s
+
+src/SystemMonitoring/UdpTelemetryDriver.o: src/SystemMonitoring/UdpTelemetryDriver.cpp.o
+.PHONY : src/SystemMonitoring/UdpTelemetryDriver.o
+
+# target to build an object file
+src/SystemMonitoring/UdpTelemetryDriver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o
+.PHONY : src/SystemMonitoring/UdpTelemetryDriver.cpp.o
+
+src/SystemMonitoring/UdpTelemetryDriver.i: src/SystemMonitoring/UdpTelemetryDriver.cpp.i
+.PHONY : src/SystemMonitoring/UdpTelemetryDriver.i
+
+# target to preprocess a source file
+src/SystemMonitoring/UdpTelemetryDriver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.i
+.PHONY : src/SystemMonitoring/UdpTelemetryDriver.cpp.i
+
+src/SystemMonitoring/UdpTelemetryDriver.s: src/SystemMonitoring/UdpTelemetryDriver.cpp.s
+.PHONY : src/SystemMonitoring/UdpTelemetryDriver.s
+
+# target to generate assembly for a file
+src/SystemMonitoring/UdpTelemetryDriver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.s
+.PHONY : src/SystemMonitoring/UdpTelemetryDriver.cpp.s
+
+src/SystemMonitoring/UdpVideoDriver.o: src/SystemMonitoring/UdpVideoDriver.cpp.o
+.PHONY : src/SystemMonitoring/UdpVideoDriver.o
+
+# target to build an object file
+src/SystemMonitoring/UdpVideoDriver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o
+.PHONY : src/SystemMonitoring/UdpVideoDriver.cpp.o
+
+src/SystemMonitoring/UdpVideoDriver.i: src/SystemMonitoring/UdpVideoDriver.cpp.i
+.PHONY : src/SystemMonitoring/UdpVideoDriver.i
+
+# target to preprocess a source file
+src/SystemMonitoring/UdpVideoDriver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.i
+.PHONY : src/SystemMonitoring/UdpVideoDriver.cpp.i
+
+src/SystemMonitoring/UdpVideoDriver.s: src/SystemMonitoring/UdpVideoDriver.cpp.s
+.PHONY : src/SystemMonitoring/UdpVideoDriver.s
+
+# target to generate assembly for a file
+src/SystemMonitoring/UdpVideoDriver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.s
+.PHONY : src/SystemMonitoring/UdpVideoDriver.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -446,6 +544,30 @@ tests/test_shared_state.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.s
 .PHONY : tests/test_shared_state.cpp.s
 
+tests/test_telemetry.o: tests/test_telemetry.cpp.o
+.PHONY : tests/test_telemetry.o
+
+# target to build an object file
+tests/test_telemetry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.o
+.PHONY : tests/test_telemetry.cpp.o
+
+tests/test_telemetry.i: tests/test_telemetry.cpp.i
+.PHONY : tests/test_telemetry.i
+
+# target to preprocess a source file
+tests/test_telemetry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.i
+.PHONY : tests/test_telemetry.cpp.i
+
+tests/test_telemetry.s: tests/test_telemetry.cpp.s
+.PHONY : tests/test_telemetry.s
+
+# target to generate assembly for a file
+tests/test_telemetry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.s
+.PHONY : tests/test_telemetry.cpp.s
+
 tests/test_types.o: tests/test_types.cpp.o
 .PHONY : tests/test_types.o
 
@@ -504,11 +626,13 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... generate_codes"
+	@echo "... generate_telemetry"
 	@echo "... drone"
 	@echo "... drone_lib"
 	@echo "... test_global_watchdog"
 	@echo "... test_shared_state"
 	@echo "... test_stub_child"
+	@echo "... test_telemetry"
 	@echo "... test_types"
 	@echo "... test_watchdog"
 	@echo "... src/Drivers/LD06.o"
@@ -526,6 +650,15 @@ help:
 	@echo "... src/SensorsFusion/SensorFusion.o"
 	@echo "... src/SensorsFusion/SensorFusion.i"
 	@echo "... src/SensorsFusion/SensorFusion.s"
+	@echo "... src/SystemMonitoring/SystemMonitoring.o"
+	@echo "... src/SystemMonitoring/SystemMonitoring.i"
+	@echo "... src/SystemMonitoring/SystemMonitoring.s"
+	@echo "... src/SystemMonitoring/UdpTelemetryDriver.o"
+	@echo "... src/SystemMonitoring/UdpTelemetryDriver.i"
+	@echo "... src/SystemMonitoring/UdpTelemetryDriver.s"
+	@echo "... src/SystemMonitoring/UdpVideoDriver.o"
+	@echo "... src/SystemMonitoring/UdpVideoDriver.i"
+	@echo "... src/SystemMonitoring/UdpVideoDriver.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
@@ -538,6 +671,9 @@ help:
 	@echo "... tests/test_shared_state.o"
 	@echo "... tests/test_shared_state.i"
 	@echo "... tests/test_shared_state.s"
+	@echo "... tests/test_telemetry.o"
+	@echo "... tests/test_telemetry.i"
+	@echo "... tests/test_telemetry.s"
 	@echo "... tests/test_types.o"
 	@echo "... tests/test_types.i"
 	@echo "... tests/test_types.s"

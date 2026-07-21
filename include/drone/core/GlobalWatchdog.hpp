@@ -1,6 +1,7 @@
 #pragma once
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
+#include "drone/Components/System Monitoring/SharedComMem.hpp"
 #include "drone/core/SharedSysStateMem.hpp"
 #include "drone/shm.hpp"
 #include "drone/types.hpp"
@@ -20,6 +21,7 @@
 inline constexpr std::string_view kNavShmPath = "/drone_nav";
 inline constexpr std::string_view kSFShmPath = "/drone_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_sysstate";
+inline constexpr std::string_view kComShmPath = "/drone_com";
 
 class GlobalWatchdog {
 public:
@@ -49,12 +51,14 @@ private:
   ShmPublisher<SharedNavMem> navShm_;
   ShmPublisher<SharedSFMem> sfShm_;
   ShmPublisher<SharedSysStateMem> sysShm_;
+  ShmPublisher<SharedComMem> comShm_;
 
   std::optional<SharedNavMemHandler> navHandler_;
   std::optional<SharedSFMemHandler> sfHandler_;
   std::optional<SharedSysStateMemHandler> sysHandler_;
+  std::optional<SharedComMemHandler> comHandler_;
 
-  std::array<ChildProc, 2> children_{};
+  std::array<ChildProc, 3> children_{};
 
   static inline std::atomic<bool> keepRunning_{true};
 
@@ -88,6 +92,10 @@ private:
     if (!sys) return false;
     sysShm_ = sys.value();
 
+    auto com = publishSharedMemory<SharedComMem>(kComShmPath);
+    if (!com) return false;
+    comShm_ = com.value();
+
     // GlobalWatchdog s'enregistre lui meme comme "writer" ID pour ces
     // handlers : il ne fait qu'appeler resetWriterFlag() dessus, jamais
     // getData/setData, donc l'id passe ici ne sert qu'a satisfaire les
@@ -98,6 +106,8 @@ private:
                        *sfShm_.ptr);
     sysHandler_.emplace(*sysShm_.ptr, TYPES::ComponentID::GlobalWatchdog,
                         TYPES::Us(2000));
+    comHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
+                        *comShm_.ptr);
 
     return true;
   }
@@ -105,6 +115,7 @@ private:
   void forkChildren() {
     children_[0] = spawn(TYPES::ComponentID::Navigation, "navigation");
     children_[1] = spawn(TYPES::ComponentID::SensorFusion, "sensorfusion");
+    children_[2] = spawn(TYPES::ComponentID::SysMonitoring, "sysmonitoring");
   }
 
   ChildProc spawn(TYPES::ComponentID id, const char *role) {
@@ -149,6 +160,7 @@ private:
     navHandler_->resetWriterFlag(id);
     sfHandler_->resetWriterFlag(id);
     sysHandler_->resetWriterFlag(id);
+    comHandler_->resetWriterFlag(id);
   }
 
   void shutdown() {
@@ -165,5 +177,6 @@ private:
     destroySharedMemory(kNavShmPath, navShm_);
     destroySharedMemory(kSFShmPath, sfShm_);
     destroySharedMemory(kSysShmPath, sysShm_);
+    destroySharedMemory(kComShmPath, comShm_);
   }
 };

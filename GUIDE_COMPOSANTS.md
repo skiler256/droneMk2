@@ -37,6 +37,17 @@ qui tu veux la santé). Si tu construis un nouveau handler multi-écrivains,
 respecte ce pattern — verrouiller avec l'id du sujet plutôt que le tien
 peut créer un deadlock permanent si tu crashes en tenant le verrou.
 
+**Checksum mono vs multi-écrivains** (§1.1) : par défaut, `checksumValid`/
+`updateChecksum` (hooks `protected virtual` de `SharedMemoryHandler`)
+utilisent le seul `mem_.checksum` du segment entier — correct pour un
+segment mono-propriétaire (`SharedNavMem`, `SharedSFMem`). Pour un segment
+multi-écrivains (`SharedSysStateMem`), il FAUT les overrider avec un
+checksum **par composant** (`state_.checksums[id]`, un tableau, pas un seul
+`uint32_t`) : sinon `reset(id)` d'un writer recalculerait un hash sur tout
+le payload — y compris les slots d'autres composants jamais vérifiés — et
+revaliderait silencieusement leur corruption éventuelle. Voir
+`SharedSysStateMem.hpp` pour l'implémentation de référence.
+
 ## 2. Créer un nouveau segment shm pour ton composant
 
 Copie le pattern de `SharedNavMem.hpp` :
@@ -71,8 +82,10 @@ private:
   SharedMonComposantMem &mem_ref_;
 
   // Doit couvrir payload ET l'historique de restart hérité (sinon une
-  // corruption de l'historique ne sera jamais détectée) :
-  uint32_t computeChecksum() {
+  // corruption de l'historique ne sera jamais détectée). `id` est transmis
+  // par la voie d'accès générique mais ignoré ici : segment mono-écrivain,
+  // pas besoin d'un checksum par composant (cf. §1.1 pour la nuance).
+  uint32_t computeChecksum(TYPES::ComponentID) {
     return UTILITIES::crc32(mem_ref_.data) ^ historyChecksum();
   };
 
@@ -82,21 +95,23 @@ private:
       mem_ref_.data = SharedMonComposantMem::payload{};
       sanitizeHistory(comp_.HotStartHistory);
       sanitizeHistory(comp_.ColdStartHistory);
-      mem_.checksum = computeChecksum();
+      updateChecksum(id); // PAS mem_.checksum = ... à la main, voir §1.1
     }
   };
 };
 ```
 
 Points obligatoires (sinon ça compile mais silencieusement faux) :
-- `computeChecksum()` doit hacher `historyChecksum()` en plus de ton
+- `computeChecksum(id)` doit hacher `historyChecksum()` en plus de ton
   payload, sinon la corruption de l'historique de restart est invisible.
 - `reset(id)` doit vérifier `id == id_` (n'importe quel composant ne doit
-  pas pouvoir reconstruire tes données).
+  pas pouvoir reconstruire tes données), et finir par `updateChecksum(id)`
+  — jamais une assignation directe à `mem_.checksum`.
 - Pour un segment multi-écrivains façon `SharedSysStateMem` (pas
-  mono-composant), `reset(id)` doit être **segmenté** : ne reconstruire que
-  le slot de `id`, jamais tout le tableau (sinon tu effaces les données des
-  autres). Voir `SharedSysStateMem.hpp` pour le pattern exact.
+  mono-composant), il faut en plus overrider `checksumValid`/
+  `updateChecksum` pour un checksum **par composant** — voir §1.1 et
+  `SharedSysStateMem.hpp` pour le pattern exact. Sans ça, `reset(id)` d'un
+  writer peut revalider silencieusement la corruption d'un autre slot.
 
 ## 3. Écrire une Task
 
@@ -120,7 +135,7 @@ private:
 ```cpp
 void MaTask::loop() {
   // Appelée à Tconfig.loopFrequency. Doit rester rapide — pas de sleep,
-  // pas d'I/O bloquante longue (ça retarde le heartbeat, cf. §6).
+  // pas d'I/O bloquante longue (ça retarde le heartbeat, cf. §7).
 }
 ```
 
@@ -212,7 +227,39 @@ ComponenConfig{
    construis les handlers puis le composant, boucle `while(true) sleep(2)`.
 5. Ajoute le dispatch dans `main()` : `if (role == "moncomposant") return runMonComposant();`.
 
-## 6. Pièges déjà rencontrés (lis avant de coder)
+## 6. Signaler un événement/une panne (système de codes)
+
+Chaque code (`FCP001`, style OBD2 — composant + catégorie + numéro) est
+défini dans `INDEX.csv` à la racine et génère `include/drone/generated/
+codes.hpp` (régénéré automatiquement par CMake à chaque build si le CSV a
+changé — `python3 tools/gen_codes.py` pour le faire à la main). Édite le
+CSV via `python3 tools/codes_editor.py` (recherche/filtre/ajout/édition/
+suppression) plutôt qu'à la main.
+
+Depuis ton composant :
+
+```cpp
+#include "drone/generated/codes.hpp"
+
+// ...
+sysState_.raiseCode(CODES::FCP001); // route auto vers mineur/majeur selon
+                                    // la sévérité définie dans le CSV
+sysState_.clearCode(CODES::FCP001); // retire d'un ensemble actif majeur
+                                    // (no-op si le code est mineur/déjà clear)
+```
+
+- **Toujours edge-triggered** : lève un code au *changement* d'état (garde
+  un booléen local dans ton composant), jamais à chaque tick de `loop()` —
+  sinon tu noies le ring buffer mineur (16 slots) sous des doublons en
+  quelques itérations.
+- **Mineur vs majeur** : les codes `Critical`/`Emergency` vont dans un
+  ensemble actif (8 slots, jamais écrasé silencieusement, effacé
+  explicitement par `clearCode`) ; les autres sévérités vont dans un ring
+  buffer FIFO (16 slots) — pas de `clearCode` là, il s'auto-purge.
+- Un code absent du dictionnaire (typo, jamais ajouté au CSV) n'est pas
+  perdu : il atterrit côté mineur par défaut plutôt que d'être ignoré.
+
+## 7. Pièges déjà rencontrés (lis avant de coder)
 
 - **Priorité `SCHED_FIFO` 0 = invalide.** `RTpriority` doit être ≥ 1, sinon
   `pthread_create` échoue silencieusement (`EINVAL`) et ta Task ne tourne
@@ -237,7 +284,7 @@ ComponenConfig{
   spécifique par composant dans `ComponentBase` aujourd'hui), à garder en
   tête si tu touches à ce composant.
 
-## 7. Tester
+## 8. Tester
 
 Regarde `tests/test_watchdog.cpp` pour des exemples directement
 réutilisables :

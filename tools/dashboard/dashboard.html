@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Dashboard — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+    --critical: #ff5c5c;
+    --ok: #3ecf8e;
+    --stale: #8b92a1;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  h1 { font-size: 1.1rem; margin: 0 0 .25rem; }
+  h2 { font-size: .85rem; margin: 0 0 .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; }
+  .card {
+    border: 1px solid var(--border); border-radius: 6px; padding: .6rem .7rem;
+    background: var(--bg);
+  }
+  .card .name { font-weight: 700; font-size: .8rem; display: flex; justify-content: space-between; align-items: center; }
+  .card .link-tag {
+    font-size: .65rem; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 4px; padding: 0 .3rem;
+  }
+  .card .field { display: flex; justify-content: space-between; font-size: .78rem; padding: .1rem 0; }
+  .card .field .k { color: var(--muted); }
+  .card .age { font-size: .68rem; margin-top: .3rem; }
+  .age.fresh { color: var(--ok); }
+  .age.stale { color: var(--critical); }
+  .empty { color: var(--muted); font-size: .82rem; padding: .5rem 0; }
+
+  form { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .75rem; }
+  label { font-size: .72rem; color: var(--muted); display: block; margin-bottom: .15rem; }
+  input, select {
+    width: 100%; padding: .35rem .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: .82rem;
+  }
+  button {
+    padding: .45rem .7rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--accent); color: #fff; font-family: inherit; font-size: .8rem;
+    cursor: pointer; font-weight: 600;
+  }
+  button.secondary { background: var(--bg); color: var(--text); }
+  .quick-cmds { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+  .quick-cmds button { flex: 1 1 auto; }
+  .status { font-size: .75rem; color: var(--muted); min-height: 1.2em; }
+  .status.error { color: var(--critical); }
+  .status.ok { color: var(--ok); }
+</style>
+</head>
+<body>
+  <h1>droneMk2 — Dashboard SysMonitoring</h1>
+  <div class="subtitle">
+    Écoute les ports UDP loopback des drivers factices (cf. src/main.cpp).
+    Pas de vidéo pour l'instant : VideoTask ne relaie pas encore les frames reçues.
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Télémétrie</h2>
+        <div id="cards" class="cards">
+          <div class="empty">En attente de paquets…</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Commandes rapides</h2>
+        <div class="quick-cmds" id="quickCmds"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Commande paramétrée</h2>
+        <form id="cmdForm">
+          <label for="cmdSelect">Paquet</label>
+          <select id="cmdSelect"></select>
+          <div id="cmdFields"></div>
+          <label for="linkSelect">Lien</label>
+          <select id="linkSelect">
+            <option value="main">TelMain</option>
+            <option value="sec">TelSec</option>
+          </select>
+          <button type="submit">Envoyer</button>
+        </form>
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const STALE_MS = 2000;
+let commands = {};
+
+async function fetchJSON(url, opts) {
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+  return res.json();
+}
+
+function renderCards(state) {
+  const el = document.getElementById('cards');
+  const names = Object.keys(state).sort();
+  if (names.length === 0) {
+    el.innerHTML = '<div class="empty">En attente de paquets…</div>';
+    return;
+  }
+
+  const now = Date.now() / 1000;
+  el.innerHTML = names.map(name => {
+    const entry = state[name];
+    const age = now - entry.ts;
+    const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+    const fields = Object.entries(entry.fields).map(([k, v]) => {
+      const val = typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(3) : v;
+      return `<div class="field"><span class="k">${k}</span><span>${val}</span></div>`;
+    }).join('');
+    return `<div class="card">
+      <div class="name">${name}<span class="link-tag">${entry.link}</span></div>
+      ${fields}
+      <div class="age ${ageClass}">${age.toFixed(1)}s</div>
+    </div>`;
+  }).join('');
+}
+
+async function pollTelemetry() {
+  try {
+    const state = await fetchJSON('/api/telemetry');
+    renderCards(state);
+  } catch (e) {
+    // silencieux : un poll raté ne doit pas spammer la console
+  }
+  setTimeout(pollTelemetry, 300);
+}
+
+async function sendCommand(name, link, fields) {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = 'envoi…';
+  statusEl.className = 'status';
+  try {
+    await fetchJSON('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, link, fields }),
+    });
+    statusEl.textContent = `${name} envoyé (${link})`;
+    statusEl.className = 'status ok';
+  } catch (e) {
+    statusEl.textContent = `erreur: ${e.message}`;
+    statusEl.className = 'status error';
+  }
+}
+
+function renderCmdFields(name) {
+  const container = document.getElementById('cmdFields');
+  const fields = commands[name] || [];
+  container.innerHTML = fields.map(f => `
+    <label for="f_${f.name}">${f.name} (${f.type})</label>
+    <input id="f_${f.name}" data-field="${f.name}" data-type="${f.type}"
+           type="${f.type === 'f32' ? 'number' : 'number'}" step="${f.type === 'f32' ? 'any' : '1'}" value="0">
+  `).join('');
+}
+
+async function loadCommands() {
+  commands = await fetchJSON('/api/commands');
+
+  const select = document.getElementById('cmdSelect');
+  select.innerHTML = Object.keys(commands).sort()
+    .map(name => `<option value="${name}">${name}</option>`).join('');
+  select.addEventListener('change', () => renderCmdFields(select.value));
+  renderCmdFields(select.value);
+
+  // Boutons "rapides" pour les commandes sans paramètre.
+  const quick = document.getElementById('quickCmds');
+  const noArgCmds = ['CMD_ARM', 'CMD_DISARM', 'CMD_RTL', 'CMD_LAND'].filter(n => n in commands);
+  quick.innerHTML = noArgCmds.map(n => `<button data-cmd="${n}">${n}</button>`).join('');
+  quick.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const link = document.getElementById('linkSelect').value;
+      sendCommand(btn.dataset.cmd, link, {});
+    });
+  });
+}
+
+document.getElementById('cmdForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('cmdSelect').value;
+  const link = document.getElementById('linkSelect').value;
+  const fields = {};
+  document.querySelectorAll('#cmdFields [data-field]').forEach(input => {
+    fields[input.dataset.field] = Number(input.value);
+  });
+  sendCommand(name, link, fields);
+});
+
+loadCommands();
+pollTelemetry();
+</script>
+</body>
+</html>

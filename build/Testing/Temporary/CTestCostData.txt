@@ -1,5 +1,6 @@
-test_types 43 7.64331e-05
-test_shared_state 37 0.00149551
-test_watchdog 18 0.0583929
-test_global_watchdog 15 0.0422095
+test_types 45 7.62649e-05
+test_shared_state 39 0.00142223
+test_watchdog 20 0.0525559
+test_global_watchdog 17 0.0372396
+test_telemetry 2 0.00108393
 ---

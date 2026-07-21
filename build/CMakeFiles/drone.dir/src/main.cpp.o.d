@@ -473,6 +473,13 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/c++/14/deque /usr/include/c++/14/bits/stl_deque.h \
  /usr/include/c++/14/bits/deque.tcc \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpTelemetryDriver.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpVideoDriver.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SysMonitoring.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/PacketScheduler.hpp \
+ /home/jules/droneMk2/include/drone/generated/telemetry.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
  /home/jules/droneMk2/include/drone/shm.hpp /usr/include/c++/14/csignal \
  /usr/include/signal.h \

@@ -1,10 +1,10 @@
-Start testing: Jul 19 17:15 CEST
+Start testing: Jul 19 22:50 CEST
 ----------------------------------------------------------
-1/4 Testing: test_types
-1/4 Test: test_types
+1/5 Testing: test_types
+1/5 Test: test_types
 Command: "/home/jules/droneMk2/build/test_types"
 Directory: /home/jules/droneMk2/build
-"test_types" start time: Jul 19 17:15 CEST
+"test_types" start time: Jul 19 22:50 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -75,15 +75,15 @@ Running main() from ./googletest/src/gtest_main.cc
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_types" end time: Jul 19 17:15 CEST
+"test_types" end time: Jul 19 22:50 CEST
 "test_types" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-2/4 Testing: test_shared_state
-2/4 Test: test_shared_state
+2/5 Testing: test_shared_state
+2/5 Test: test_shared_state
 Command: "/home/jules/droneMk2/build/test_shared_state"
 Directory: /home/jules/droneMk2/build
-"test_shared_state" start time: Jul 19 17:15 CEST
+"test_shared_state" start time: Jul 19 22:50 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -138,15 +138,15 @@ Running main() from ./googletest/src/gtest_main.cc
 Test time =   0.06 sec
 ----------------------------------------------------------
 Test Passed.
-"test_shared_state" end time: Jul 19 17:15 CEST
+"test_shared_state" end time: Jul 19 22:50 CEST
 "test_shared_state" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-3/4 Testing: test_watchdog
-3/4 Test: test_watchdog
+3/5 Testing: test_watchdog
+3/5 Test: test_watchdog
 Command: "/home/jules/droneMk2/build/test_watchdog"
 Directory: /home/jules/droneMk2/build
-"test_watchdog" start time: Jul 19 17:15 CEST
+"test_watchdog" start time: Jul 19 22:50 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -210,15 +210,73 @@ Running main() from ./googletest/src/gtest_main.cc
 Test time =   1.05 sec
 ----------------------------------------------------------
 Test Passed.
-"test_watchdog" end time: Jul 19 17:15 CEST
+"test_watchdog" end time: Jul 19 22:50 CEST
 "test_watchdog" time elapsed: 00:00:01
 ----------------------------------------------------------
 
-4/4 Testing: test_global_watchdog
-4/4 Test: test_global_watchdog
+4/5 Testing: test_telemetry
+4/5 Test: test_telemetry
+Command: "/home/jules/droneMk2/build/test_telemetry"
+Directory: /home/jules/droneMk2/build
+"test_telemetry" start time: Jul 19 22:50 CEST
+Output:
+----------------------------------------------------------
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 14 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 5 tests from TelemetryPacketTest
+[ RUN      ] TelemetryPacketTest.PosRoundTrip
+[       OK ] TelemetryPacketTest.PosRoundTrip (0 ms)
+[ RUN      ] TelemetryPacketTest.AutopilotModeRoundTrip
+[       OK ] TelemetryPacketTest.AutopilotModeRoundTrip (0 ms)
+[ RUN      ] TelemetryPacketTest.EmptyPayloadPacketRoundTrip
+[       OK ] TelemetryPacketTest.EmptyPayloadPacketRoundTrip (0 ms)
+[ RUN      ] TelemetryPacketTest.UnpackTruncatedBufferReturnsDefault
+[       OK ] TelemetryPacketTest.UnpackTruncatedBufferReturnsDefault (0 ms)
+[ RUN      ] TelemetryPacketTest.KTableCoversEveryPacketID
+[       OK ] TelemetryPacketTest.KTableCoversEveryPacketID (0 ms)
+[----------] 5 tests from TelemetryPacketTest (0 ms total)
+
+[----------] 2 tests from TelemetryFramingTest
+[ RUN      ] TelemetryFramingTest.EncodeDecodeRoundTrip
+[       OK ] TelemetryFramingTest.EncodeDecodeRoundTrip (0 ms)
+[ RUN      ] TelemetryFramingTest.DecodeEmptyBufferFails
+[       OK ] TelemetryFramingTest.DecodeEmptyBufferFails (0 ms)
+[----------] 2 tests from TelemetryFramingTest (0 ms total)
+
+[----------] 7 tests from PacketSchedulerTest
+[ RUN      ] PacketSchedulerTest.MainLinkCarriesEveryDownPacket
+[       OK ] PacketSchedulerTest.MainLinkCarriesEveryDownPacket (0 ms)
+[ RUN      ] PacketSchedulerTest.SecLinkOnlyCarriesBothPackets
+[       OK ] PacketSchedulerTest.SecLinkOnlyCarriesBothPackets (0 ms)
+[ RUN      ] PacketSchedulerTest.CriticalAlwaysBeatsRoutineWhenBothDue
+[       OK ] PacketSchedulerTest.CriticalAlwaysBeatsRoutineWhenBothDue (0 ms)
+[ RUN      ] PacketSchedulerTest.MostOverdueWinsAtEqualPriority
+[       OK ] PacketSchedulerTest.MostOverdueWinsAtEqualPriority (0 ms)
+[ RUN      ] PacketSchedulerTest.NothingDueReturnsNullptr
+[       OK ] PacketSchedulerTest.NothingDueReturnsNullptr (0 ms)
+[ RUN      ] PacketSchedulerTest.MarkDirtyForcesEventPacketDue
+[       OK ] PacketSchedulerTest.MarkDirtyForcesEventPacketDue (0 ms)
+[ RUN      ] PacketSchedulerTest.EventPacketRedundancyRefiresWithoutMarkDirty
+[       OK ] PacketSchedulerTest.EventPacketRedundancyRefiresWithoutMarkDirty (0 ms)
+[----------] 7 tests from PacketSchedulerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 14 tests from 3 test suites ran. (0 ms total)
+[  PASSED  ] 14 tests.
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"test_telemetry" end time: Jul 19 22:50 CEST
+"test_telemetry" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/5 Testing: test_global_watchdog
+5/5 Test: test_global_watchdog
 Command: "/home/jules/droneMk2/build/test_global_watchdog"
 Directory: /home/jules/droneMk2/build
-"test_global_watchdog" start time: Jul 19 17:15 CEST
+"test_global_watchdog" start time: Jul 19 22:50 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -230,22 +288,31 @@ Running main() from ./googletest/src/gtest_main.cc
 [ RUN      ] GlobalWatchdogTest.RespawnsChildrenThatDie
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
-GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
-GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
-GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 [       OK ] GlobalWatchdogTest.RespawnsChildrenThatDie (310 ms)
 [ RUN      ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren
 [       OK ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren (160 ms)
@@ -258,8 +325,8 @@ GlobalWatchdog: navigation est mort, reset writer flags + respawn
 Test time =   0.63 sec
 ----------------------------------------------------------
 Test Passed.
-"test_global_watchdog" end time: Jul 19 17:15 CEST
+"test_global_watchdog" end time: Jul 19 22:50 CEST
 "test_global_watchdog" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Jul 19 17:15 CEST
+End testing: Jul 19 22:50 CEST

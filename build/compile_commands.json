@@ -13,6 +13,24 @@
 },
 {
   "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/SystemMonitoring.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/SystemMonitoring.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/UdpTelemetryDriver.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/UdpTelemetryDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/UdpVideoDriver.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/UdpVideoDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
   "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o -c /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp",
   "file": "/home/jules/droneMk2/src/Drivers/NEO-M8N.cpp",
   "output": "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o"
@@ -52,6 +70,12 @@
   "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o -c /home/jules/droneMk2/tests/test_watchdog.cpp",
   "file": "/home/jules/droneMk2/tests/test_watchdog.cpp",
   "output": "CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.o -c /home/jules/droneMk2/tests/test_telemetry.cpp",
+  "file": "/home/jules/droneMk2/tests/test_telemetry.cpp",
+  "output": "CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.o"
 },
 {
   "directory": "/home/jules/droneMk2/build",
