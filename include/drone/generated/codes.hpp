@@ -23,6 +23,7 @@ enum class Category : uint8_t {
   P = 1, // Power
   S = 2, // Sensor
   A = 3, // Action
+  C = 4, // Communication
 };
 
 enum class Severity : uint8_t { Info = 0, Warning = 1, Critical = 2, Emergency = 3 };
@@ -65,14 +66,16 @@ struct Entry {
 };
 
 inline constexpr Code FCP001{Component::FC, Category::P, 1};
+inline constexpr Code MVC001{Component::MV, Category::C, 1};
 inline constexpr Code NVA001{Component::NV, Category::A, 1};
 inline constexpr Code NVA002{Component::NV, Category::A, 2};
 inline constexpr Code NVA003{Component::NV, Category::A, 3};
 inline constexpr Code SFS001{Component::SF, Category::S, 1};
 inline constexpr Code SFS002{Component::SF, Category::S, 2};
 
-inline constexpr std::array<Entry, 6> kTable{{
+inline constexpr std::array<Entry, 7> kTable{{
     Entry{FCP001, Severity::Critical, "batt_low", "tension batterie faible"},
+    Entry{MVC001, Severity::Warning, "unexpected_ack", "ACK reçu (COMMAND_ACK/PARAM_VALUE) ne correspond à aucune commande TTxACK en attente"},
     Entry{NVA001, Severity::Critical, "landing_cat_1", "atterissage d'urgence, FC autonome"},
     Entry{NVA002, Severity::Info, "landing_cat_2", "atterissage assité par LIDAR"},
     Entry{NVA003, Severity::Info, "landing_cat_3", "atterissage guidé"},

@@ -160,7 +160,7 @@ function renderCards(state) {
 
 async function pollTelemetry() {
   try {
-    const state = await fetchJSON('/api/telemetry');
+    const state = await fetchJSON('/api/sysmonitoring/telemetry');
     renderCards(state);
   } catch (e) {
     // silencieux : un poll raté ne doit pas spammer la console
@@ -173,7 +173,7 @@ async function sendCommand(name, link, fields) {
   statusEl.textContent = 'envoi…';
   statusEl.className = 'status';
   try {
-    await fetchJSON('/api/command', {
+    await fetchJSON('/api/sysmonitoring/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, link, fields }),
@@ -197,7 +197,7 @@ function renderCmdFields(name) {
 }
 
 async function loadCommands() {
-  commands = await fetchJSON('/api/commands');
+  commands = await fetchJSON('/api/sysmonitoring/commands');
 
   const select = document.getElementById('cmdSelect');
   select.innerHTML = Object.keys(commands).sort()

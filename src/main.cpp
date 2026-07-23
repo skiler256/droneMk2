@@ -34,6 +34,8 @@
 //   return 0;
 // };
 
+#include "drone/Components/MavlinkInterface/Driver/UartMavlinkLink.hpp"
+#include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"
 #include "drone/Components/Navigation/Navigation.hpp"
 #include "drone/Components/SensorFusions/SensorsFusion.hpp"
 #include "drone/Components/System Monitoring/Driver/UdpTelemetryDriver.hpp"
@@ -58,6 +60,10 @@ constexpr uint16_t kUdpTelMainPeerPort = 5602;
 constexpr uint16_t kUdpTelSecLocalPort = 5611;
 constexpr uint16_t kUdpTelSecPeerPort = 5612;
 constexpr uint16_t kUdpVideoLocalPort = 5621;
+
+// Port UART réel vers le FC — placeholder, cohérent avec les autres
+// drivers UART du projet (GPS sur ttyAMA1, LD06 sur ttyAMA2).
+constexpr const char *kFcUartPort = "/dev/ttyAMA0";
 
 int runNavigation() {
   auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
@@ -139,6 +145,33 @@ int runSysMonitoring() {
   return 0;
 }
 
+int runMavlinkInterface() {
+  auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
+  auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
+  auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
+  auto fc = attachSharedMemory<SharedFCStatus>(kFCShmPath);
+
+  if (!nav || !sf || !sys || !fc) {
+    std::cerr << "MavlinkInterface: echec attach shm\n";
+    return 1;
+  }
+
+  SharedNavMemHandler navHandler(ComponentID::MavlinkInterface, Us(2000), *nav->ptr);
+  SharedSFMemHandler sfHandler(ComponentID::MavlinkInterface, Us(2000), *sf->ptr);
+  SharedSysStateMemHandler sysHandler(*sys->ptr, ComponentID::MavlinkInterface,
+                                      Us(2000));
+  SharedFCStatusHandler fcHandler(ComponentID::MavlinkInterface, Us(2000), *fc->ptr);
+
+  UartMavlinkLink link(kFcUartPort);
+
+  ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 2};
+  MavlinkInterface composant(config, sysHandler, fcHandler, navHandler, sfHandler, link);
+
+  while (true)
+    sleep(2);
+  return 0;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -150,6 +183,8 @@ int main(int argc, char **argv) {
     return runSensorFusion();
   if (role == "sysmonitoring")
     return runSysMonitoring();
+  if (role == "mavlinkinterface")
+    return runMavlinkInterface();
 
   // point d'entree par defaut : process parent
   GlobalWatchdog gwd(argv[0]);

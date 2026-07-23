@@ -74,6 +74,12 @@ using Degrees = Scalar<TagDegrees>;
 struct TagHz {};
 using Hz = Scalar<TagHz>; // fréquence en hertz
 
+// Grandeurs électriques (batterie, ESC)
+struct TagVolts {};
+struct TagAmps {};
+using Volts = Scalar<TagVolts>;
+using Amps = Scalar<TagAmps>;
+
 // ─── Vecteurs 3D POD ─────────────────────────────────────────────────────────
 // Décision actée (CLAUDE.md) : pas de type Eigen dans un payload shared
 // memory — Eigen ne garantit ni trivially-copyable ni standard-layout, et

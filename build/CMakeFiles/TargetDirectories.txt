@@ -6,8 +6,11 @@
 /home/jules/droneMk2/build/CMakeFiles/test_shared_state.dir
 /home/jules/droneMk2/build/CMakeFiles/test_watchdog.dir
 /home/jules/droneMk2/build/CMakeFiles/test_telemetry.dir
+/home/jules/droneMk2/build/CMakeFiles/test_mavlink.dir
 /home/jules/droneMk2/build/CMakeFiles/test_stub_child.dir
 /home/jules/droneMk2/build/CMakeFiles/test_global_watchdog.dir
+/home/jules/droneMk2/build/CMakeFiles/mv_sitl.dir
+/home/jules/droneMk2/build/CMakeFiles/udp_bridge.dir
 /home/jules/droneMk2/build/CMakeFiles/test.dir
 /home/jules/droneMk2/build/CMakeFiles/edit_cache.dir
 /home/jules/droneMk2/build/CMakeFiles/rebuild_cache.dir

@@ -1,7 +1,6 @@
 #pragma once
 #include "drone/types.hpp"
 #include <cstddef>
-#include <cstdint>
 #include <expected>
 #include <optional>
 #include <span>
@@ -23,7 +22,8 @@ public:
   IMavlinkLink &operator=(IMavlinkLink &&) = delete;
 
   // Non bloquant : renvoie DriverError::NoNewData si rien n'est disponible.
-  [[nodiscard]] virtual std::expected<std::span<const std::byte>, TYPES::DriverError>
+  [[nodiscard]] virtual std::expected<std::span<const std::byte>,
+                                      TYPES::DriverError>
   poll() = 0;
 
   // Envoi normal — passe par le scheduler de TTx/TTxACK côté appelant.

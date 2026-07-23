@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SITL MV — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+    --ok: #3ecf8e;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  a.back { color: var(--muted); font-size: .8rem; text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-size: 1.1rem; margin: .5rem 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+  .segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .panel h2 { font-size: .85rem; margin: 0 0 .6rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .field { display: flex; justify-content: space-between; font-size: .8rem; padding: .15rem 0; border-bottom: 1px solid var(--border); }
+  .field:last-child { border-bottom: none; }
+  .field .k { color: var(--muted); }
+  .empty { color: var(--muted); font-style: italic; font-size: .82rem; }
+  .age { font-size: .68rem; margin-top: .5rem; }
+  .age.fresh { color: var(--ok); }
+  .age.stale { color: var(--muted); }
+
+  .inject { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .inject form { display: flex; flex-direction: column; gap: .5rem; }
+  .inject .row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .4rem; }
+  label { font-size: .72rem; color: var(--muted); display: block; margin-bottom: .15rem; }
+  input {
+    width: 100%; padding: .35rem .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: .82rem;
+  }
+  button {
+    padding: .45rem .7rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--accent); color: #fff; font-family: inherit; font-size: .8rem;
+    cursor: pointer; font-weight: 600; margin-top: .3rem;
+  }
+  .inject-status { font-size: .72rem; color: var(--muted); min-height: 1.2em; margin-top: .3rem; }
+  .inject-status.ok { color: var(--ok); }
+  .inject-status.error { color: #ff5c5c; }
+</style>
+</head>
+<body>
+  <a class="back" href="/">&larr; retour au menu</a>
+  <h1>SITL — MavlinkInterface</h1>
+  <div class="subtitle">
+    État des segments shm (FC/Nav/SF) via UDP_bridge, et injection de
+    données de test (écrit directement dans Nav/SF via les vrais handlers).
+  </div>
+
+  <div class="segments">
+    <div class="panel">
+      <h2>FC (SharedFCStatus)</h2>
+      <div id="fc"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Nav (consigne)</h2>
+      <div id="nav"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>SF (GPS/mag + état)</h2>
+      <div id="sf"><div class="empty">en attente…</div></div>
+    </div>
+  </div>
+
+  <div class="inject">
+    <div class="panel">
+      <h2>Injecter — consigne Nav</h2>
+      <form id="navForm">
+        <div class="row2">
+          <div>
+            <label for="nav_vx">vel.x</label>
+            <input id="nav_vx" type="number" step="any" value="0">
+          </div>
+          <div>
+            <label for="nav_vy">vel.y</label>
+            <input id="nav_vy" type="number" step="any" value="0">
+          </div>
+          <div>
+            <label for="nav_vz">vel.z</label>
+            <input id="nav_vz" type="number" step="any" value="0">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="nav_heading">heading (rad)</label>
+            <input id="nav_heading" type="number" step="any" value="0">
+          </div>
+          <div>
+            <label for="nav_altitude">altitude (m, NED)</label>
+            <input id="nav_altitude" type="number" step="any" value="0">
+          </div>
+        </div>
+        <button type="submit">Envoyer CMD=NAV</button>
+        <div class="inject-status" id="navStatus"></div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Injecter — échantillon GPS/mag</h2>
+      <form id="gpsForm">
+        <div class="row2">
+          <div>
+            <label for="gps_lat">lat</label>
+            <input id="gps_lat" type="number" step="any" value="44.1">
+          </div>
+          <div>
+            <label for="gps_lon">lon</label>
+            <input id="gps_lon" type="number" step="any" value="0.7">
+          </div>
+          <div>
+            <label for="gps_alt">alt (m MSL)</label>
+            <input id="gps_alt" type="number" step="any" value="120">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="gps_vn">vel_n</label>
+            <input id="gps_vn" type="number" step="any" value="0">
+          </div>
+          <div>
+            <label for="gps_ve">vel_e</label>
+            <input id="gps_ve" type="number" step="any" value="0">
+          </div>
+          <div>
+            <label for="gps_vd">vel_d</label>
+            <input id="gps_vd" type="number" step="any" value="0">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="gps_heading">heading (rad)</label>
+            <input id="gps_heading" type="number" step="any" value="0">
+          </div>
+          <div>
+            <label for="gps_fix">fix_type</label>
+            <input id="gps_fix" type="number" step="1" value="3">
+          </div>
+          <div>
+            <label for="gps_sats">satellites</label>
+            <input id="gps_sats" type="number" step="1" value="10">
+          </div>
+        </div>
+        <button type="submit">Envoyer CMD=GPSMAG</button>
+        <div class="inject-status" id="gpsStatus"></div>
+      </form>
+    </div>
+  </div>
+
+<script>
+const STALE_MS = 2000;
+
+function renderSegment(elId, entry) {
+  const el = document.getElementById(elId);
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+
+  const fields = Object.entries(entry.fields).map(([k, v]) => {
+    const val = typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(4) : v;
+    return `<div class="field"><span class="k">${k}</span><span>${val}</span></div>`;
+  }).join('');
+
+  el.innerHTML = fields + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/api/sitl_mv/status');
+    if (res.ok) {
+      const state = await res.json();
+      renderSegment('fc', state.FC);
+      renderSegment('nav', state.NAV);
+      renderSegment('sf', state.SF);
+    }
+  } catch (e) {
+    // silencieux : un poll raté ne doit pas spammer la console
+  }
+  setTimeout(poll, 300);
+}
+
+poll();
+
+async function inject(cmd, fields, statusEl) {
+  statusEl.textContent = 'envoi…';
+  statusEl.className = 'inject-status';
+  try {
+    const res = await fetch('/api/sitl_mv/inject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd, fields }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    statusEl.textContent = `${cmd} envoyé`;
+    statusEl.className = 'inject-status ok';
+  } catch (e) {
+    statusEl.textContent = `erreur: ${e.message}`;
+    statusEl.className = 'inject-status error';
+  }
+}
+
+document.getElementById('navForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  inject('NAV', {
+    'vel.x': document.getElementById('nav_vx').value,
+    'vel.y': document.getElementById('nav_vy').value,
+    'vel.z': document.getElementById('nav_vz').value,
+    'heading': document.getElementById('nav_heading').value,
+    'altitude': document.getElementById('nav_altitude').value,
+  }, document.getElementById('navStatus'));
+});
+
+document.getElementById('gpsForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  inject('GPSMAG', {
+    'lat': document.getElementById('gps_lat').value,
+    'lon': document.getElementById('gps_lon').value,
+    'alt': document.getElementById('gps_alt').value,
+    'vel_n': document.getElementById('gps_vn').value,
+    'vel_e': document.getElementById('gps_ve').value,
+    'vel_d': document.getElementById('gps_vd').value,
+    'heading': document.getElementById('gps_heading').value,
+    'fix_type': document.getElementById('gps_fix').value,
+    'satellites': document.getElementById('gps_sats').value,
+  }, document.getElementById('gpsStatus'));
+});
+</script>
+</body>
+</html>

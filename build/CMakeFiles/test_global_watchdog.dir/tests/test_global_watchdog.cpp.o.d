@@ -2,7 +2,7 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o: \
  /home/jules/droneMk2/tests/test_global_watchdog.cpp \
  /usr/include/stdc-predef.h \
  /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
- /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
+ /home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp \
  /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
  /home/jules/droneMk2/include/drone/types.hpp \
@@ -466,6 +466,7 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \

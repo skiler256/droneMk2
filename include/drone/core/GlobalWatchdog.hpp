@@ -1,4 +1,5 @@
 #pragma once
+#include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/Components/System Monitoring/SharedComMem.hpp"
@@ -22,6 +23,7 @@ inline constexpr std::string_view kNavShmPath = "/drone_nav";
 inline constexpr std::string_view kSFShmPath = "/drone_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_sysstate";
 inline constexpr std::string_view kComShmPath = "/drone_com";
+inline constexpr std::string_view kFCShmPath = "/drone_fc";
 
 class GlobalWatchdog {
 public:
@@ -52,13 +54,15 @@ private:
   ShmPublisher<SharedSFMem> sfShm_;
   ShmPublisher<SharedSysStateMem> sysShm_;
   ShmPublisher<SharedComMem> comShm_;
+  ShmPublisher<SharedFCStatus> fcShm_;
 
   std::optional<SharedNavMemHandler> navHandler_;
   std::optional<SharedSFMemHandler> sfHandler_;
   std::optional<SharedSysStateMemHandler> sysHandler_;
   std::optional<SharedComMemHandler> comHandler_;
+  std::optional<SharedFCStatusHandler> fcHandler_;
 
-  std::array<ChildProc, 3> children_{};
+  std::array<ChildProc, 4> children_{};
 
   static inline std::atomic<bool> keepRunning_{true};
 
@@ -96,6 +100,10 @@ private:
     if (!com) return false;
     comShm_ = com.value();
 
+    auto fc = publishSharedMemory<SharedFCStatus>(kFCShmPath);
+    if (!fc) return false;
+    fcShm_ = fc.value();
+
     // GlobalWatchdog s'enregistre lui meme comme "writer" ID pour ces
     // handlers : il ne fait qu'appeler resetWriterFlag() dessus, jamais
     // getData/setData, donc l'id passe ici ne sert qu'a satisfaire les
@@ -108,6 +116,8 @@ private:
                         TYPES::Us(2000));
     comHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
                         *comShm_.ptr);
+    fcHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
+                       *fcShm_.ptr);
 
     return true;
   }
@@ -116,6 +126,7 @@ private:
     children_[0] = spawn(TYPES::ComponentID::Navigation, "navigation");
     children_[1] = spawn(TYPES::ComponentID::SensorFusion, "sensorfusion");
     children_[2] = spawn(TYPES::ComponentID::SysMonitoring, "sysmonitoring");
+    children_[3] = spawn(TYPES::ComponentID::MavlinkInterface, "mavlinkinterface");
   }
 
   ChildProc spawn(TYPES::ComponentID id, const char *role) {
@@ -161,6 +172,7 @@ private:
     sfHandler_->resetWriterFlag(id);
     sysHandler_->resetWriterFlag(id);
     comHandler_->resetWriterFlag(id);
+    fcHandler_->resetWriterFlag(id);
   }
 
   void shutdown() {
@@ -178,5 +190,6 @@ private:
     destroySharedMemory(kSFShmPath, sfShm_);
     destroySharedMemory(kSysShmPath, sysShm_);
     destroySharedMemory(kComShmPath, comShm_);
+    destroySharedMemory(kFCShmPath, fcShm_);
   }
 };

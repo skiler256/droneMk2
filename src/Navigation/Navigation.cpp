@@ -25,6 +25,5 @@ Navigation::Navigation(ComponenConfig config,
 
 void APTask::loop() {
   // Ms dure = UTILITIES::msBetween(comp.temps, Clock::now());
-  auto a = comp.SF_.getBlip();
-  std::cout <<"Je suis nav :" <<a << "\n";
+  std::cout <<"Je suis nav\n";
 };

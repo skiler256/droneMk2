@@ -26,7 +26,6 @@ SensorFusions::SensorFusions(ComponenConfig config,
 
 void GPSTask::loop() {
   Ms dure = UTILITIES::msBetween(comp.temps, Clock::now());
-  comp.SF_.setBlip(static_cast<int>(dure.count())*2);
   std::cout <<"Je suis SensorFusion " <<dure.count() << "\n";
-  
+
 };

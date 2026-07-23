@@ -28,6 +28,7 @@ CATEGORIES = {
     "P": (1, "Power"),
     "S": (2, "Sensor"),
     "A": (3, "Action"),
+    "C": (4, "Communication"),
 }
 
 SEVERITIES = {"info": "Info", "warning": "Warning", "critical": "Critical",

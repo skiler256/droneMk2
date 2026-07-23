@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Outils de dev — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  h1 { font-size: 1.1rem; margin: 0 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; max-width: 900px; }
+  a.card {
+    display: block;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  a.card:hover { border-color: var(--accent); }
+  a.card .name { font-weight: 700; font-size: .95rem; margin-bottom: .3rem; }
+  a.card .desc { color: var(--muted); font-size: .78rem; }
+</style>
+</head>
+<body>
+  <h1>Outils de dev — droneMk2</h1>
+  <div class="subtitle">Un serveur, plusieurs outils — chaque cas de test dans sa propre page.</div>
+
+  <div class="cards">
+    <a class="card" href="/sysmonitoring">
+      <div class="name">SysMonitoring</div>
+      <div class="desc">Télémétrie TelMain/TelSec (UDP loopback), envoi de commandes GCS.</div>
+    </a>
+    <a class="card" href="/sitl/mv">
+      <div class="name">SITL — MavlinkInterface</div>
+      <div class="desc">État des segments FC/Nav/SF face à ArduPilot SITL.</div>
+    </a>
+  </div>
+</body>
+</html>

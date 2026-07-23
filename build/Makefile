@@ -231,6 +231,19 @@ test_telemetry/fast:
 .PHONY : test_telemetry/fast
 
 #=============================================================================
+# Target rules for targets named test_mavlink
+
+# Build rule for target.
+test_mavlink: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_mavlink
+.PHONY : test_mavlink
+
+# fast build rule for target.
+test_mavlink/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/build
+.PHONY : test_mavlink/fast
+
+#=============================================================================
 # Target rules for targets named test_stub_child
 
 # Build rule for target.
@@ -255,6 +268,32 @@ test_global_watchdog: cmake_check_build_system
 test_global_watchdog/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/build
 .PHONY : test_global_watchdog/fast
+
+#=============================================================================
+# Target rules for targets named mv_sitl
+
+# Build rule for target.
+mv_sitl: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mv_sitl
+.PHONY : mv_sitl
+
+# fast build rule for target.
+mv_sitl/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/build
+.PHONY : mv_sitl/fast
+
+#=============================================================================
+# Target rules for targets named udp_bridge
+
+# Build rule for target.
+udp_bridge: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 udp_bridge
+.PHONY : udp_bridge
+
+# fast build rule for target.
+udp_bridge/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/build
+.PHONY : udp_bridge/fast
 
 src/Drivers/LD06.o: src/Drivers/LD06.cpp.o
 .PHONY : src/Drivers/LD06.o
@@ -328,6 +367,78 @@ src/Drivers/NEO-M8N.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s
 .PHONY : src/Drivers/NEO-M8N.cpp.s
 
+src/MavlinkInterface/MavlinkInterface.o: src/MavlinkInterface/MavlinkInterface.cpp.o
+.PHONY : src/MavlinkInterface/MavlinkInterface.o
+
+# target to build an object file
+src/MavlinkInterface/MavlinkInterface.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.o
+.PHONY : src/MavlinkInterface/MavlinkInterface.cpp.o
+
+src/MavlinkInterface/MavlinkInterface.i: src/MavlinkInterface/MavlinkInterface.cpp.i
+.PHONY : src/MavlinkInterface/MavlinkInterface.i
+
+# target to preprocess a source file
+src/MavlinkInterface/MavlinkInterface.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.i
+.PHONY : src/MavlinkInterface/MavlinkInterface.cpp.i
+
+src/MavlinkInterface/MavlinkInterface.s: src/MavlinkInterface/MavlinkInterface.cpp.s
+.PHONY : src/MavlinkInterface/MavlinkInterface.s
+
+# target to generate assembly for a file
+src/MavlinkInterface/MavlinkInterface.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.s
+.PHONY : src/MavlinkInterface/MavlinkInterface.cpp.s
+
+src/MavlinkInterface/UartMavlinkLink.o: src/MavlinkInterface/UartMavlinkLink.cpp.o
+.PHONY : src/MavlinkInterface/UartMavlinkLink.o
+
+# target to build an object file
+src/MavlinkInterface/UartMavlinkLink.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UartMavlinkLink.cpp.o
+.PHONY : src/MavlinkInterface/UartMavlinkLink.cpp.o
+
+src/MavlinkInterface/UartMavlinkLink.i: src/MavlinkInterface/UartMavlinkLink.cpp.i
+.PHONY : src/MavlinkInterface/UartMavlinkLink.i
+
+# target to preprocess a source file
+src/MavlinkInterface/UartMavlinkLink.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UartMavlinkLink.cpp.i
+.PHONY : src/MavlinkInterface/UartMavlinkLink.cpp.i
+
+src/MavlinkInterface/UartMavlinkLink.s: src/MavlinkInterface/UartMavlinkLink.cpp.s
+.PHONY : src/MavlinkInterface/UartMavlinkLink.s
+
+# target to generate assembly for a file
+src/MavlinkInterface/UartMavlinkLink.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UartMavlinkLink.cpp.s
+.PHONY : src/MavlinkInterface/UartMavlinkLink.cpp.s
+
+src/MavlinkInterface/UdpMavlinkLink.o: src/MavlinkInterface/UdpMavlinkLink.cpp.o
+.PHONY : src/MavlinkInterface/UdpMavlinkLink.o
+
+# target to build an object file
+src/MavlinkInterface/UdpMavlinkLink.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UdpMavlinkLink.cpp.o
+.PHONY : src/MavlinkInterface/UdpMavlinkLink.cpp.o
+
+src/MavlinkInterface/UdpMavlinkLink.i: src/MavlinkInterface/UdpMavlinkLink.cpp.i
+.PHONY : src/MavlinkInterface/UdpMavlinkLink.i
+
+# target to preprocess a source file
+src/MavlinkInterface/UdpMavlinkLink.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UdpMavlinkLink.cpp.i
+.PHONY : src/MavlinkInterface/UdpMavlinkLink.cpp.i
+
+src/MavlinkInterface/UdpMavlinkLink.s: src/MavlinkInterface/UdpMavlinkLink.cpp.s
+.PHONY : src/MavlinkInterface/UdpMavlinkLink.s
+
+# target to generate assembly for a file
+src/MavlinkInterface/UdpMavlinkLink.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UdpMavlinkLink.cpp.s
+.PHONY : src/MavlinkInterface/UdpMavlinkLink.cpp.s
+
 src/Navigation/Navigation.o: src/Navigation/Navigation.cpp.o
 .PHONY : src/Navigation/Navigation.o
 
@@ -351,6 +462,54 @@ src/Navigation/Navigation.s: src/Navigation/Navigation.cpp.s
 src/Navigation/Navigation.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.s
 .PHONY : src/Navigation/Navigation.cpp.s
+
+src/SITL/MV_SITL.o: src/SITL/MV_SITL.cpp.o
+.PHONY : src/SITL/MV_SITL.o
+
+# target to build an object file
+src/SITL/MV_SITL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o
+.PHONY : src/SITL/MV_SITL.cpp.o
+
+src/SITL/MV_SITL.i: src/SITL/MV_SITL.cpp.i
+.PHONY : src/SITL/MV_SITL.i
+
+# target to preprocess a source file
+src/SITL/MV_SITL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.i
+.PHONY : src/SITL/MV_SITL.cpp.i
+
+src/SITL/MV_SITL.s: src/SITL/MV_SITL.cpp.s
+.PHONY : src/SITL/MV_SITL.s
+
+# target to generate assembly for a file
+src/SITL/MV_SITL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.s
+.PHONY : src/SITL/MV_SITL.cpp.s
+
+src/SITL/UDP_bridge.o: src/SITL/UDP_bridge.cpp.o
+.PHONY : src/SITL/UDP_bridge.o
+
+# target to build an object file
+src/SITL/UDP_bridge.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o
+.PHONY : src/SITL/UDP_bridge.cpp.o
+
+src/SITL/UDP_bridge.i: src/SITL/UDP_bridge.cpp.i
+.PHONY : src/SITL/UDP_bridge.i
+
+# target to preprocess a source file
+src/SITL/UDP_bridge.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.i
+.PHONY : src/SITL/UDP_bridge.cpp.i
+
+src/SITL/UDP_bridge.s: src/SITL/UDP_bridge.cpp.s
+.PHONY : src/SITL/UDP_bridge.s
+
+# target to generate assembly for a file
+src/SITL/UDP_bridge.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.s
+.PHONY : src/SITL/UDP_bridge.cpp.s
 
 src/SensorsFusion/SensorFusion.o: src/SensorsFusion/SensorFusion.cpp.o
 .PHONY : src/SensorsFusion/SensorFusion.o
@@ -520,6 +679,30 @@ tests/test_global_watchdog.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.s
 .PHONY : tests/test_global_watchdog.cpp.s
 
+tests/test_mavlink.o: tests/test_mavlink.cpp.o
+.PHONY : tests/test_mavlink.o
+
+# target to build an object file
+tests/test_mavlink.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o
+.PHONY : tests/test_mavlink.cpp.o
+
+tests/test_mavlink.i: tests/test_mavlink.cpp.i
+.PHONY : tests/test_mavlink.i
+
+# target to preprocess a source file
+tests/test_mavlink.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.i
+.PHONY : tests/test_mavlink.cpp.i
+
+tests/test_mavlink.s: tests/test_mavlink.cpp.s
+.PHONY : tests/test_mavlink.s
+
+# target to generate assembly for a file
+tests/test_mavlink.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.s
+.PHONY : tests/test_mavlink.cpp.s
+
 tests/test_shared_state.o: tests/test_shared_state.cpp.o
 .PHONY : tests/test_shared_state.o
 
@@ -629,12 +812,15 @@ help:
 	@echo "... generate_telemetry"
 	@echo "... drone"
 	@echo "... drone_lib"
+	@echo "... mv_sitl"
 	@echo "... test_global_watchdog"
+	@echo "... test_mavlink"
 	@echo "... test_shared_state"
 	@echo "... test_stub_child"
 	@echo "... test_telemetry"
 	@echo "... test_types"
 	@echo "... test_watchdog"
+	@echo "... udp_bridge"
 	@echo "... src/Drivers/LD06.o"
 	@echo "... src/Drivers/LD06.i"
 	@echo "... src/Drivers/LD06.s"
@@ -644,9 +830,24 @@ help:
 	@echo "... src/Drivers/NEO-M8N.o"
 	@echo "... src/Drivers/NEO-M8N.i"
 	@echo "... src/Drivers/NEO-M8N.s"
+	@echo "... src/MavlinkInterface/MavlinkInterface.o"
+	@echo "... src/MavlinkInterface/MavlinkInterface.i"
+	@echo "... src/MavlinkInterface/MavlinkInterface.s"
+	@echo "... src/MavlinkInterface/UartMavlinkLink.o"
+	@echo "... src/MavlinkInterface/UartMavlinkLink.i"
+	@echo "... src/MavlinkInterface/UartMavlinkLink.s"
+	@echo "... src/MavlinkInterface/UdpMavlinkLink.o"
+	@echo "... src/MavlinkInterface/UdpMavlinkLink.i"
+	@echo "... src/MavlinkInterface/UdpMavlinkLink.s"
 	@echo "... src/Navigation/Navigation.o"
 	@echo "... src/Navigation/Navigation.i"
 	@echo "... src/Navigation/Navigation.s"
+	@echo "... src/SITL/MV_SITL.o"
+	@echo "... src/SITL/MV_SITL.i"
+	@echo "... src/SITL/MV_SITL.s"
+	@echo "... src/SITL/UDP_bridge.o"
+	@echo "... src/SITL/UDP_bridge.i"
+	@echo "... src/SITL/UDP_bridge.s"
 	@echo "... src/SensorsFusion/SensorFusion.o"
 	@echo "... src/SensorsFusion/SensorFusion.i"
 	@echo "... src/SensorsFusion/SensorFusion.s"
@@ -668,6 +869,9 @@ help:
 	@echo "... tests/test_global_watchdog.o"
 	@echo "... tests/test_global_watchdog.i"
 	@echo "... tests/test_global_watchdog.s"
+	@echo "... tests/test_mavlink.o"
+	@echo "... tests/test_mavlink.i"
+	@echo "... tests/test_mavlink.s"
 	@echo "... tests/test_shared_state.o"
 	@echo "... tests/test_shared_state.i"
 	@echo "... tests/test_shared_state.s"

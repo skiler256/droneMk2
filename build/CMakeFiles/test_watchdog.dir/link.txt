@@ -1,1 +1,1 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/test_watchdog.dir/link.d CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o -o test_watchdog  libdrone_lib.a /usr/lib/aarch64-linux-gnu/libgtest_main.a /usr/lib/aarch64-linux-gnu/libgtest.a
+/usr/bin/c++ -g -fsanitize=address,undefined -Wl,--dependency-file=CMakeFiles/test_watchdog.dir/link.d CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o -o test_watchdog  libdrone_lib.a /usr/lib/aarch64-linux-gnu/libgtest_main.a /usr/lib/aarch64-linux-gnu/libgtest.a

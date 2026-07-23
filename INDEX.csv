@@ -1,5 +1,6 @@
 Code;Component;Category;Name;Description;Criticity
 FCP001;Flight Controller;Power;batt_low;tension batterie faible;Critical
+MVC001;Mavlink Interface;Communication;unexpected_ack;ACK reçu (COMMAND_ACK/PARAM_VALUE) ne correspond à aucune commande TTxACK en attente;Warning
 NVA001;Navigation;Action;landing_cat_1;atterissage d'urgence, FC autonome;Critical
 NVA002;Navigation;Action;landing_cat_2;atterissage assité par LIDAR;Info
 NVA003;Navigation;Action;landing_cat_3;atterissage guidé;Info

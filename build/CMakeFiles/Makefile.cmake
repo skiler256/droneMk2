@@ -74,6 +74,9 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/test_shared_state.dir/DependInfo.cmake"
   "CMakeFiles/test_watchdog.dir/DependInfo.cmake"
   "CMakeFiles/test_telemetry.dir/DependInfo.cmake"
+  "CMakeFiles/test_mavlink.dir/DependInfo.cmake"
   "CMakeFiles/test_stub_child.dir/DependInfo.cmake"
   "CMakeFiles/test_global_watchdog.dir/DependInfo.cmake"
+  "CMakeFiles/mv_sitl.dir/DependInfo.cmake"
+  "CMakeFiles/udp_bridge.dir/DependInfo.cmake"
   )

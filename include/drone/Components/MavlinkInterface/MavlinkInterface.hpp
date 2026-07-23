@@ -1,7 +1,11 @@
 #pragma once
+#include "drone/Components/MavlinkInterface/AckFifo.hpp"
 #include "drone/Components/MavlinkInterface/Driver.hpp"
+#include "drone/Components/MavlinkInterface/PendingAck.hpp"
+#include "drone/Components/MavlinkInterface/PendingAckQueue.hpp"
 #include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
+#include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/core/ComponentBase.hpp"
 
 class MavlinkInterface;
@@ -79,12 +83,37 @@ public:
   explicit MavlinkInterface(ComponenConfig config,
                             SharedSysStateMemHandler &sysState,
                             SharedFCStatusHandler &fc, SharedNavMemHandler &nav,
-                            IMavlinkLink &link);
+                            SharedSFMemHandler &sf, IMavlinkLink &link);
+
+  // Empile une demande MAV_CMD_SET_MESSAGE_INTERVAL par message d'intérêt
+  // dans ackQueue_ — TTxACK les enverra une par une (ACK'd, retry inclus).
+  // TEMPORAIRE : à terme cette séquence est ordonnée par MissionControl via
+  // TCmd (cf. MAVLINKINTERFACE.md §2) ; en attendant, appelée directement
+  // par le binaire SITL en bootstrap manuel (cf. MV_SITL.cpp).
+  void requestInitStreams();
 
   SharedFCStatusHandler &fc_;
   SharedSysStateMemHandler &sysState_; // pour raiseCode/clearCode depuis les Task
   SharedNavMemHandler &nav_;           // source consigne vitesse (SET_POSITION_TARGET_LOCAL_NED)
+  SharedSFMemHandler &sf_;             // source GPS_INPUT (position/vitesse brutes + cap fusionné)
   IMavlinkLink &link_;
+
+  // TRx est seule à lire link_ (cf. MAVLINKINTERFACE.md) — c'est l'unique
+  // canal par lequel TTxACK apprend qu'un COMMAND_ACK/PARAM_VALUE est arrivé.
+  AckFifo ackFifo_;
+
+  // État de la commande ACK'd en vol (TTxACK) et dernier HEARTBEAT envoyé
+  // (TTx) — sur comp_ plutôt que sur la Task elle-même, par cohérence avec
+  // le reste du code (mainSched_/secSched_ de SysMonitoring).
+  PendingAck pendingAck_;
+  PendingAckQueue ackQueue_; // commandes ACK'd en attente d'envoi, cf. requestInitStreams()
+  TYPES::TimePoint lastHeartbeatSent_{};
+
+  // Horodatage de l'ÉCHANTILLON (pas de l'envoi) le plus récent déjà
+  // transmis — sert à détecter une donnée réellement nouvelle chez
+  // sf_/nav_ (cf. §5 : événementiel, pas de redondance périodique).
+  TYPES::TimePoint lastGpsMagSampleTs_{};
+  TYPES::TimePoint lastNavCmdSampleTs_{};
 
 private:
   TTxTask TTx;
