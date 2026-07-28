@@ -6,11 +6,9 @@
 #include <optional>
 
 // FIFO borné de commandes ACK'd EN ATTENTE D'ENVOI — alimentée par TCmd
-// (routage MissionControl, pas encore implémenté) ou par des méthodes
-// publiques ponctuelles comme MavlinkInterface::requestInitStreams().
-// Dépilée uniquement par TTxACK (cf. MavlinkInterface.cpp, étape 3 de
-// TTxAckTask::loop()), un élément à la fois — jamais deux commandes ACK'd
-// en vol simultanément, cf. MAVLINKINTERFACE.md.
+// (ordres MissionControl) ou par des méthodes ponctuelles comme
+// requestInitStreams(). Dépilée uniquement par TTxACK, un élément à la
+// fois (jamais deux commandes ACK'd en vol simultanément).
 //
 // Contrairement à AckFifo (qui route des messages REÇUS), ici chaque
 // élément est déjà un PendingAck entièrement construit (frame packée
@@ -41,6 +39,15 @@ public:
     tail_ = (tail_ + 1) % kCapacity;
     --count_;
     return req;
+  }
+
+  // Vide la queue sans envoyer ce qui reste — utilisé par TTxACK quand une
+  // commande échoue (DENIED/FAILED/timeout) pour abandonner la séquence en
+  // cours plutôt que d'enchaîner aveuglément (ex: guided échoué -> arm
+  // -> takeoff quand même).
+  void clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    head_ = tail_ = count_ = 0;
   }
 
 private:

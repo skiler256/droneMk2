@@ -21,6 +21,7 @@ private:
   void handleUBX(std::uint8_t cls, std::uint8_t id, std::uint16_t payloadSize);
   [[nodiscard]] int makeI4(int cursor) const;
   [[nodiscard]] std::uint32_t makeU4(int cursor) const;
+  [[nodiscard]] std::uint16_t makeU2(int cursor) const;
 
   const char *portName_;
 

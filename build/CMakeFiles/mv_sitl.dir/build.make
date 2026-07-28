@@ -72,28 +72,28 @@ include CMakeFiles/mv_sitl.dir/flags.make
 CMakeFiles/mv_sitl.dir/codegen:
 .PHONY : CMakeFiles/mv_sitl.dir/codegen
 
-CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o: CMakeFiles/mv_sitl.dir/flags.make
-CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o: /home/jules/droneMk2/src/SITL/MV_SITL.cpp
-CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o: CMakeFiles/mv_sitl.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o -MF CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o.d -o CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o -c /home/jules/droneMk2/src/SITL/MV_SITL.cpp
+CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o: CMakeFiles/mv_sitl.dir/flags.make
+CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o: /home/jules/droneMk2/src/IntegrationTests/MV_SITL.cpp
+CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o: CMakeFiles/mv_sitl.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o -MF CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o.d -o CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/MV_SITL.cpp
 
-CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/SITL/MV_SITL.cpp > CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.i
+CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/IntegrationTests/MV_SITL.cpp > CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.i
 
-CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/SITL/MV_SITL.cpp -o CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.s
+CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/IntegrationTests/MV_SITL.cpp -o CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.s
 
 # Object files for target mv_sitl
 mv_sitl_OBJECTS = \
-"CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o"
+"CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o"
 
 # External object files for target mv_sitl
 mv_sitl_EXTERNAL_OBJECTS =
 
-mv_sitl: CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o
+mv_sitl: CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o
 mv_sitl: CMakeFiles/mv_sitl.dir/build.make
 mv_sitl: CMakeFiles/mv_sitl.dir/compiler_depend.ts
 mv_sitl: libdrone_lib.a

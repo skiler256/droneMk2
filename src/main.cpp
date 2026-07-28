@@ -34,6 +34,8 @@
 //   return 0;
 // };
 
+#include "drone/Components/Drivers/LD06.hpp"
+#include "drone/Components/Drivers/NEO-M8N.hpp"
 #include "drone/Components/MavlinkInterface/Driver/UartMavlinkLink.hpp"
 #include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"
 #include "drone/Components/Navigation/Navigation.hpp"
@@ -69,8 +71,9 @@ int runNavigation() {
   auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
   auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
+  auto cmd = attachSharedMemory<SharedCmdMem>(kCmdShmPath);
 
-  if (!nav || !sf || !sys) {
+  if (!nav || !sf || !sys || !cmd) {
     std::cerr << "Navigation: echec attach shm\n";
     return 1;
   }
@@ -79,9 +82,10 @@ int runNavigation() {
   SharedSFMemHandler sfHandler(ComponentID::Navigation, Us(2000), *sf->ptr);
   SharedSysStateMemHandler sysHandler(*sys->ptr, ComponentID::Navigation,
                                       Us(2000));
+  SharedCmdMemHandler cmdHandler(ComponentID::Navigation, Us(2000), *cmd->ptr);
 
   ComponenConfig config{.id = ComponentID::Navigation, .CompCore = 0};
-  Navigation composant(config, sysHandler, navHandler, sfHandler);
+  Navigation composant(config, sysHandler, navHandler, sfHandler, cmdHandler);
 
   while (true)
     sleep(2);
@@ -91,8 +95,9 @@ int runNavigation() {
 int runSensorFusion() {
   auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
+  auto fc = attachSharedMemory<SharedFCStatus>(kFCShmPath);
 
-  if (!sf || !sys) {
+  if (!sf || !sys || !fc) {
     std::cerr << "SensorFusion: echec attach shm\n";
     return 1;
   }
@@ -100,9 +105,21 @@ int runSensorFusion() {
   SharedSFMemHandler sfHandler(ComponentID::SensorFusion, Us(2000), *sf->ptr);
   SharedSysStateMemHandler sysHandler(*sys->ptr, ComponentID::SensorFusion,
                                       Us(2000));
+  SharedFCStatusHandler fcHandler(ComponentID::SensorFusion, Us(2000), *fc->ptr);
+
+  NEO_M8N gps;
+  LD06 lidar;
+  if (auto err = gps.init()) {
+    std::cerr << "SensorFusion: echec init GPS\n";
+    return 1;
+  }
+  if (auto err = lidar.init()) {
+    std::cerr << "SensorFusion: echec init Lidar\n";
+    return 1;
+  }
 
   ComponenConfig config{.id = ComponentID::SensorFusion, .CompCore = 0};
-  SensorFusions composant(config, sysHandler, sfHandler);
+  SensorFusions composant(config, sysHandler, sfHandler, gps, fcHandler, lidar);
 
   while (true)
     sleep(2);
@@ -150,8 +167,9 @@ int runMavlinkInterface() {
   auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
   auto fc = attachSharedMemory<SharedFCStatus>(kFCShmPath);
+  auto cmd = attachSharedMemory<SharedCmdMem>(kCmdShmPath);
 
-  if (!nav || !sf || !sys || !fc) {
+  if (!nav || !sf || !sys || !fc || !cmd) {
     std::cerr << "MavlinkInterface: echec attach shm\n";
     return 1;
   }
@@ -161,11 +179,13 @@ int runMavlinkInterface() {
   SharedSysStateMemHandler sysHandler(*sys->ptr, ComponentID::MavlinkInterface,
                                       Us(2000));
   SharedFCStatusHandler fcHandler(ComponentID::MavlinkInterface, Us(2000), *fc->ptr);
+  SharedCmdMemHandler cmdHandler(ComponentID::MavlinkInterface, Us(2000), *cmd->ptr);
 
   UartMavlinkLink link(kFcUartPort);
 
   ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 2};
-  MavlinkInterface composant(config, sysHandler, fcHandler, navHandler, sfHandler, link);
+  MavlinkInterface composant(config, sysHandler, fcHandler, navHandler, sfHandler,
+                             cmdHandler, link);
 
   while (true)
     sleep(2);

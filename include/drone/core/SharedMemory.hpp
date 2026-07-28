@@ -1,6 +1,7 @@
 #pragma once
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -11,6 +12,17 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+// FIFO bornée POD — safe en shm (pas de mutex, manipulée uniquement via
+// pushFifo()/popFifo() sous le CAS-lock de SharedMemoryHandler). Échoue au
+// lieu d'écraser (cf. pushFifo) : perdre un élément silencieusement (ex: un
+// ordre de MissionControl) est pire qu'un push refusé explicitement.
+template <typename T, size_t N> struct RingBuffer {
+  std::array<T, N> buf{};
+  size_t head{0};
+  size_t tail{0};
+  size_t count{0};
+};
 
 // RAII : release uniquement, l'acquisition (CAS) est faite par l'appelant.
 class WriterGuard {
@@ -97,6 +109,41 @@ protected:
     if (!fetch) {
       recordError(fetch.error());
     }
+  };
+
+  // Échoue (renvoie false) si la FIFO est pleine, plutôt que d'écraser
+  // l'élément le plus ancien.
+  template <typename T, size_t N>
+  [[nodiscard]] bool pushFifo(TYPES::ComponentID id, TYPES::Us timeout,
+                              RingBuffer<T, N> &fifo, const T &value) {
+    bool pushed = false;
+    auto fetch = lockedAccess(id, timeout, /*repairOnCorrupt=*/true, [&] {
+      if (fifo.count < N) {
+        fifo.buf[fifo.head] = value;
+        fifo.head = (fifo.head + 1) % N;
+        ++fifo.count;
+        pushed = true;
+      }
+    });
+    if (!fetch)
+      recordError(fetch.error());
+    return pushed;
+  };
+
+  template <typename T, size_t N>
+  std::optional<T> popFifo(TYPES::ComponentID id, TYPES::Us timeout,
+                           RingBuffer<T, N> &fifo) {
+    std::optional<T> result;
+    auto fetch = lockedAccess(id, timeout, /*repairOnCorrupt=*/true, [&] {
+      if (fifo.count > 0) {
+        result = fifo.buf[fifo.tail];
+        fifo.tail = (fifo.tail + 1) % N;
+        --fifo.count;
+      }
+    });
+    if (!fetch)
+      recordError(fetch.error());
+    return result;
   };
 
   template <typename T, typename A>

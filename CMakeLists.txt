@@ -151,9 +151,10 @@ drone_test(test_types        tests/test_types.cpp)
 drone_test(test_shared_state tests/test_shared_state.cpp)
 drone_test(test_watchdog     tests/test_watchdog.cpp)
 drone_test(test_telemetry    tests/test_telemetry.cpp)
-# drone_test(test_navigation   tests/test_navigation.cpp)
+drone_test(test_navigation   tests/test_navigation.cpp)
 # drone_test(test_kalman       tests/test_kalman.cpp)
 drone_test(test_mavlink      tests/test_mavlink.cpp)
+drone_test(test_sensorfusion tests/test_sensorfusion.cpp)
 
 # ─── test_global_watchdog : boîte noire, process réels ───────────────────────
 # Binaire compagnon minimal (pas de dispatch main.cpp, trop lourd) que
@@ -167,20 +168,29 @@ target_compile_definitions(test_global_watchdog PRIVATE
 add_dependencies(test_global_watchdog test_stub_child)
 
 # ════════════════════════════════════════════════════════════════════════════
-# SITL — binaires de dev, jamais dans le build de prod (cross-compile ARM64).
-# Un .cpp par test dans src/SITL/, plus un pont shm<->UDP réutilisable.
+# Tests d'intégration — binaires de dev, jamais dans le build de prod
+# (cross-compile ARM64). Un .cpp par test dans src/IntegrationTests/, plus un
+# pont shm<->UDP réutilisable (SITL et HIL).
 #
-# cmake -B build -DBUILD_SITL=ON
-# cmake --build build --target mv_sitl      # ou udp_bridge, etc.
+# cmake -B build -DBUILD_ITESTS=ON
+# cmake --build build --target mv_sitl      # ou udp_bridge, hil_sf_mv, etc.
 # ════════════════════════════════════════════════════════════════════════════
-option(BUILD_SITL "Compiler les binaires de test SITL (dev uniquement)" OFF)
+option(BUILD_ITESTS "Compiler les binaires de test d'intégration SITL/HIL (dev uniquement)" OFF)
 
-if(BUILD_SITL)
-    add_executable(mv_sitl src/SITL/MV_SITL.cpp)
+if(BUILD_ITESTS)
+    add_executable(mv_sitl src/IntegrationTests/MV_SITL.cpp)
     target_link_libraries(mv_sitl PRIVATE drone_lib)
     add_dependencies(mv_sitl generate_codes generate_telemetry)
 
-    add_executable(udp_bridge src/SITL/UDP_bridge.cpp)
+    add_executable(hil_sf_mv src/IntegrationTests/HIL_SF_MV.cpp)
+    target_link_libraries(hil_sf_mv PRIVATE drone_lib)
+    add_dependencies(hil_sf_mv generate_codes generate_telemetry)
+
+    add_executable(nav_sitl src/IntegrationTests/NAV_SITL.cpp)
+    target_link_libraries(nav_sitl PRIVATE drone_lib)
+    add_dependencies(nav_sitl generate_codes generate_telemetry)
+
+    add_executable(udp_bridge src/IntegrationTests/UDP_bridge.cpp)
     target_link_libraries(udp_bridge PRIVATE drone_lib)
     add_dependencies(udp_bridge generate_codes generate_telemetry)
 endif()

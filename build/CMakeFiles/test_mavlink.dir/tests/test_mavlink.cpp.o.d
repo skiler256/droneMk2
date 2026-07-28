@@ -502,6 +502,7 @@ CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o: \
  /usr/include/c++/14/bits/functional_hash.h \
  /home/jules/droneMk2/include/drone/Components/MavlinkInterface/Conversions.hpp \
  /home/jules/droneMk2/include/drone/Components/MavlinkInterface/PendingAck.hpp \
+ /home/jules/droneMk2/include/drone/generated/codes.hpp \
  /home/jules/droneMk2/include/drone/types.hpp \
  /usr/include/eigen3/Eigen/Core \
  /usr/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h \
@@ -813,6 +814,8 @@ CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /home/jules/droneMk2/include/drone/Components/MissionControl/SharedCmdMem.hpp \
+ /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /usr/include/gtest/gtest.h /usr/include/c++/14/memory \

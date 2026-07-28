@@ -72,28 +72,28 @@ include CMakeFiles/udp_bridge.dir/flags.make
 CMakeFiles/udp_bridge.dir/codegen:
 .PHONY : CMakeFiles/udp_bridge.dir/codegen
 
-CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o: CMakeFiles/udp_bridge.dir/flags.make
-CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o: /home/jules/droneMk2/src/SITL/UDP_bridge.cpp
-CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o: CMakeFiles/udp_bridge.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o -MF CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o.d -o CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o -c /home/jules/droneMk2/src/SITL/UDP_bridge.cpp
+CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: CMakeFiles/udp_bridge.dir/flags.make
+CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: /home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp
+CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: CMakeFiles/udp_bridge.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o -MF CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o.d -o CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp
 
-CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/SITL/UDP_bridge.cpp > CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.i
+CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp > CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.i
 
-CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/SITL/UDP_bridge.cpp -o CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.s
+CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp -o CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.s
 
 # Object files for target udp_bridge
 udp_bridge_OBJECTS = \
-"CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o"
+"CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o"
 
 # External object files for target udp_bridge
 udp_bridge_EXTERNAL_OBJECTS =
 
-udp_bridge: CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o
+udp_bridge: CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o
 udp_bridge: CMakeFiles/udp_bridge.dir/build.make
 udp_bridge: CMakeFiles/udp_bridge.dir/compiler_depend.ts
 udp_bridge: libdrone_lib.a

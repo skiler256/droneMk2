@@ -464,11 +464,13 @@ CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /home/jules/droneMk2/include/drone/Components/MissionControl/SharedCmdMem.hpp \
+ /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
+ /home/jules/droneMk2/include/drone/generated/codes.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/SITL/ShmPaths.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
- /home/jules/droneMk2/include/drone/generated/codes.hpp \
  /home/jules/droneMk2/include/drone/shm.hpp /usr/include/arpa/inet.h \
  /usr/include/netinet/in.h /usr/include/aarch64-linux-gnu/sys/socket.h \
  /usr/include/aarch64-linux-gnu/bits/socket.h \

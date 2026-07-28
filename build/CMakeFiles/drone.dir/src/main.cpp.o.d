@@ -1,7 +1,7 @@
 CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/stdc-predef.h \
- /home/jules/droneMk2/include/drone/Components/MavlinkInterface/Driver/UartMavlinkLink.hpp \
- /home/jules/droneMk2/include/drone/Components/MavlinkInterface/Driver.hpp \
+ /home/jules/droneMk2/include/drone/Components/Drivers/LD06.hpp \
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/Driver.hpp \
  /home/jules/droneMk2/include/drone/types.hpp \
  /usr/include/eigen3/Eigen/Core \
  /usr/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h \
@@ -438,8 +438,19 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/c++/14/ext/concurrence.h /usr/include/c++/14/bits/align.h \
  /usr/include/c++/14/bits/chrono_io.h /usr/include/c++/14/iomanip \
  /usr/include/c++/14/bits/quoted_string.h /usr/include/c++/14/expected \
- /usr/include/c++/14/mutex /usr/include/c++/14/bits/unique_lock.h \
- /usr/include/termios.h /usr/include/aarch64-linux-gnu/bits/termios.h \
+ /usr/include/fcntl.h /usr/include/aarch64-linux-gnu/bits/fcntl.h \
+ /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h \
+ /usr/include/aarch64-linux-gnu/bits/types/struct_iovec.h \
+ /usr/include/linux/falloc.h /usr/include/aarch64-linux-gnu/bits/stat.h \
+ /usr/include/aarch64-linux-gnu/bits/struct_stat.h \
+ /usr/include/linux/i2c-dev.h /usr/include/aarch64-linux-gnu/sys/ioctl.h \
+ /usr/include/aarch64-linux-gnu/bits/ioctls.h \
+ /usr/lib/linux/uapi/arm64/asm/ioctls.h /usr/include/asm-generic/ioctls.h \
+ /usr/include/linux/ioctl.h /usr/lib/linux/uapi/arm64/asm/ioctl.h \
+ /usr/include/asm-generic/ioctl.h \
+ /usr/include/aarch64-linux-gnu/bits/ioctl-types.h \
+ /usr/include/aarch64-linux-gnu/sys/ttydefaults.h /usr/include/termios.h \
+ /usr/include/aarch64-linux-gnu/bits/termios.h \
  /usr/include/aarch64-linux-gnu/bits/termios-struct.h \
  /usr/include/aarch64-linux-gnu/bits/termios-c_cc.h \
  /usr/include/aarch64-linux-gnu/bits/termios-c_iflag.h \
@@ -449,7 +460,10 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/aarch64-linux-gnu/bits/termios-c_lflag.h \
  /usr/include/aarch64-linux-gnu/bits/termios-tcflow.h \
  /usr/include/aarch64-linux-gnu/bits/termios-misc.h \
- /usr/include/aarch64-linux-gnu/sys/ttydefaults.h \
+ /home/jules/droneMk2/include/drone/Components/Drivers/NEO-M8N.hpp \
+ /home/jules/droneMk2/include/drone/Components/MavlinkInterface/Driver/UartMavlinkLink.hpp \
+ /home/jules/droneMk2/include/drone/Components/MavlinkInterface/Driver.hpp \
+ /usr/include/c++/14/mutex /usr/include/c++/14/bits/unique_lock.h \
  /home/jules/droneMk2/include/drone/Components/MavlinkInterface/MavlinkInterface.hpp \
  /home/jules/droneMk2/include/drone/Components/MavlinkInterface/AckFifo.hpp \
  /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink.h \
@@ -798,6 +812,8 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /home/jules/droneMk2/third_party/mavlink/c_library_v2/csAirLink/mavlink_msg_airlink_auth_response.h \
  /home/jules/droneMk2/third_party/mavlink/c_library_v2/mavlink_get_info.h \
  /home/jules/droneMk2/include/drone/Components/MavlinkInterface/PendingAck.hpp \
+ /home/jules/droneMk2/include/drone/generated/codes.hpp \
+ /home/jules/droneMk2/include/drone/Components/MavlinkInterface/PendingAckQueue.hpp \
  /home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp \
  /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
@@ -810,11 +826,6 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/aarch64-linux-gnu/sys/time.h /usr/include/semaphore.h \
  /usr/include/aarch64-linux-gnu/bits/semaphore.h \
  /usr/lib/gcc/aarch64-linux-gnu/14/include/arm_acle.h \
- /usr/include/fcntl.h /usr/include/aarch64-linux-gnu/bits/fcntl.h \
- /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h \
- /usr/include/aarch64-linux-gnu/bits/types/struct_iovec.h \
- /usr/include/linux/falloc.h /usr/include/aarch64-linux-gnu/bits/stat.h \
- /usr/include/aarch64-linux-gnu/bits/struct_stat.h \
  /usr/include/aarch64-linux-gnu/sys/mman.h \
  /usr/include/aarch64-linux-gnu/bits/mman.h \
  /usr/include/aarch64-linux-gnu/bits/mman-map-flags-generic.h \
@@ -826,11 +837,12 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /home/jules/droneMk2/include/drone/Components/MissionControl/SharedCmdMem.hpp \
+ /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
- /home/jules/droneMk2/include/drone/generated/codes.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \
  /usr/include/c++/14/deque /usr/include/c++/14/bits/stl_deque.h \
  /usr/include/c++/14/bits/deque.tcc \

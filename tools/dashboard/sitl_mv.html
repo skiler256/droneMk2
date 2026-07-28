@@ -88,8 +88,16 @@
       <div id="nav"><div class="empty">en attente…</div></div>
     </div>
     <div class="panel">
-      <h2>SF (GPS/mag + état)</h2>
+      <h2>SF (GPS + état)</h2>
       <div id="sf"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Lidar</h2>
+      <div id="lidar"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>SysState (santé + codes)</h2>
+      <div id="sys"><div class="empty">en attente…</div></div>
     </div>
   </div>
 
@@ -107,27 +115,27 @@
             <input id="nav_vy" type="number" step="any" value="0">
           </div>
           <div>
-            <label for="nav_vz">vel.z</label>
-            <input id="nav_vz" type="number" step="any" value="0">
-          </div>
-        </div>
-        <div class="row2">
-          <div>
             <label for="nav_heading">heading (rad)</label>
             <input id="nav_heading" type="number" step="any" value="0">
           </div>
+        </div>
+        <div class="row2">
           <div>
             <label for="nav_altitude">altitude (m, NED)</label>
             <input id="nav_altitude" type="number" step="any" value="0">
           </div>
         </div>
+        <!-- vel.z retiré : vz est calculé en interne par MavlinkInterface
+             (P-controller sur l'écart d'altitude), pas piloté depuis ici. -->
         <button type="submit">Envoyer CMD=NAV</button>
         <div class="inject-status" id="navStatus"></div>
       </form>
     </div>
 
     <div class="panel">
-      <h2>Injecter — échantillon GPS/mag</h2>
+      <h2>Injecter — échantillon GPS</h2>
+      <!-- Pas de cap ici : le magnétomètre est câblé directement sur le FC
+           (cf. SENSORFUSION.md), plus fourni par SensorFusion. -->
       <form id="gpsForm">
         <div class="row2">
           <div>
@@ -159,10 +167,6 @@
         </div>
         <div class="row2">
           <div>
-            <label for="gps_heading">heading (rad)</label>
-            <input id="gps_heading" type="number" step="any" value="0">
-          </div>
-          <div>
             <label for="gps_fix">fix_type</label>
             <input id="gps_fix" type="number" step="1" value="3">
           </div>
@@ -174,6 +178,21 @@
         <button type="submit">Envoyer CMD=GPSMAG</button>
         <div class="inject-status" id="gpsStatus"></div>
       </form>
+    </div>
+
+    <div class="panel">
+      <h2>Ordres MissionControl (temporaire, cf. TCmd)</h2>
+      <div class="row2">
+        <div>
+          <label for="takeoff_alt">altitude (cm)</label>
+          <input id="takeoff_alt" type="number" step="1" value="500">
+        </div>
+      </div>
+      <button id="armBtn" type="button">Armer (MCO003)</button>
+      <button id="disarmBtn" type="button">Désarmer (MCO004)</button>
+      <button id="takeoffBtn" type="button">Décollage (MCO001)</button>
+      <button id="guidedBtn" type="button">Mode GUIDED (MCO002)</button>
+      <div class="inject-status" id="mcStatus"></div>
     </div>
   </div>
 
@@ -199,14 +218,32 @@ function renderSegment(elId, entry) {
   el.innerHTML = fields + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
 }
 
+// Un point cloud complet (jusqu'à 360 points) est illisible en liste
+// champ/valeur — on affiche juste le compte + l'âge, pas chaque point.
+function renderLidar(elId, entry) {
+  const el = document.getElementById(elId);
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+  const count = entry.fields.count ?? 0;
+  el.innerHTML = `<div class="field"><span class="k">points valides</span><span>${count}</span></div>`
+    + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
 async function poll() {
   try {
-    const res = await fetch('/api/sitl_mv/status');
+    const res = await fetch('/api/bridge/status');
     if (res.ok) {
       const state = await res.json();
-      renderSegment('fc', state.FC);
-      renderSegment('nav', state.NAV);
-      renderSegment('sf', state.SF);
+      renderSegment('fc', state.SITL_FC);
+      renderSegment('nav', state.SITL_NAV);
+      renderSegment('sf', state.SITL_SF);
+      renderLidar('lidar', state.SITL_LIDAR);
+      renderSegment('sys', state.SITL_SYS);
     }
   } catch (e) {
     // silencieux : un poll raté ne doit pas spammer la console
@@ -220,10 +257,10 @@ async function inject(cmd, fields, statusEl) {
   statusEl.textContent = 'envoi…';
   statusEl.className = 'inject-status';
   try {
-    const res = await fetch('/api/sitl_mv/inject', {
+    const res = await fetch('/api/bridge/inject', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cmd, fields }),
+      body: JSON.stringify({ ns: 'SITL', cmd, fields }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || res.statusText);
@@ -240,7 +277,6 @@ document.getElementById('navForm').addEventListener('submit', (e) => {
   inject('NAV', {
     'vel.x': document.getElementById('nav_vx').value,
     'vel.y': document.getElementById('nav_vy').value,
-    'vel.z': document.getElementById('nav_vz').value,
     'heading': document.getElementById('nav_heading').value,
     'altitude': document.getElementById('nav_altitude').value,
   }, document.getElementById('navStatus'));
@@ -255,10 +291,30 @@ document.getElementById('gpsForm').addEventListener('submit', (e) => {
     'vel_n': document.getElementById('gps_vn').value,
     'vel_e': document.getElementById('gps_ve').value,
     'vel_d': document.getElementById('gps_vd').value,
-    'heading': document.getElementById('gps_heading').value,
     'fix_type': document.getElementById('gps_fix').value,
     'satellites': document.getElementById('gps_sats').value,
   }, document.getElementById('gpsStatus'));
+});
+
+document.getElementById('armBtn').addEventListener('click', () => {
+  inject('MCCMD', { 'code': 'arm' }, document.getElementById('mcStatus'));
+});
+
+document.getElementById('disarmBtn').addEventListener('click', () => {
+  inject('MCCMD', { 'code': 'disarm' }, document.getElementById('mcStatus'));
+});
+
+document.getElementById('takeoffBtn').addEventListener('click', () => {
+  inject('MCCMD', {
+    'code': 'takeoff',
+    'payload': document.getElementById('takeoff_alt').value,
+  }, document.getElementById('mcStatus'));
+});
+
+document.getElementById('guidedBtn').addEventListener('click', () => {
+  inject('MCCMD', {
+    'code': 'guided',
+  }, document.getElementById('mcStatus'));
 });
 </script>
 </body>

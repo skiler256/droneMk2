@@ -121,6 +121,12 @@ std::optional<TYPES::DriverError> NEO_M8N::configureGNSS() {
   static constexpr std::uint8_t CFG_MSG_PVT_ON[] = {
       0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0x01, 0x07,
       0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x18, 0xE1};
+  // NAV-DOP (0x01,0x04) : seule source de hdop/vdop, ni NAV-PVT ni
+  // NAV-POSLLH ne les fournissent (checksum calculé, pas repris de l'ancien
+  // driver comme les autres trames ci-dessus).
+  static constexpr std::uint8_t CFG_MSG_DOP_ON[] = {
+      0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0x01, 0x04,
+      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x15, 0xCC};
 
   static constexpr std::uint8_t CFG_RATE[] = {0xB5, 0x62, 0x06, 0x08, 0x06,
                                               0x00, 0xC8, 0x00, 0x01, 0x00,
@@ -130,7 +136,8 @@ std::optional<TYPES::DriverError> NEO_M8N::configureGNSS() {
       CFG_GNSS,          CFG_NAV5,           CFG_MSG_GGA_OFF,   CFG_MSG_GLL_OFF,
       CFG_MSG_GSA_OFF,   CFG_MSG_GSV_OFF,    CFG_MSG_RMC_OFF,   CFG_MSG_VTG_OFF,
       CFG_MSG_POSLLH_ON, CFG_MSG_STATUS_ON,  CFG_MSG_VELNED_ON, CFG_MSG_SOL_ON,
-      CFG_MSG_SVINFO_ON, CFG_MSG_TIMEUTC_ON, CFG_MSG_PVT_ON,    CFG_RATE};
+      CFG_MSG_SVINFO_ON, CFG_MSG_TIMEUTC_ON, CFG_MSG_PVT_ON,    CFG_MSG_DOP_ON,
+      CFG_RATE};
   const std::size_t sizes[] = {
       sizeof(CFG_GNSS),          sizeof(CFG_NAV5),
       sizeof(CFG_MSG_GGA_OFF),   sizeof(CFG_MSG_GLL_OFF),
@@ -139,7 +146,8 @@ std::optional<TYPES::DriverError> NEO_M8N::configureGNSS() {
       sizeof(CFG_MSG_POSLLH_ON), sizeof(CFG_MSG_STATUS_ON),
       sizeof(CFG_MSG_VELNED_ON), sizeof(CFG_MSG_SOL_ON),
       sizeof(CFG_MSG_SVINFO_ON), sizeof(CFG_MSG_TIMEUTC_ON),
-      sizeof(CFG_MSG_PVT_ON),    sizeof(CFG_RATE)};
+      sizeof(CFG_MSG_PVT_ON),    sizeof(CFG_MSG_DOP_ON),
+      sizeof(CFG_RATE)};
 
   for (std::size_t i = 0; i < std::size(frames); ++i) {
     if (auto err = sendConfigFrame(frames[i], sizes[i])) {
@@ -247,6 +255,7 @@ void NEO_M8N::handleUBX(std::uint8_t cls, std::uint8_t id,
 
   case 0x03: // NAV-STATUS
     if (payloadSize == 16) {
+      data_.fixType = payloadBuffer_[4];
       data_.gpsFixOk = (payloadBuffer_[4] >= 0x03);
       newPacketDecoded_ = true;
     }
@@ -268,6 +277,16 @@ void NEO_M8N::handleUBX(std::uint8_t cls, std::uint8_t id,
     if (payloadSize == 28) {
       data_.coord.longitude = makeI4(4) * 1e-7;
       data_.coord.latitude = makeI4(8) * 1e-7;
+      data_.altMslMm = makeI4(16); // hMSL, mm (offset 12 = height ellipsoïde, ignoré)
+      data_.vAcc = makeU4(24);     // mm (offset 20 = hAcc, déjà repris depuis NAV-PVT.pAcc)
+      newPacketDecoded_ = true;
+    }
+    break;
+
+  case 0x04: // NAV-DOP (gDOP/pDOP/tDOP non utilisés)
+    if (payloadSize == 18) {
+      data_.vdop = static_cast<float>(makeU2(10)) * 0.01f;
+      data_.hdop = static_cast<float>(makeU2(12)) * 0.01f;
       newPacketDecoded_ = true;
     }
     break;
@@ -284,11 +303,13 @@ void NEO_M8N::handleUBX(std::uint8_t cls, std::uint8_t id,
     break;
   }
 
-  case 0x07: // NAV-PVT (utilisé ici uniquement pour hAcc/sAcc, comme dans
-             // l'original)
-    data_.pAcc = makeU4(40);
-    data_.sAcc = makeU4(68);
-    newPacketDecoded_ = true;
+  case 0x07: // NAV-PVT
+    if (payloadSize == 92) {
+      data_.iTowMs = makeU4(0);
+      data_.pAcc = makeU4(40);
+      data_.sAcc = makeU4(68);
+      newPacketDecoded_ = true;
+    }
     break;
 
   default:
@@ -311,4 +332,10 @@ std::uint32_t NEO_M8N::makeU4(int cursor) const {
       (static_cast<std::uint32_t>(payloadBuffer_[cursor + 1]) << 8) |
       (static_cast<std::uint32_t>(payloadBuffer_[cursor + 2]) << 16) |
       (static_cast<std::uint32_t>(payloadBuffer_[cursor + 3]) << 24));
+}
+
+std::uint16_t NEO_M8N::makeU2(int cursor) const {
+  return static_cast<std::uint16_t>(
+      (static_cast<std::uint16_t>(payloadBuffer_[cursor])) |
+      (static_cast<std::uint16_t>(payloadBuffer_[cursor + 1]) << 8));
 }

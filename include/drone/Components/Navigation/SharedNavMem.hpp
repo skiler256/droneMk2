@@ -1,6 +1,7 @@
 #pragma once
 
 #include "drone/Components/SharedCompMem.hpp"
+#include "drone/generated/codes.hpp"
 #include "drone/types.hpp"
 
 // Consigne de sortie de la loi de correction (cf. Document de Conception
@@ -9,22 +10,30 @@
 // SET_POSITION_TARGET_LOCAL_NED.
 struct NavCommand {
   TYPES::TimePoint ts{};
-  TYPES::Velocity velNed{};        // vx, vy désirés — vz ignoré, cf. altitudeCmd
+  // vx, vy, vz — les 3 composantes sont envoyées telles quelles à
+  // MavlinkInterface (SET_POSITION_TARGET_LOCAL_NED). vz vient du
+  // P-controller altitude de Nav (NAV_CONV::computeVerticalGuidance).
+  TYPES::Velocity velNed{};
   TYPES::Radians headingCmd{0.0f}; // cap absolu désiré
-  // Altitude absolue désirée, repère NED (négative en vol, cf. Position) —
-  // envoyée comme position z, pas vz : plus stable qu'un taux de montée
-  // intégré (cf. MAVLINKINTERFACE.md, SET_POSITION_TARGET_LOCAL_NED).
+  // Altitude absolue visée, repère NED (négative en vol, cf. Position) —
+  // indicatif seulement (affichage GCS via UDP_bridge) : la commande
+  // réelle envoyée au FC passe par velNed.ned.z, pas ce champ.
   TYPES::Meters altitudeCmd{0.0f};
 };
-
-// Info segment/mode autopilote (engaged/armed, façon FMA) : pas encore
-// détaillé, cf. discussion à venir quand on s'attaquera à cette partie.
 
 struct SharedNavMem {
   SharedCompMem compMem;
 
+  // Affichage FMA (armé/engagé par axe), indicatif seulement — pas via
+  // sysState_.raiseCode/clearCode. À plat pour que TSeq/TAP écrivent
+  // chacun le leur sans se marcher dessus. Cf. NAVIGATION.md §7.
   struct payload {
     NavCommand cmd{};
+    CODES::Code lateralArmed{};
+    CODES::Code lateralEngaged{};
+    CODES::Code verticalArmed{};
+    CODES::Code verticalEngaged{};
+    CODES::Code speedEngaged{};
   };
   payload data;
 };
@@ -39,6 +48,29 @@ public:
 
   [[nodiscard]] std::optional<NavCommand> getCommand() {
     return getData(id_, timeout_, nav_.data.cmd);
+  }
+
+  // FMA — écrit par TSeq (latéral) et TAP (vertical/vitesse), lu par le GCS.
+  void setLateralArmed(CODES::Code c) { setData(id_, timeout_, nav_.data.lateralArmed, c); }
+  void setLateralEngaged(CODES::Code c) { setData(id_, timeout_, nav_.data.lateralEngaged, c); }
+  void setVerticalArmed(CODES::Code c) { setData(id_, timeout_, nav_.data.verticalArmed, c); }
+  void setVerticalEngaged(CODES::Code c) { setData(id_, timeout_, nav_.data.verticalEngaged, c); }
+  void setSpeedEngaged(CODES::Code c) { setData(id_, timeout_, nav_.data.speedEngaged, c); }
+
+  [[nodiscard]] std::optional<CODES::Code> getLateralArmed() {
+    return getData(id_, timeout_, nav_.data.lateralArmed);
+  }
+  [[nodiscard]] std::optional<CODES::Code> getLateralEngaged() {
+    return getData(id_, timeout_, nav_.data.lateralEngaged);
+  }
+  [[nodiscard]] std::optional<CODES::Code> getVerticalArmed() {
+    return getData(id_, timeout_, nav_.data.verticalArmed);
+  }
+  [[nodiscard]] std::optional<CODES::Code> getVerticalEngaged() {
+    return getData(id_, timeout_, nav_.data.verticalEngaged);
+  }
+  [[nodiscard]] std::optional<CODES::Code> getSpeedEngaged() {
+    return getData(id_, timeout_, nav_.data.speedEngaged);
   }
 
 private:

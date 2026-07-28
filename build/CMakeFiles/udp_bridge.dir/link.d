@@ -4,7 +4,7 @@ udp_bridge: \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o \
+  CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o \
   libdrone_lib.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/libm.so \
@@ -45,7 +45,7 @@ udp_bridge: \
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
 
-CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o:
+CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 
 libdrone_lib.a:
 

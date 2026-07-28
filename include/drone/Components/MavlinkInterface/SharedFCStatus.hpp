@@ -5,11 +5,8 @@
 #include <array>
 #include <cstdint>
 
-// LOCAL_POSITION_NED (position + vitesse) : BRUTES, pas calibrées — le
-// recalage par rapport au point home (HomeCalibrator) est appliqué par
-// SensorFusion en aval, pas ici (cf. Document de Conception Logicielle
-// §3.3.3). Bundlées dans un seul champ pour que set/get soit atomique
-// (évite de lire une position et une vitesse d'instants différents).
+// LOCAL_POSITION_NED brute, pas calibrée — le recalage HomeCalibrator est
+// appliqué par SensorFusion en aval. Bundlée pour un set/get atomique.
 struct FCLocalPosVel {
   TYPES::Position pos{};
   TYPES::Velocity vel{};
@@ -37,15 +34,26 @@ struct FCPressure {
   float temperatureC{0.0f};
 };
 
+// Bitmasks MAV_SYS_STATUS_SENSOR bruts (SYS_STATUS) — santé vue par le FC
+// lui-même, complémentaire aux codes SFS0xx/MVC0xx qui mesurent côté Pi.
+struct FCSensorHealth {
+  uint32_t present{0};
+  uint32_t enabled{0};
+  uint32_t health{0};
+};
+
 struct SharedFCStatus {
   SharedCompMem compMem;
 
   struct payload {
     TYPES::Attitude attitude{};       // ATTITUDE_QUATERNION
+    TYPES::TimePoint attitudeTs{};    // horodatage de réception, pour staleness (ex: TEKF)
     FCLocalPosVel localPosVel{};      // LOCAL_POSITION_NED
+    TYPES::TimePoint localPosVelTs{}; // idem, LOCAL_POSITION_NED
     FCBatteryStatus battery{};        // BATTERY_STATUS
     FCEscStatus esc{};                // ESC_STATUS
     FCPressure pressure{};            // SCALED_PRESSURE
+    FCSensorHealth sensorHealth{};    // SYS_STATUS
     TYPES::TimePoint lastHeartbeat{}; // HEARTBEAT — pour TimeoutMonitor/FSTask
   };
   payload data;
@@ -57,15 +65,18 @@ public:
                                  SharedFCStatus &fc)
       : SharedCompMemHandler(fc.compMem, id, timeout), fc_(fc) {};
 
-  // Écriture — appelée par TRx uniquement, mais pas de garde ici (le
-  // segment SharedCompMem est mono-writer par convention, pas imposé par
-  // le code ; cf. reset() ci-dessous pour la seule vérification d'identité).
+  // Écriture — appelée par TRx uniquement (mono-writer par convention, pas
+  // imposé par le code ; cf. reset() pour la seule vérification d'identité).
   void setAttitude(TYPES::Attitude a) {
     setData(id_, timeout_, fc_.data.attitude, a);
+    auto now = TYPES::Clock::now();
+    setData(id_, timeout_, fc_.data.attitudeTs, now);
   }
   void setLocalPosVel(TYPES::Position pos, TYPES::Velocity vel) {
     FCLocalPosVel v{pos, vel};
     setData(id_, timeout_, fc_.data.localPosVel, v);
+    auto now = TYPES::Clock::now();
+    setData(id_, timeout_, fc_.data.localPosVelTs, now);
   }
   void setBattery(FCBatteryStatus b) {
     setData(id_, timeout_, fc_.data.battery, b);
@@ -76,6 +87,9 @@ public:
   void setPressure(FCPressure p) {
     setData(id_, timeout_, fc_.data.pressure, p);
   }
+  void setSensorHealth(FCSensorHealth h) {
+    setData(id_, timeout_, fc_.data.sensorHealth, h);
+  }
   void setLastHeartbeat(TYPES::TimePoint t) {
     setData(id_, timeout_, fc_.data.lastHeartbeat, t);
   }
@@ -85,8 +99,14 @@ public:
   [[nodiscard]] std::optional<TYPES::Attitude> getAttitude() {
     return getData(id_, timeout_, fc_.data.attitude);
   }
+  [[nodiscard]] std::optional<TYPES::TimePoint> getAttitudeTs() {
+    return getData(id_, timeout_, fc_.data.attitudeTs);
+  }
   [[nodiscard]] std::optional<FCLocalPosVel> getLocalPosVel() {
     return getData(id_, timeout_, fc_.data.localPosVel);
+  }
+  [[nodiscard]] std::optional<TYPES::TimePoint> getLocalPosVelTs() {
+    return getData(id_, timeout_, fc_.data.localPosVelTs);
   }
   [[nodiscard]] std::optional<FCBatteryStatus> getBattery() {
     return getData(id_, timeout_, fc_.data.battery);
@@ -96,6 +116,9 @@ public:
   }
   [[nodiscard]] std::optional<FCPressure> getPressure() {
     return getData(id_, timeout_, fc_.data.pressure);
+  }
+  [[nodiscard]] std::optional<FCSensorHealth> getSensorHealth() {
+    return getData(id_, timeout_, fc_.data.sensorHealth);
   }
   [[nodiscard]] std::optional<TYPES::TimePoint> getLastHeartbeat() {
     return getData(id_, timeout_, fc_.data.lastHeartbeat);

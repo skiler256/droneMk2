@@ -29,6 +29,7 @@ CATEGORIES = {
     "S": (2, "Sensor"),
     "A": (3, "Action"),
     "C": (4, "Communication"),
+    "O": (5, "Command"),  # Ordre — C déjà pris par Communication
 }
 
 SEVERITIES = {"info": "Info", "warning": "Warning", "critical": "Critical",

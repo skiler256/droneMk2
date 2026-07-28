@@ -14,6 +14,7 @@
 #include "drone/Components/MavlinkInterface/Conversions.hpp"
 #include "drone/Components/MavlinkInterface/PendingAck.hpp"
 #include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
+#include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include <gtest/gtest.h>
@@ -23,24 +24,6 @@ using namespace MAVLINK_CONV;
 
 // ─── Conversions ─────────────────────────────────────────────────────────
 
-TEST(ConversionsTest, HeadingToYawCdegBasic) {
-  EXPECT_EQ(headingToYawCdeg(Radians{0.0f}), 36000); // 0° = "non disponible" -> remap plein nord
-  EXPECT_NEAR(headingToYawCdeg(Radians{3.14159265f}), 18000, 2); // 180°
-}
-
-TEST(ConversionsTest, HeadingToYawCdegWrapsNegative) {
-  // -90° doit devenir 270°, jamais une valeur négative.
-  auto cdeg = headingToYawCdeg(Radians{-3.14159265f / 2.0f});
-  EXPECT_NEAR(cdeg, 27000, 2);
-}
-
-TEST(ConversionsTest, HeadingToYawCdegWrapsAboveFullCircle) {
-  // 370° -> 10°
-  float rad370 = 370.0f * (3.14159265f / 180.0f);
-  auto cdeg = headingToYawCdeg(Radians{rad370});
-  EXPECT_NEAR(cdeg, 1000, 2);
-}
-
 TEST(ConversionsTest, DegToE7RoundTrip) {
   EXPECT_EQ(degToE7(44.123456), 441234560);
   EXPECT_EQ(degToE7(-1.5), -15000000);
@@ -49,6 +32,11 @@ TEST(ConversionsTest, DegToE7RoundTrip) {
 TEST(ConversionsTest, MvToVolts) {
   EXPECT_FLOAT_EQ(mvToVolts(12600).v, 12.6f);
   EXPECT_FLOAT_EQ(mvToVolts(0).v, 0.0f);
+}
+
+TEST(ConversionsTest, MvToVoltsHandlesUnknown) {
+  // UINT16_MAX = "non mesuré" (spec MAVLink BATTERY_STATUS) -> 0V, pas 65.5V.
+  EXPECT_FLOAT_EQ(mvToVolts(UINT16_MAX).v, 0.0f);
 }
 
 TEST(ConversionsTest, CaToAmpsHandlesUnknown) {
@@ -92,8 +80,14 @@ TEST(AckMatchTest, ParamValueMatchesSameParamId) {
   PendingAck pending{.kind = PendingKind::Param};
   std::strcpy(pending.paramId.data(), "ARMING_CHECK");
 
+  // param_id est un champ MAVLink de 16 octets fixes : mavlink_msg_param_
+  // value_pack() fait un memcpy(16) inconditionnel sur l'argument, un
+  // littéral plus court lirait au-delà de sa fin (buffer-overflow détecté
+  // par ASan) — il faut un buffer explicitement paddé à 16 octets.
+  char paramId[16] = "ARMING_CHECK";
+
   mavlink_message_t msg{};
-  mavlink_msg_param_value_pack(1, 1, &msg, "ARMING_CHECK", 1.0f, MAV_PARAM_TYPE_REAL32,
+  mavlink_msg_param_value_pack(1, 1, &msg, paramId, 1.0f, MAV_PARAM_TYPE_REAL32,
                                1, 0);
 
   EXPECT_TRUE(ackMatchesPending(msg, pending));
@@ -103,8 +97,10 @@ TEST(AckMatchTest, ParamValueDoesNotMatchDifferentParamId) {
   PendingAck pending{.kind = PendingKind::Param};
   std::strcpy(pending.paramId.data(), "ARMING_CHECK");
 
+  char paramId[16] = "BATT_LOW_VOLT";
+
   mavlink_message_t msg{};
-  mavlink_msg_param_value_pack(1, 1, &msg, "BATT_LOW_VOLT", 1.0f, MAV_PARAM_TYPE_REAL32,
+  mavlink_msg_param_value_pack(1, 1, &msg, paramId, 1.0f, MAV_PARAM_TYPE_REAL32,
                                1, 0);
 
   EXPECT_FALSE(ackMatchesPending(msg, pending));
@@ -115,8 +111,10 @@ TEST(AckMatchTest, WrongMessageKindNeverMatches) {
   // jamais un match, même si les identifiants "coïncidaient" par hasard.
   PendingAck pending{.kind = PendingKind::Command, .command = MAV_CMD_DO_SET_MODE};
 
+  char paramId[16] = "ARMING_CHECK";
+
   mavlink_message_t msg{};
-  mavlink_msg_param_value_pack(1, 1, &msg, "ARMING_CHECK", 1.0f, MAV_PARAM_TYPE_REAL32,
+  mavlink_msg_param_value_pack(1, 1, &msg, paramId, 1.0f, MAV_PARAM_TYPE_REAL32,
                                1, 0);
 
   EXPECT_FALSE(ackMatchesPending(msg, pending));
@@ -273,7 +271,9 @@ TEST(SharedSFMemTest, GpsMagRoundTrip) {
                       .longitude = 0.7,
                       .altMsl = 120.0f,
                       .fixType = 3,
-                      .satellitesVisible = 12};
+                      .satellitesVisible = 12,
+                      .gpsWeek = 2428,
+                      .gpsTowMs = 123456};
   h.setGpsMag(sample);
 
   auto got = h.getGpsMag();
@@ -281,6 +281,8 @@ TEST(SharedSFMemTest, GpsMagRoundTrip) {
   EXPECT_DOUBLE_EQ(got->latitude, 44.1);
   EXPECT_EQ(got->fixType, 3);
   EXPECT_EQ(got->satellitesVisible, 12);
+  EXPECT_EQ(got->gpsWeek, 2428);
+  EXPECT_EQ(got->gpsTowMs, 123456u);
 }
 
 TEST(SharedSFMemTest, LidarMapRoundTrip) {
@@ -289,14 +291,14 @@ TEST(SharedSFMemTest, LidarMapRoundTrip) {
 
   LidarMap map{};
   map.ts = Clock::now();
-  map.distanceMm[90] = 1500;
+  map.points[90] = Vec3{1.5f, 0.0f, 0.0f};
   map.intensity[90] = 200;
   h.setLidarMap(map);
 
   auto got = h.getLidarMap();
   ASSERT_TRUE(got.has_value());
-  EXPECT_EQ(got->distanceMm[90], 1500);
-  EXPECT_EQ(got->distanceMm[0], 0); // sentinelle "pas de mesure"
+  EXPECT_EQ(got->points[90].x, 1.5f);
+  EXPECT_TRUE(got->points[0].isZero()); // sentinelle "pas de mesure"
 }
 
 TEST(SharedSFMemTest, DynamicStateRoundTrip) {
@@ -343,6 +345,45 @@ TEST(SharedNavMemTest, CorruptionIsDetected) {
   auto got = h.getCommand();
   EXPECT_FALSE(got.has_value());
   EXPECT_EQ(h.consumeError(), shmError::corrupt);
+}
+
+// ─── SharedCmdMem ────────────────────────────────────────────────────────
+
+TEST(SharedCmdMemTest, PushAssignsMonotoneSeq) {
+  SharedCmdMem cmd{};
+  SharedCmdMemHandler h(ComponentID::MissionControl, Us(20000), cmd);
+
+  ASSERT_TRUE(h.pushMavlinkCommand(CODES::MCO003, 0));
+  ASSERT_TRUE(h.pushMavlinkCommand(CODES::MCO001, 500));
+
+  auto first = h.popMavlinkCommand();
+  auto second = h.popMavlinkCommand();
+  ASSERT_TRUE(first.has_value());
+  ASSERT_TRUE(second.has_value());
+  EXPECT_EQ(first->seq, 0u);
+  EXPECT_EQ(second->seq, 1u); // jamais assigné par l'appelant, toujours croissant
+  EXPECT_EQ(second->payload, 500u);
+}
+
+TEST(SharedCmdMemTest, ReportRoundTripCorrelatesBySeq) {
+  SharedCmdMem cmd{};
+  SharedCmdMemHandler h(ComponentID::MavlinkInterface, Us(20000), cmd);
+
+  ASSERT_TRUE(h.pushMavlinkReport(0, CODES::MCO002, false));
+
+  auto got = h.popMavlinkReport();
+  ASSERT_TRUE(got.has_value());
+  EXPECT_EQ(got->seq, 0u);
+  EXPECT_EQ(got->code, CODES::MCO002);
+  EXPECT_FALSE(got->success);
+}
+
+TEST(SharedCmdMemTest, EmptyPopsReturnNullopt) {
+  SharedCmdMem cmd{};
+  SharedCmdMemHandler h(ComponentID::MissionControl, Us(20000), cmd);
+
+  EXPECT_FALSE(h.popMavlinkCommand().has_value());
+  EXPECT_FALSE(h.popMavlinkReport().has_value());
 }
 
 // ─── mavlink_parse_char() : ce sur quoi TRx s'appuie ────────────────────

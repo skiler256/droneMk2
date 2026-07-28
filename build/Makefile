@@ -231,6 +231,19 @@ test_telemetry/fast:
 .PHONY : test_telemetry/fast
 
 #=============================================================================
+# Target rules for targets named test_navigation
+
+# Build rule for target.
+test_navigation: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_navigation
+.PHONY : test_navigation
+
+# fast build rule for target.
+test_navigation/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/build
+.PHONY : test_navigation/fast
+
+#=============================================================================
 # Target rules for targets named test_mavlink
 
 # Build rule for target.
@@ -242,6 +255,19 @@ test_mavlink: cmake_check_build_system
 test_mavlink/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/build
 .PHONY : test_mavlink/fast
+
+#=============================================================================
+# Target rules for targets named test_sensorfusion
+
+# Build rule for target.
+test_sensorfusion: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_sensorfusion
+.PHONY : test_sensorfusion
+
+# fast build rule for target.
+test_sensorfusion/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/build
+.PHONY : test_sensorfusion/fast
 
 #=============================================================================
 # Target rules for targets named test_stub_child
@@ -281,6 +307,32 @@ mv_sitl: cmake_check_build_system
 mv_sitl/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/build
 .PHONY : mv_sitl/fast
+
+#=============================================================================
+# Target rules for targets named hil_sf_mv
+
+# Build rule for target.
+hil_sf_mv: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 hil_sf_mv
+.PHONY : hil_sf_mv
+
+# fast build rule for target.
+hil_sf_mv/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/build
+.PHONY : hil_sf_mv/fast
+
+#=============================================================================
+# Target rules for targets named nav_sitl
+
+# Build rule for target.
+nav_sitl: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 nav_sitl
+.PHONY : nav_sitl
+
+# fast build rule for target.
+nav_sitl/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/build
+.PHONY : nav_sitl/fast
 
 #=============================================================================
 # Target rules for targets named udp_bridge
@@ -366,6 +418,102 @@ src/Drivers/NEO-M8N.s: src/Drivers/NEO-M8N.cpp.s
 src/Drivers/NEO-M8N.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s
 .PHONY : src/Drivers/NEO-M8N.cpp.s
+
+src/IntegrationTests/HIL_SF_MV.o: src/IntegrationTests/HIL_SF_MV.cpp.o
+.PHONY : src/IntegrationTests/HIL_SF_MV.o
+
+# target to build an object file
+src/IntegrationTests/HIL_SF_MV.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.o
+.PHONY : src/IntegrationTests/HIL_SF_MV.cpp.o
+
+src/IntegrationTests/HIL_SF_MV.i: src/IntegrationTests/HIL_SF_MV.cpp.i
+.PHONY : src/IntegrationTests/HIL_SF_MV.i
+
+# target to preprocess a source file
+src/IntegrationTests/HIL_SF_MV.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.i
+.PHONY : src/IntegrationTests/HIL_SF_MV.cpp.i
+
+src/IntegrationTests/HIL_SF_MV.s: src/IntegrationTests/HIL_SF_MV.cpp.s
+.PHONY : src/IntegrationTests/HIL_SF_MV.s
+
+# target to generate assembly for a file
+src/IntegrationTests/HIL_SF_MV.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.s
+.PHONY : src/IntegrationTests/HIL_SF_MV.cpp.s
+
+src/IntegrationTests/MV_SITL.o: src/IntegrationTests/MV_SITL.cpp.o
+.PHONY : src/IntegrationTests/MV_SITL.o
+
+# target to build an object file
+src/IntegrationTests/MV_SITL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o
+.PHONY : src/IntegrationTests/MV_SITL.cpp.o
+
+src/IntegrationTests/MV_SITL.i: src/IntegrationTests/MV_SITL.cpp.i
+.PHONY : src/IntegrationTests/MV_SITL.i
+
+# target to preprocess a source file
+src/IntegrationTests/MV_SITL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.i
+.PHONY : src/IntegrationTests/MV_SITL.cpp.i
+
+src/IntegrationTests/MV_SITL.s: src/IntegrationTests/MV_SITL.cpp.s
+.PHONY : src/IntegrationTests/MV_SITL.s
+
+# target to generate assembly for a file
+src/IntegrationTests/MV_SITL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.s
+.PHONY : src/IntegrationTests/MV_SITL.cpp.s
+
+src/IntegrationTests/NAV_SITL.o: src/IntegrationTests/NAV_SITL.cpp.o
+.PHONY : src/IntegrationTests/NAV_SITL.o
+
+# target to build an object file
+src/IntegrationTests/NAV_SITL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o
+.PHONY : src/IntegrationTests/NAV_SITL.cpp.o
+
+src/IntegrationTests/NAV_SITL.i: src/IntegrationTests/NAV_SITL.cpp.i
+.PHONY : src/IntegrationTests/NAV_SITL.i
+
+# target to preprocess a source file
+src/IntegrationTests/NAV_SITL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.i
+.PHONY : src/IntegrationTests/NAV_SITL.cpp.i
+
+src/IntegrationTests/NAV_SITL.s: src/IntegrationTests/NAV_SITL.cpp.s
+.PHONY : src/IntegrationTests/NAV_SITL.s
+
+# target to generate assembly for a file
+src/IntegrationTests/NAV_SITL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.s
+.PHONY : src/IntegrationTests/NAV_SITL.cpp.s
+
+src/IntegrationTests/UDP_bridge.o: src/IntegrationTests/UDP_bridge.cpp.o
+.PHONY : src/IntegrationTests/UDP_bridge.o
+
+# target to build an object file
+src/IntegrationTests/UDP_bridge.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o
+.PHONY : src/IntegrationTests/UDP_bridge.cpp.o
+
+src/IntegrationTests/UDP_bridge.i: src/IntegrationTests/UDP_bridge.cpp.i
+.PHONY : src/IntegrationTests/UDP_bridge.i
+
+# target to preprocess a source file
+src/IntegrationTests/UDP_bridge.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.i
+.PHONY : src/IntegrationTests/UDP_bridge.cpp.i
+
+src/IntegrationTests/UDP_bridge.s: src/IntegrationTests/UDP_bridge.cpp.s
+.PHONY : src/IntegrationTests/UDP_bridge.s
+
+# target to generate assembly for a file
+src/IntegrationTests/UDP_bridge.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.s
+.PHONY : src/IntegrationTests/UDP_bridge.cpp.s
 
 src/MavlinkInterface/MavlinkInterface.o: src/MavlinkInterface/MavlinkInterface.cpp.o
 .PHONY : src/MavlinkInterface/MavlinkInterface.o
@@ -462,54 +610,6 @@ src/Navigation/Navigation.s: src/Navigation/Navigation.cpp.s
 src/Navigation/Navigation.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.s
 .PHONY : src/Navigation/Navigation.cpp.s
-
-src/SITL/MV_SITL.o: src/SITL/MV_SITL.cpp.o
-.PHONY : src/SITL/MV_SITL.o
-
-# target to build an object file
-src/SITL/MV_SITL.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.o
-.PHONY : src/SITL/MV_SITL.cpp.o
-
-src/SITL/MV_SITL.i: src/SITL/MV_SITL.cpp.i
-.PHONY : src/SITL/MV_SITL.i
-
-# target to preprocess a source file
-src/SITL/MV_SITL.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.i
-.PHONY : src/SITL/MV_SITL.cpp.i
-
-src/SITL/MV_SITL.s: src/SITL/MV_SITL.cpp.s
-.PHONY : src/SITL/MV_SITL.s
-
-# target to generate assembly for a file
-src/SITL/MV_SITL.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/src/SITL/MV_SITL.cpp.s
-.PHONY : src/SITL/MV_SITL.cpp.s
-
-src/SITL/UDP_bridge.o: src/SITL/UDP_bridge.cpp.o
-.PHONY : src/SITL/UDP_bridge.o
-
-# target to build an object file
-src/SITL/UDP_bridge.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o
-.PHONY : src/SITL/UDP_bridge.cpp.o
-
-src/SITL/UDP_bridge.i: src/SITL/UDP_bridge.cpp.i
-.PHONY : src/SITL/UDP_bridge.i
-
-# target to preprocess a source file
-src/SITL/UDP_bridge.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.i
-.PHONY : src/SITL/UDP_bridge.cpp.i
-
-src/SITL/UDP_bridge.s: src/SITL/UDP_bridge.cpp.s
-.PHONY : src/SITL/UDP_bridge.s
-
-# target to generate assembly for a file
-src/SITL/UDP_bridge.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.s
-.PHONY : src/SITL/UDP_bridge.cpp.s
 
 src/SensorsFusion/SensorFusion.o: src/SensorsFusion/SensorFusion.cpp.o
 .PHONY : src/SensorsFusion/SensorFusion.o
@@ -703,6 +803,54 @@ tests/test_mavlink.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.s
 .PHONY : tests/test_mavlink.cpp.s
 
+tests/test_navigation.o: tests/test_navigation.cpp.o
+.PHONY : tests/test_navigation.o
+
+# target to build an object file
+tests/test_navigation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.o
+.PHONY : tests/test_navigation.cpp.o
+
+tests/test_navigation.i: tests/test_navigation.cpp.i
+.PHONY : tests/test_navigation.i
+
+# target to preprocess a source file
+tests/test_navigation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.i
+.PHONY : tests/test_navigation.cpp.i
+
+tests/test_navigation.s: tests/test_navigation.cpp.s
+.PHONY : tests/test_navigation.s
+
+# target to generate assembly for a file
+tests/test_navigation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.s
+.PHONY : tests/test_navigation.cpp.s
+
+tests/test_sensorfusion.o: tests/test_sensorfusion.cpp.o
+.PHONY : tests/test_sensorfusion.o
+
+# target to build an object file
+tests/test_sensorfusion.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.o
+.PHONY : tests/test_sensorfusion.cpp.o
+
+tests/test_sensorfusion.i: tests/test_sensorfusion.cpp.i
+.PHONY : tests/test_sensorfusion.i
+
+# target to preprocess a source file
+tests/test_sensorfusion.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.i
+.PHONY : tests/test_sensorfusion.cpp.i
+
+tests/test_sensorfusion.s: tests/test_sensorfusion.cpp.s
+.PHONY : tests/test_sensorfusion.s
+
+# target to generate assembly for a file
+tests/test_sensorfusion.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.s
+.PHONY : tests/test_sensorfusion.cpp.s
+
 tests/test_shared_state.o: tests/test_shared_state.cpp.o
 .PHONY : tests/test_shared_state.o
 
@@ -812,9 +960,13 @@ help:
 	@echo "... generate_telemetry"
 	@echo "... drone"
 	@echo "... drone_lib"
+	@echo "... hil_sf_mv"
 	@echo "... mv_sitl"
+	@echo "... nav_sitl"
 	@echo "... test_global_watchdog"
 	@echo "... test_mavlink"
+	@echo "... test_navigation"
+	@echo "... test_sensorfusion"
 	@echo "... test_shared_state"
 	@echo "... test_stub_child"
 	@echo "... test_telemetry"
@@ -830,6 +982,18 @@ help:
 	@echo "... src/Drivers/NEO-M8N.o"
 	@echo "... src/Drivers/NEO-M8N.i"
 	@echo "... src/Drivers/NEO-M8N.s"
+	@echo "... src/IntegrationTests/HIL_SF_MV.o"
+	@echo "... src/IntegrationTests/HIL_SF_MV.i"
+	@echo "... src/IntegrationTests/HIL_SF_MV.s"
+	@echo "... src/IntegrationTests/MV_SITL.o"
+	@echo "... src/IntegrationTests/MV_SITL.i"
+	@echo "... src/IntegrationTests/MV_SITL.s"
+	@echo "... src/IntegrationTests/NAV_SITL.o"
+	@echo "... src/IntegrationTests/NAV_SITL.i"
+	@echo "... src/IntegrationTests/NAV_SITL.s"
+	@echo "... src/IntegrationTests/UDP_bridge.o"
+	@echo "... src/IntegrationTests/UDP_bridge.i"
+	@echo "... src/IntegrationTests/UDP_bridge.s"
 	@echo "... src/MavlinkInterface/MavlinkInterface.o"
 	@echo "... src/MavlinkInterface/MavlinkInterface.i"
 	@echo "... src/MavlinkInterface/MavlinkInterface.s"
@@ -842,12 +1006,6 @@ help:
 	@echo "... src/Navigation/Navigation.o"
 	@echo "... src/Navigation/Navigation.i"
 	@echo "... src/Navigation/Navigation.s"
-	@echo "... src/SITL/MV_SITL.o"
-	@echo "... src/SITL/MV_SITL.i"
-	@echo "... src/SITL/MV_SITL.s"
-	@echo "... src/SITL/UDP_bridge.o"
-	@echo "... src/SITL/UDP_bridge.i"
-	@echo "... src/SITL/UDP_bridge.s"
 	@echo "... src/SensorsFusion/SensorFusion.o"
 	@echo "... src/SensorsFusion/SensorFusion.i"
 	@echo "... src/SensorsFusion/SensorFusion.s"
@@ -872,6 +1030,12 @@ help:
 	@echo "... tests/test_mavlink.o"
 	@echo "... tests/test_mavlink.i"
 	@echo "... tests/test_mavlink.s"
+	@echo "... tests/test_navigation.o"
+	@echo "... tests/test_navigation.i"
+	@echo "... tests/test_navigation.s"
+	@echo "... tests/test_sensorfusion.o"
+	@echo "... tests/test_sensorfusion.i"
+	@echo "... tests/test_sensorfusion.s"
 	@echo "... tests/test_shared_state.o"
 	@echo "... tests/test_shared_state.i"
 	@echo "... tests/test_shared_state.s"

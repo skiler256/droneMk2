@@ -71,10 +71,14 @@ all: CMakeFiles/test_types.dir/all
 all: CMakeFiles/test_shared_state.dir/all
 all: CMakeFiles/test_watchdog.dir/all
 all: CMakeFiles/test_telemetry.dir/all
+all: CMakeFiles/test_navigation.dir/all
 all: CMakeFiles/test_mavlink.dir/all
+all: CMakeFiles/test_sensorfusion.dir/all
 all: CMakeFiles/test_stub_child.dir/all
 all: CMakeFiles/test_global_watchdog.dir/all
 all: CMakeFiles/mv_sitl.dir/all
+all: CMakeFiles/hil_sf_mv.dir/all
+all: CMakeFiles/nav_sitl.dir/all
 all: CMakeFiles/udp_bridge.dir/all
 .PHONY : all
 
@@ -87,10 +91,14 @@ codegen: CMakeFiles/test_types.dir/codegen
 codegen: CMakeFiles/test_shared_state.dir/codegen
 codegen: CMakeFiles/test_watchdog.dir/codegen
 codegen: CMakeFiles/test_telemetry.dir/codegen
+codegen: CMakeFiles/test_navigation.dir/codegen
 codegen: CMakeFiles/test_mavlink.dir/codegen
+codegen: CMakeFiles/test_sensorfusion.dir/codegen
 codegen: CMakeFiles/test_stub_child.dir/codegen
 codegen: CMakeFiles/test_global_watchdog.dir/codegen
 codegen: CMakeFiles/mv_sitl.dir/codegen
+codegen: CMakeFiles/hil_sf_mv.dir/codegen
+codegen: CMakeFiles/nav_sitl.dir/codegen
 codegen: CMakeFiles/udp_bridge.dir/codegen
 .PHONY : codegen
 
@@ -107,10 +115,14 @@ clean: CMakeFiles/test_types.dir/clean
 clean: CMakeFiles/test_shared_state.dir/clean
 clean: CMakeFiles/test_watchdog.dir/clean
 clean: CMakeFiles/test_telemetry.dir/clean
+clean: CMakeFiles/test_navigation.dir/clean
 clean: CMakeFiles/test_mavlink.dir/clean
+clean: CMakeFiles/test_sensorfusion.dir/clean
 clean: CMakeFiles/test_stub_child.dir/clean
 clean: CMakeFiles/test_global_watchdog.dir/clean
 clean: CMakeFiles/mv_sitl.dir/clean
+clean: CMakeFiles/hil_sf_mv.dir/clean
+clean: CMakeFiles/nav_sitl.dir/clean
 clean: CMakeFiles/udp_bridge.dir/clean
 .PHONY : clean
 
@@ -256,7 +268,7 @@ CMakeFiles/test_types.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/test_types.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=29,30 "Built target test_types"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=37,38 "Built target test_types"
 .PHONY : CMakeFiles/test_types.dir/all
 
 # Build rule for subdir invocation for target.
@@ -274,7 +286,7 @@ test_types: CMakeFiles/test_types.dir/rule
 CMakeFiles/test_types.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/test_types.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_types.dir/build.make CMakeFiles/test_types.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=29,30 "Finished codegen for target test_types"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=37,38 "Finished codegen for target test_types"
 .PHONY : CMakeFiles/test_types.dir/codegen
 
 # clean rule for target.
@@ -291,7 +303,7 @@ CMakeFiles/test_shared_state.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/test_shared_state.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=23,24 "Built target test_shared_state"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=31,32 "Built target test_shared_state"
 .PHONY : CMakeFiles/test_shared_state.dir/all
 
 # Build rule for subdir invocation for target.
@@ -309,7 +321,7 @@ test_shared_state: CMakeFiles/test_shared_state.dir/rule
 CMakeFiles/test_shared_state.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/test_shared_state.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_shared_state.dir/build.make CMakeFiles/test_shared_state.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=23,24 "Finished codegen for target test_shared_state"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=31,32 "Finished codegen for target test_shared_state"
 .PHONY : CMakeFiles/test_shared_state.dir/codegen
 
 # clean rule for target.
@@ -326,7 +338,7 @@ CMakeFiles/test_watchdog.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/test_watchdog.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=31,32 "Built target test_watchdog"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=39,40 "Built target test_watchdog"
 .PHONY : CMakeFiles/test_watchdog.dir/all
 
 # Build rule for subdir invocation for target.
@@ -344,7 +356,7 @@ test_watchdog: CMakeFiles/test_watchdog.dir/rule
 CMakeFiles/test_watchdog.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/test_watchdog.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_watchdog.dir/build.make CMakeFiles/test_watchdog.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=31,32 "Finished codegen for target test_watchdog"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=39,40 "Finished codegen for target test_watchdog"
 .PHONY : CMakeFiles/test_watchdog.dir/codegen
 
 # clean rule for target.
@@ -361,7 +373,7 @@ CMakeFiles/test_telemetry.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/test_telemetry.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=27,28 "Built target test_telemetry"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=35,36 "Built target test_telemetry"
 .PHONY : CMakeFiles/test_telemetry.dir/all
 
 # Build rule for subdir invocation for target.
@@ -379,13 +391,48 @@ test_telemetry: CMakeFiles/test_telemetry.dir/rule
 CMakeFiles/test_telemetry.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/test_telemetry.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=27,28 "Finished codegen for target test_telemetry"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=35,36 "Finished codegen for target test_telemetry"
 .PHONY : CMakeFiles/test_telemetry.dir/codegen
 
 # clean rule for target.
 CMakeFiles/test_telemetry.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_telemetry.dir/build.make CMakeFiles/test_telemetry.dir/clean
 .PHONY : CMakeFiles/test_telemetry.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_navigation.dir
+
+# All Build rule for target.
+CMakeFiles/test_navigation.dir/all: CMakeFiles/generate_codes.dir/all
+CMakeFiles/test_navigation.dir/all: CMakeFiles/generate_telemetry.dir/all
+CMakeFiles/test_navigation.dir/all: CMakeFiles/drone_lib.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=27,28 "Built target test_navigation"
+.PHONY : CMakeFiles/test_navigation.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_navigation.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 16
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_navigation.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_navigation.dir/rule
+
+# Convenience name for target.
+test_navigation: CMakeFiles/test_navigation.dir/rule
+.PHONY : test_navigation
+
+# codegen rule for target.
+CMakeFiles/test_navigation.dir/codegen: CMakeFiles/generate_codes.dir/all
+CMakeFiles/test_navigation.dir/codegen: CMakeFiles/generate_telemetry.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=27,28 "Finished codegen for target test_navigation"
+.PHONY : CMakeFiles/test_navigation.dir/codegen
+
+# clean rule for target.
+CMakeFiles/test_navigation.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_navigation.dir/build.make CMakeFiles/test_navigation.dir/clean
+.PHONY : CMakeFiles/test_navigation.dir/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/test_mavlink.dir
@@ -396,7 +443,7 @@ CMakeFiles/test_mavlink.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/test_mavlink.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=21,22 "Built target test_mavlink"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=25,26 "Built target test_mavlink"
 .PHONY : CMakeFiles/test_mavlink.dir/all
 
 # Build rule for subdir invocation for target.
@@ -414,7 +461,7 @@ test_mavlink: CMakeFiles/test_mavlink.dir/rule
 CMakeFiles/test_mavlink.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/test_mavlink.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=21,22 "Finished codegen for target test_mavlink"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=25,26 "Finished codegen for target test_mavlink"
 .PHONY : CMakeFiles/test_mavlink.dir/codegen
 
 # clean rule for target.
@@ -423,13 +470,48 @@ CMakeFiles/test_mavlink.dir/clean:
 .PHONY : CMakeFiles/test_mavlink.dir/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/test_sensorfusion.dir
+
+# All Build rule for target.
+CMakeFiles/test_sensorfusion.dir/all: CMakeFiles/generate_codes.dir/all
+CMakeFiles/test_sensorfusion.dir/all: CMakeFiles/generate_telemetry.dir/all
+CMakeFiles/test_sensorfusion.dir/all: CMakeFiles/drone_lib.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=29,30 "Built target test_sensorfusion"
+.PHONY : CMakeFiles/test_sensorfusion.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_sensorfusion.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 16
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_sensorfusion.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_sensorfusion.dir/rule
+
+# Convenience name for target.
+test_sensorfusion: CMakeFiles/test_sensorfusion.dir/rule
+.PHONY : test_sensorfusion
+
+# codegen rule for target.
+CMakeFiles/test_sensorfusion.dir/codegen: CMakeFiles/generate_codes.dir/all
+CMakeFiles/test_sensorfusion.dir/codegen: CMakeFiles/generate_telemetry.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=29,30 "Finished codegen for target test_sensorfusion"
+.PHONY : CMakeFiles/test_sensorfusion.dir/codegen
+
+# clean rule for target.
+CMakeFiles/test_sensorfusion.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sensorfusion.dir/build.make CMakeFiles/test_sensorfusion.dir/clean
+.PHONY : CMakeFiles/test_sensorfusion.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/test_stub_child.dir
 
 # All Build rule for target.
 CMakeFiles/test_stub_child.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=25,26 "Built target test_stub_child"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=33,34 "Built target test_stub_child"
 .PHONY : CMakeFiles/test_stub_child.dir/all
 
 # Build rule for subdir invocation for target.
@@ -446,7 +528,7 @@ test_stub_child: CMakeFiles/test_stub_child.dir/rule
 # codegen rule for target.
 CMakeFiles/test_stub_child.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_stub_child.dir/build.make CMakeFiles/test_stub_child.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=25,26 "Finished codegen for target test_stub_child"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=33,34 "Finished codegen for target test_stub_child"
 .PHONY : CMakeFiles/test_stub_child.dir/codegen
 
 # clean rule for target.
@@ -464,7 +546,7 @@ CMakeFiles/test_global_watchdog.dir/all: CMakeFiles/test_stub_child.dir/all
 CMakeFiles/test_global_watchdog.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=19,20 "Built target test_global_watchdog"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=23,24 "Built target test_global_watchdog"
 .PHONY : CMakeFiles/test_global_watchdog.dir/all
 
 # Build rule for subdir invocation for target.
@@ -483,7 +565,7 @@ CMakeFiles/test_global_watchdog.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/test_global_watchdog.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/test_global_watchdog.dir/codegen: CMakeFiles/test_stub_child.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_global_watchdog.dir/build.make CMakeFiles/test_global_watchdog.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=19,20 "Finished codegen for target test_global_watchdog"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=23,24 "Finished codegen for target test_global_watchdog"
 .PHONY : CMakeFiles/test_global_watchdog.dir/codegen
 
 # clean rule for target.
@@ -500,7 +582,7 @@ CMakeFiles/mv_sitl.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/mv_sitl.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=17,18 "Built target mv_sitl"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=19,20 "Built target mv_sitl"
 .PHONY : CMakeFiles/mv_sitl.dir/all
 
 # Build rule for subdir invocation for target.
@@ -518,13 +600,83 @@ mv_sitl: CMakeFiles/mv_sitl.dir/rule
 CMakeFiles/mv_sitl.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/mv_sitl.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=17,18 "Finished codegen for target mv_sitl"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=19,20 "Finished codegen for target mv_sitl"
 .PHONY : CMakeFiles/mv_sitl.dir/codegen
 
 # clean rule for target.
 CMakeFiles/mv_sitl.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mv_sitl.dir/build.make CMakeFiles/mv_sitl.dir/clean
 .PHONY : CMakeFiles/mv_sitl.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/hil_sf_mv.dir
+
+# All Build rule for target.
+CMakeFiles/hil_sf_mv.dir/all: CMakeFiles/generate_codes.dir/all
+CMakeFiles/hil_sf_mv.dir/all: CMakeFiles/generate_telemetry.dir/all
+CMakeFiles/hil_sf_mv.dir/all: CMakeFiles/drone_lib.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=17,18 "Built target hil_sf_mv"
+.PHONY : CMakeFiles/hil_sf_mv.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/hil_sf_mv.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 16
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/hil_sf_mv.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/hil_sf_mv.dir/rule
+
+# Convenience name for target.
+hil_sf_mv: CMakeFiles/hil_sf_mv.dir/rule
+.PHONY : hil_sf_mv
+
+# codegen rule for target.
+CMakeFiles/hil_sf_mv.dir/codegen: CMakeFiles/generate_codes.dir/all
+CMakeFiles/hil_sf_mv.dir/codegen: CMakeFiles/generate_telemetry.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=17,18 "Finished codegen for target hil_sf_mv"
+.PHONY : CMakeFiles/hil_sf_mv.dir/codegen
+
+# clean rule for target.
+CMakeFiles/hil_sf_mv.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/clean
+.PHONY : CMakeFiles/hil_sf_mv.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/nav_sitl.dir
+
+# All Build rule for target.
+CMakeFiles/nav_sitl.dir/all: CMakeFiles/generate_codes.dir/all
+CMakeFiles/nav_sitl.dir/all: CMakeFiles/generate_telemetry.dir/all
+CMakeFiles/nav_sitl.dir/all: CMakeFiles/drone_lib.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=21,22 "Built target nav_sitl"
+.PHONY : CMakeFiles/nav_sitl.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/nav_sitl.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 16
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/nav_sitl.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jules/droneMk2/build/CMakeFiles 0
+.PHONY : CMakeFiles/nav_sitl.dir/rule
+
+# Convenience name for target.
+nav_sitl: CMakeFiles/nav_sitl.dir/rule
+.PHONY : nav_sitl
+
+# codegen rule for target.
+CMakeFiles/nav_sitl.dir/codegen: CMakeFiles/generate_codes.dir/all
+CMakeFiles/nav_sitl.dir/codegen: CMakeFiles/generate_telemetry.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=21,22 "Finished codegen for target nav_sitl"
+.PHONY : CMakeFiles/nav_sitl.dir/codegen
+
+# clean rule for target.
+CMakeFiles/nav_sitl.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/clean
+.PHONY : CMakeFiles/nav_sitl.dir/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/udp_bridge.dir
@@ -535,7 +687,7 @@ CMakeFiles/udp_bridge.dir/all: CMakeFiles/generate_telemetry.dir/all
 CMakeFiles/udp_bridge.dir/all: CMakeFiles/drone_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=33,34 "Built target udp_bridge"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=41,42 "Built target udp_bridge"
 .PHONY : CMakeFiles/udp_bridge.dir/all
 
 # Build rule for subdir invocation for target.
@@ -553,7 +705,7 @@ udp_bridge: CMakeFiles/udp_bridge.dir/rule
 CMakeFiles/udp_bridge.dir/codegen: CMakeFiles/generate_codes.dir/all
 CMakeFiles/udp_bridge.dir/codegen: CMakeFiles/generate_telemetry.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=33,34 "Finished codegen for target udp_bridge"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jules/droneMk2/build/CMakeFiles --progress-num=41,42 "Finished codegen for target udp_bridge"
 .PHONY : CMakeFiles/udp_bridge.dir/codegen
 
 # clean rule for target.

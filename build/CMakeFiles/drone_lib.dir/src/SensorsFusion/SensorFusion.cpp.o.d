@@ -2,7 +2,7 @@ CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o: \
  /home/jules/droneMk2/src/SensorsFusion/SensorFusion.cpp \
  /usr/include/stdc-predef.h \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp \
- /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
+ /home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp \
  /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
  /home/jules/droneMk2/include/drone/types.hpp \
@@ -466,9 +466,29 @@ CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/Driver.hpp \
+ /usr/include/linux/i2c-dev.h /usr/include/aarch64-linux-gnu/sys/ioctl.h \
+ /usr/include/aarch64-linux-gnu/bits/ioctls.h \
+ /usr/lib/linux/uapi/arm64/asm/ioctls.h /usr/include/asm-generic/ioctls.h \
+ /usr/include/linux/ioctl.h /usr/lib/linux/uapi/arm64/asm/ioctl.h \
+ /usr/include/asm-generic/ioctl.h \
+ /usr/include/aarch64-linux-gnu/bits/ioctl-types.h \
+ /usr/include/aarch64-linux-gnu/sys/ttydefaults.h /usr/include/termios.h \
+ /usr/include/aarch64-linux-gnu/bits/termios.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-struct.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-c_cc.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-c_iflag.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-c_oflag.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-baud.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-c_cflag.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-c_lflag.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-tcflow.h \
+ /usr/include/aarch64-linux-gnu/bits/termios-misc.h \
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
  /home/jules/droneMk2/include/drone/generated/codes.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \
  /usr/include/c++/14/deque /usr/include/c++/14/bits/stl_deque.h \
- /usr/include/c++/14/bits/deque.tcc /usr/include/c++/14/iostream
+ /usr/include/c++/14/bits/deque.tcc \
+ /home/jules/droneMk2/include/drone/Components/SensorFusions/Conversions.hpp

@@ -1,5 +1,6 @@
 #pragma once
 #include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
+#include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/Components/System Monitoring/SharedComMem.hpp"
@@ -24,6 +25,7 @@ inline constexpr std::string_view kSFShmPath = "/drone_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_sysstate";
 inline constexpr std::string_view kComShmPath = "/drone_com";
 inline constexpr std::string_view kFCShmPath = "/drone_fc";
+inline constexpr std::string_view kCmdShmPath = "/drone_cmd";
 
 class GlobalWatchdog {
 public:
@@ -55,12 +57,14 @@ private:
   ShmPublisher<SharedSysStateMem> sysShm_;
   ShmPublisher<SharedComMem> comShm_;
   ShmPublisher<SharedFCStatus> fcShm_;
+  ShmPublisher<SharedCmdMem> cmdShm_;
 
   std::optional<SharedNavMemHandler> navHandler_;
   std::optional<SharedSFMemHandler> sfHandler_;
   std::optional<SharedSysStateMemHandler> sysHandler_;
   std::optional<SharedComMemHandler> comHandler_;
   std::optional<SharedFCStatusHandler> fcHandler_;
+  std::optional<SharedCmdMemHandler> cmdHandler_;
 
   std::array<ChildProc, 4> children_{};
 
@@ -104,6 +108,13 @@ private:
     if (!fc) return false;
     fcShm_ = fc.value();
 
+    // MissionControl n'est pas encore implémenté (cf. CLAUDE.md, ordre de
+    // dépendance) — segment publié dès maintenant (MavlinkInterface::TCmd
+    // le consomme déjà), aucun writer réel avant l'arrivée du composant.
+    auto cmd = publishSharedMemory<SharedCmdMem>(kCmdShmPath);
+    if (!cmd) return false;
+    cmdShm_ = cmd.value();
+
     // GlobalWatchdog s'enregistre lui meme comme "writer" ID pour ces
     // handlers : il ne fait qu'appeler resetWriterFlag() dessus, jamais
     // getData/setData, donc l'id passe ici ne sert qu'a satisfaire les
@@ -118,6 +129,8 @@ private:
                         *comShm_.ptr);
     fcHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
                        *fcShm_.ptr);
+    cmdHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
+                        *cmdShm_.ptr);
 
     return true;
   }
@@ -173,6 +186,7 @@ private:
     sysHandler_->resetWriterFlag(id);
     comHandler_->resetWriterFlag(id);
     fcHandler_->resetWriterFlag(id);
+    cmdHandler_->resetWriterFlag(id);
   }
 
   void shutdown() {
@@ -191,5 +205,6 @@ private:
     destroySharedMemory(kSysShmPath, sysShm_);
     destroySharedMemory(kComShmPath, comShm_);
     destroySharedMemory(kFCShmPath, fcShm_);
+    destroySharedMemory(kCmdShmPath, cmdShm_);
   }
 };

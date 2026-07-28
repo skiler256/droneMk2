@@ -11,25 +11,16 @@
 // est privée, appelée uniquement par le thread RT de la Task).
 namespace MAVLINK_CONV {
 
-// GPS_INPUT.yaw : cdeg, 0 = "non disponible" selon la spec MAVLink (PAS
-// "plein nord") — la valeur 0 doit donc toujours être remappée sur 36000.
-[[nodiscard]] inline uint16_t headingToYawCdeg(TYPES::Radians heading) noexcept {
-  float deg = TYPES::toDegrees(heading).v;
-  deg = std::fmod(deg, 360.0f);
-  if (deg < 0.0f)
-    deg += 360.0f;
-  auto cdeg = static_cast<uint16_t>(std::lround(deg * 100.0));
-  return cdeg == 0 ? 36000 : cdeg;
-}
-
 // GPS_INPUT.lat/lon : degE7 (degrés * 1e7, int32).
 [[nodiscard]] inline int32_t degToE7(double deg) noexcept {
   return static_cast<int32_t>(std::lround(deg * 1e7));
 }
 
-// BATTERY_STATUS.voltages[0] : mV -> V.
+// BATTERY_STATUS.voltages[0] : mV -> V. UINT16_MAX = "non mesuré" (spec
+// MAVLink) -> 0V, même convention que caToAmps(-1)/clampBatteryPct(-1)
+// ci-dessous — sans ce garde, 65535mV afficherait 65.5V au lieu de "inconnu".
 [[nodiscard]] inline TYPES::Volts mvToVolts(uint16_t mv) noexcept {
-  return TYPES::Volts{static_cast<float>(mv) / 1000.0f};
+  return TYPES::Volts{mv == UINT16_MAX ? 0.0f : static_cast<float>(mv) / 1000.0f};
 }
 
 // BATTERY_STATUS.current_battery : cA (0.01A), -1 si non mesuré -> 0A.
@@ -47,10 +38,28 @@ namespace MAVLINK_CONV {
   return static_cast<float>(cdegc) / 100.0f;
 }
 
-// Un ACK (COMMAND_ACK ou PARAM_VALUE) correspond-il à la commande
-// actuellement en attente ? Faux si le type d'ACK ne correspond pas au
-// type de commande en attente (ex: PARAM_VALUE reçu alors qu'on attend un
-// COMMAND_ACK), ou si l'identifiant (command / param_id) diffère.
+// ATTITUDE.roll/pitch/yaw (rad, Euler ZYX) -> quaternion. ArduPilot SITL
+// n'émet jamais ATTITUDE_QUATERNION (constaté en session, quelle que soit
+// la demande SET_MESSAGE_INTERVAL) — seulement ATTITUDE en Euler, d'où
+// cette conversion locale plutôt que de dépendre d'un message que le FC ne
+// produit pas.
+[[nodiscard]] inline TYPES::Quat eulerToQuat(float roll, float pitch, float yaw) noexcept {
+  float cr = std::cos(roll * 0.5f), sr = std::sin(roll * 0.5f);
+  float cp = std::cos(pitch * 0.5f), sp = std::sin(pitch * 0.5f);
+  float cy = std::cos(yaw * 0.5f), sy = std::sin(yaw * 0.5f);
+
+  return TYPES::Quat{cr * cp * cy + sr * sp * sy, sr * cp * cy - cr * sp * sy,
+                     cr * sp * cy + sr * cp * sy, cr * cp * sy - sr * sp * cy};
+}
+
+// ESC_TELEMETRY_1_TO_4.current[i] : cA (0.01A) -> A. Distinct de caToAmps()
+// (int16_t signé, -1="non mesuré") : ici uint16_t non signé, jamais négatif.
+[[nodiscard]] inline float escCaToAmps(uint16_t ca) noexcept {
+  return static_cast<float>(ca) * 0.01f;
+}
+
+// Un ACK (COMMAND_ACK ou PARAM_VALUE) correspond-il à la commande en
+// attente ? Faux si le type ou l'identifiant (command/param_id) diffère.
 [[nodiscard]] inline bool ackMatchesPending(const mavlink_message_t &msg,
                                             const PendingAck &pending) noexcept {
   if (msg.msgid == MAVLINK_MSG_ID_COMMAND_ACK && pending.kind == PendingKind::Command) {

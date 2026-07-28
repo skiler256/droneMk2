@@ -119,8 +119,23 @@ struct GPSData {
 
   bool gpsFixOk{false}; // fix 3D uniquement
 
-  std::uint32_t pAcc{0}; // non renseigné par le parsing actuel (voir note)
-  std::uint32_t sAcc{0};
+  // Code fix brut UBX NAV-STATUS.gpsFix (pas la numérotation MAVLink
+  // GPS_FIX_TYPE — conversion faite côté SensorFusion).
+  std::uint8_t fixType{0};
+
+  std::uint32_t pAcc{0}; // mm, horizontal (NAV-PVT hAcc)
+  std::uint32_t sAcc{0}; // mm/s (NAV-PVT sAcc)
+  std::uint32_t vAcc{0}; // mm, vertical (NAV-POSLLH vAcc)
+
+  float hdop{0.0f}; // sans dimension, NAV-DOP hDOP (scale 0.01)
+  float vdop{0.0f}; // sans dimension, NAV-DOP vDOP (scale 0.01)
+
+  std::int32_t altMslMm{0}; // mm, altitude au-dessus du niveau de la mer (NAV-POSLLH hMSL)
+
+  // ms depuis le début de la semaine GPS courante (UBX NAV-PVT iTOW) —
+  // exactement le format attendu par MAVLink GPS_INPUT.time_week_ms, calculé
+  // par le récepteur lui-même (précision ms, indépendant de l'horloge du Pi).
+  std::uint32_t iTowMs{0};
 
   int velNED[3]{0, 0, 0}; // vNORTH, vEAST, vDOWN (cm/s)
   std::uint32_t speed{0};

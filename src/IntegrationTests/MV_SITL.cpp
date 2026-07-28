@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Binaire de dev : fait tourner MavlinkInterface seule face à ArduPilot
 // SITL, sans GlobalWatchdog. Publie ses propres segments shm (dédiés SITL,
-// cf. drone/SITL/ShmPaths.hpp) — c'est lui le propriétaire ici, contrairement
+// cf. drone/IntegrationTests/ShmPaths.hpp) — c'est lui le propriétaire ici, contrairement
 // à runMavlinkInterface() de main.cpp qui s'attache à des segments publiés
 // par GlobalWatchdog.
 //
@@ -13,7 +13,7 @@
 
 #include "drone/Components/MavlinkInterface/Driver/UdpMavlinkLink.hpp"
 #include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"
-#include "drone/SITL/ShmPaths.hpp"
+#include "drone/IntegrationTests/ShmPaths.hpp"
 #include "drone/shm.hpp"
 #include "drone/types.hpp"
 
@@ -48,8 +48,9 @@ int main() {
   auto sf = publishSharedMemory<SharedSFMem>(SITL::kSFShmPath);
   auto sys = publishSharedMemory<SharedSysStateMem>(SITL::kSysShmPath);
   auto fc = publishSharedMemory<SharedFCStatus>(SITL::kFCShmPath);
+  auto cmd = publishSharedMemory<SharedCmdMem>(SITL::kCmdShmPath);
 
-  if (!nav || !sf || !sys || !fc) {
+  if (!nav || !sf || !sys || !fc || !cmd) {
     std::cerr << "MV_SITL: echec publication shm\n";
     return 1;
   }
@@ -64,29 +65,35 @@ int main() {
                                       Us(2000));
   SharedFCStatusHandler fcHandler(ComponentID::MavlinkInterface, Us(2000),
                                   *fc->ptr);
+  SharedCmdMemHandler cmdHandler(ComponentID::MavlinkInterface, Us(2000),
+                                 *cmd->ptr);
 
   UdpMavlinkLink link(kSitlUdpLocalPort);
 
-  ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 0};
-  MavlinkInterface composant(config, sysHandler, fcHandler, navHandler,
-                             sfHandler, link);
+  {
+    // Bloc dédié : composant doit être détruit (donc ses Tasks stoppées et
+    // jointes, cf. Task::~Task()) AVANT le nettoyage shm ci-dessous — sinon
+    // les threads TTx/TTxACK/TRx continuent d'accéder à la shm pendant son
+    // démontage (SEGV constaté en session, use-after-unmap).
+    ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 0};
+    MavlinkInterface composant(config, sysHandler, fcHandler, navHandler,
+                               sfHandler, cmdHandler, link);
+    // requestInitStreams() se déclenche automatiquement au premier
+    // HEARTBEAT reçu du FC (cf. TRxTask::loop()), plus de bootstrap manuel.
 
-  // TEMPORAIRE : à terme la séquence d'init est ordonnée par MissionControl
-  // via TCmd (cf. MAVLINKINTERFACE.md §2/§10) — en attendant, bootstrap
-  // manuel unique ici au lancement du binaire SITL.
-  composant.requestInitStreams();
+    std::cout << "MV_SITL: pret, en attente de SITL sur le port "
+              << kSitlUdpLocalPort << "\n";
 
-  std::cout << "MV_SITL: pret, en attente de SITL sur le port "
-            << kSitlUdpLocalPort << "\n";
-
-  while (keepRunning.load(std::memory_order_acquire))
-    sleep(1);
+    while (keepRunning.load(std::memory_order_acquire))
+      sleep(1);
+  }
 
   std::cout << "MV_SITL: arret, nettoyage shm\n";
   destroySharedMemory(SITL::kNavShmPath, nav.value());
   destroySharedMemory(SITL::kSFShmPath, sf.value());
   destroySharedMemory(SITL::kSysShmPath, sys.value());
   destroySharedMemory(SITL::kFCShmPath, fc.value());
+  destroySharedMemory(SITL::kCmdShmPath, cmd.value());
 
   return 0;
 }

@@ -21,7 +21,7 @@
 import argparse
 import json
 import webbrowser
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -388,7 +388,7 @@ def main():
     if not telemetry_csv_path.exists():
         raise SystemExit(f"erreur: {telemetry_csv_path} introuvable")
 
-    server = HTTPServer((args.host, args.port), make_handler(csv_path, telemetry_csv_path))
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(csv_path, telemetry_csv_path))
     url = f"http://{args.host}:{args.port}/"
     print(f"Éditeur codes + paquets sur {url} (Ctrl+C pour arrêter)")
     print(f"CSV codes : {csv_path}")

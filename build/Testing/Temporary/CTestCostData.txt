@@ -1,6 +1,9 @@
-test_types 45 7.62649e-05
-test_shared_state 39 0.00142223
-test_watchdog 20 0.0525559
-test_global_watchdog 17 0.0372396
-test_telemetry 2 0.00108393
+test_types 96 0.000126316
+test_shared_state 90 0.000761026
+test_watchdog 71 0.0154349
+test_global_watchdog 68 0.00948533
+test_telemetry 53 0.000206256
+test_mavlink 50 0.000253066
+test_sensorfusion 28 0.000387793
+test_navigation 15 0.000743574
 ---

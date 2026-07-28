@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/udp_bridge.dir/link.d"
-  "CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o"
-  "CMakeFiles/udp_bridge.dir/src/SITL/UDP_bridge.cpp.o.d"
+  "CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o"
+  "CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o.d"
   "udp_bridge"
   "udp_bridge.pdb"
 )

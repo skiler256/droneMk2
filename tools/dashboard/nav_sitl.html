@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SITL Navigation — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+    --ok: #3ecf8e;
+    --warn: #ff9f43;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  a.back { color: var(--muted); font-size: .8rem; text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-size: 1.1rem; margin: .5rem 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+  .segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .panel h2 { font-size: .85rem; margin: 0 0 .6rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .field { display: flex; justify-content: space-between; font-size: .8rem; padding: .15rem 0; border-bottom: 1px solid var(--border); }
+  .field:last-child { border-bottom: none; }
+  .field .k { color: var(--muted); }
+  .empty { color: var(--muted); font-style: italic; font-size: .82rem; }
+  .age { font-size: .68rem; margin-top: .5rem; }
+  .age.fresh { color: var(--ok); }
+  .age.stale { color: var(--muted); }
+
+  .view3d canvas { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--border); }
+
+  .inject { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .inject form { display: flex; flex-direction: column; gap: .5rem; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+  label { font-size: .72rem; color: var(--muted); display: block; margin-bottom: .15rem; }
+  input {
+    width: 100%; padding: .35rem .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: .82rem;
+  }
+  button {
+    padding: .45rem .7rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--accent); color: #fff; font-family: inherit; font-size: .8rem;
+    cursor: pointer; font-weight: 600; margin-top: .3rem;
+  }
+  .inject-status { font-size: .72rem; color: var(--muted); min-height: 1.2em; margin-top: .3rem; }
+  .inject-status.ok { color: var(--ok); }
+  .inject-status.error { color: #ff5c5c; }
+</style>
+</head>
+<body>
+  <a class="back" href="/">&larr; retour au menu</a>
+  <h1>SITL — Navigation</h1>
+  <div class="subtitle">
+    Navigation + MavlinkInterface face à ArduPilot SITL, sans SensorFusion
+    (GPS simulé laissé côté SITL, cf. NAV_SITL.cpp) — test intermédiaire
+    pour le séquencement armé→engagé et le guidage, avant le SITL complet
+    avec moteur 3D.
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="segments">
+        <div class="panel">
+          <h2>FC (attitude/position)</h2>
+          <div id="fc"><div class="empty">en attente…</div></div>
+        </div>
+        <div class="panel">
+          <h2>Nav (consigne + FMA)</h2>
+          <div id="nav"><div class="empty">en attente…</div></div>
+        </div>
+        <div class="panel">
+          <h2>Segment (armé/engagé/avancement)</h2>
+          <div id="seg"><div class="empty">en attente…</div></div>
+        </div>
+        <div class="panel">
+          <h2>SysState (santé + codes)</h2>
+          <div id="sys"><div class="empty">en attente…</div></div>
+        </div>
+      </div>
+
+      <div class="inject">
+        <div class="panel">
+          <h2>Armer un segment (Waypoint)</h2>
+          <form id="segForm">
+            <div class="row2">
+              <div>
+                <label for="seg_north">north (m)</label>
+                <input id="seg_north" type="number" step="any" value="20">
+              </div>
+              <div>
+                <label for="seg_east">east (m)</label>
+                <input id="seg_east" type="number" step="any" value="0">
+              </div>
+            </div>
+            <div class="row2">
+              <div>
+                <label for="seg_alt">altitude (m, NED — négative en vol)</label>
+                <input id="seg_alt" type="number" step="any" value="-10">
+              </div>
+              <div>
+                <label for="seg_speed">vitesse d'approche (m/s)</label>
+                <input id="seg_speed" type="number" step="any" value="3">
+              </div>
+            </div>
+            <div class="row2">
+              <div>
+                <label for="seg_entry_n">entry_n (m) — auto-rempli</label>
+                <input id="seg_entry_n" type="number" step="any" value="0">
+              </div>
+              <div>
+                <label for="seg_entry_e">entry_e (m) — auto-rempli</label>
+                <input id="seg_entry_e" type="number" step="any" value="0">
+              </div>
+            </div>
+            <button type="submit">Envoyer CMD=SEGMENT</button>
+            <div class="inject-status" id="segStatus"></div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Ordres MissionControl</h2>
+          <div class="row2">
+            <div>
+              <label for="takeoff_alt">altitude décollage (cm)</label>
+              <input id="takeoff_alt" type="number" step="1" value="1000">
+            </div>
+          </div>
+          <button id="armBtn" type="button">Armer (MCO003)</button>
+          <button id="guidedBtn" type="button">Mode GUIDED (MCO002)</button>
+          <button id="takeoffBtn" type="button">Décollage (MCO001)</button>
+          <button id="disarmBtn" type="button">Désarmer (MCO004)</button>
+          <div class="inject-status" id="mcStatus"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Amorçage</h2>
+          <div class="empty" style="margin-bottom:.6rem;">
+            Démarre le premier segment armé (MCO005) — les suivants
+            s'enchaînent automatiquement (armé→engagé) tant qu'un segment
+            reste armé quand l'engagé est atteint.
+          </div>
+          <button id="startBtn" type="button">Envoyer CMD=MCCMD code=start_segment</button>
+          <div class="inject-status" id="startStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel view3d">
+      <h2>Vue 3D — position drone + cible</h2>
+      <canvas id="view3d" width="640" height="640"></canvas>
+      <div class="empty" style="margin-top:.5rem;">
+        Point vert = drone, trace = trajectoire, cube orange = cible du
+        segment engagé. Clic-glisser pour tourner, molette pour zoomer.
+      </div>
+    </div>
+  </div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const STALE_MS = 2000;
+
+function renderSegment(elId, entry) {
+  const el = document.getElementById(elId);
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+  const fields = Object.entries(entry.fields).map(([k, v]) => {
+    const val = typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(4) : v;
+    return `<div class="field"><span class="k">${k}</span><span>${val}</span></div>`;
+  }).join('');
+  el.innerHTML = fields + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
+// ─── Vue 3D ────────────────────────────────────────────────────────────
+// Repère : X=Est, Y=Haut (-down NED), Z=-Nord — Three.js est Y-up par défaut.
+const canvas = document.getElementById('view3d');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(640, 640, false);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x11141a);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
+camera.position.set(25, 25, 25);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+
+scene.add(new THREE.GridHelper(100, 20, 0x444455, 0x2a2f3a));
+scene.add(new THREE.AxesHelper(10));
+
+const droneGeom = new THREE.SphereGeometry(0.6, 16, 16);
+const droneMat = new THREE.MeshBasicMaterial({ color: 0x3ecf8e });
+const droneMesh = new THREE.Mesh(droneGeom, droneMat);
+scene.add(droneMesh);
+
+const targetGeom = new THREE.BoxGeometry(1, 1, 1);
+const targetMat = new THREE.MeshBasicMaterial({ color: 0xff9f43, wireframe: true });
+const targetMesh = new THREE.Mesh(targetGeom, targetMat);
+targetMesh.visible = false;
+scene.add(targetMesh);
+
+const trailMax = 600;
+const trailPositions = new Float32Array(trailMax * 3);
+let trailCount = 0;
+const trailGeom = new THREE.BufferGeometry();
+trailGeom.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+trailGeom.setDrawRange(0, 0);
+const trailMat = new THREE.LineBasicMaterial({ color: 0x4f8cff });
+const trailLine = new THREE.Line(trailGeom, trailMat);
+scene.add(trailLine);
+
+function nedToThree(north, east, down) {
+  return new THREE.Vector3(east, -down, -north);
+}
+
+function pushTrail(v) {
+  if (trailCount < trailMax) {
+    trailPositions[trailCount * 3] = v.x;
+    trailPositions[trailCount * 3 + 1] = v.y;
+    trailPositions[trailCount * 3 + 2] = v.z;
+    trailCount++;
+  } else {
+    // Ring plein : décale tout d'un cran (simple, trailMax reste petit).
+    trailPositions.copyWithin(0, 3);
+    trailPositions[(trailMax - 1) * 3] = v.x;
+    trailPositions[(trailMax - 1) * 3 + 1] = v.y;
+    trailPositions[(trailMax - 1) * 3 + 2] = v.z;
+  }
+  trailGeom.setDrawRange(0, trailCount);
+  trailGeom.attributes.position.needsUpdate = true;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// ─── Poll état + mise à jour 3D ──────────────────────────────────────────
+let lastDronePos = null;
+
+async function poll() {
+  try {
+    const res = await fetch('/api/bridge/status');
+    if (res.ok) {
+      const state = await res.json();
+      renderSegment('fc', state.NAV_SITL_FC);
+      renderSegment('nav', state.NAV_SITL_NAV);
+      renderSegment('seg', state.NAV_SITL_SEG);
+      renderSegment('sys', state.NAV_SITL_SYS);
+
+      const fc = state.NAV_SITL_FC?.fields;
+      if (fc && 'pos.x' in fc) {
+        const p = nedToThree(fc['pos.x'], fc['pos.y'], fc['pos.z']);
+        droneMesh.position.copy(p);
+        if (!lastDronePos || lastDronePos.distanceTo(p) > 0.05) {
+          pushTrail(p);
+          lastDronePos = p;
+        }
+      }
+
+      const seg = state.NAV_SITL_SEG?.fields;
+      if (seg && 'engaged.exit_n' in seg) {
+        const alt = fc && 'pos.z' in fc ? fc['pos.z'] : 0; // pas d'altitude cible séparée ici, approx visuelle
+        const t = nedToThree(seg['engaged.exit_n'], seg['engaged.exit_e'], alt);
+        targetMesh.position.copy(t);
+        targetMesh.visible = true;
+      } else {
+        targetMesh.visible = false;
+      }
+    }
+  } catch (e) {
+    // silencieux : un poll raté ne doit pas spammer la console
+  }
+  setTimeout(poll, 300);
+}
+poll();
+
+// ─── Injection ────────────────────────────────────────────────────────
+async function inject(cmd, fields, statusEl) {
+  statusEl.textContent = 'envoi…';
+  statusEl.className = 'inject-status';
+  try {
+    const res = await fetch('/api/bridge/inject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ns: 'NAV_SITL', cmd, fields }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    statusEl.textContent = `${cmd} envoyé`;
+    statusEl.className = 'inject-status ok';
+    return true;
+  } catch (e) {
+    statusEl.textContent = `erreur: ${e.message}`;
+    statusEl.className = 'inject-status error';
+    return false;
+  }
+}
+
+document.getElementById('segForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const north = document.getElementById('seg_north').value;
+  const east = document.getElementById('seg_east').value;
+  const ok = await inject('SEGMENT', {
+    north, east,
+    alt: document.getElementById('seg_alt').value,
+    speed: document.getElementById('seg_speed').value,
+    entry_n: document.getElementById('seg_entry_n').value,
+    entry_e: document.getElementById('seg_entry_e').value,
+  }, document.getElementById('segStatus'));
+  if (ok) {
+    // La cible de ce segment devient le point d'entrée attendu du suivant
+    // (cf. canEngage()) — pré-rempli, éditable si besoin.
+    document.getElementById('seg_entry_n').value = north;
+    document.getElementById('seg_entry_e').value = east;
+  }
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  inject('MCCMD', { code: 'start_segment' }, document.getElementById('startStatus'));
+});
+
+document.getElementById('armBtn').addEventListener('click', () => {
+  inject('MCCMD', { code: 'arm' }, document.getElementById('mcStatus'));
+});
+
+document.getElementById('disarmBtn').addEventListener('click', () => {
+  inject('MCCMD', { code: 'disarm' }, document.getElementById('mcStatus'));
+});
+
+document.getElementById('guidedBtn').addEventListener('click', () => {
+  inject('MCCMD', { code: 'guided' }, document.getElementById('mcStatus'));
+});
+
+document.getElementById('takeoffBtn').addEventListener('click', () => {
+  inject('MCCMD', {
+    code: 'takeoff',
+    payload: document.getElementById('takeoff_alt').value,
+  }, document.getElementById('mcStatus'));
+});
+</script>
+</body>
+</html>

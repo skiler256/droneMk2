@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>HIL SF+MV — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+    --ok: #3ecf8e;
+    --warn: #ff9f43;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  a.back { color: var(--muted); font-size: .8rem; text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-size: 1.1rem; margin: .5rem 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1rem; }
+  .warning {
+    background: rgba(255, 159, 67, .12); border: 1px solid var(--warn);
+    color: var(--warn); border-radius: 8px; padding: .7rem 1rem;
+    font-size: .8rem; margin-bottom: 1.5rem;
+  }
+  .segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .panel h2 { font-size: .85rem; margin: 0 0 .6rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .field { display: flex; justify-content: space-between; font-size: .8rem; padding: .15rem 0; border-bottom: 1px solid var(--border); }
+  .field:last-child { border-bottom: none; }
+  .field .k { color: var(--muted); }
+  .empty { color: var(--muted); font-style: italic; font-size: .82rem; }
+  .age { font-size: .68rem; margin-top: .5rem; }
+  .age.fresh { color: var(--ok); }
+  .age.stale { color: var(--muted); }
+
+  .inject { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .map-panel canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
+  .map-info { font-size: .72rem; color: var(--muted); margin-top: .5rem; }
+</style>
+</head>
+<body>
+  <a class="back" href="/">&larr; retour au menu</a>
+  <h1>HIL — SensorFusion + MavlinkInterface</h1>
+  <div class="subtitle">
+    État des segments shm face au vrai matériel (GPS/LIDAR réels, vrai
+    FC — le magnétomètre est câblé directement sur le FC, pas visible ici)
+    via UDP_bridge, namespace HIL.
+  </div>
+  <div class="warning">
+    ⚠️ Page en lecture seule volontairement — test capteurs/EKF uniquement,
+    pas de vol. Aucun bouton/formulaire d'injection (arm/guided/décollage/
+    consigne Nav) : les valeurs affichées viennent uniquement des capteurs
+    réels et du FC.
+  </div>
+
+  <div class="segments">
+    <div class="panel">
+      <h2>FC (SharedFCStatus)</h2>
+      <div id="fc"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Nav (consigne)</h2>
+      <div id="nav"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>SF (GPS + état, capteurs réels)</h2>
+      <div id="sf"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Lidar (réel)</h2>
+      <div id="lidar"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>SysState (santé + codes)</h2>
+      <div id="sys"><div class="empty">en attente…</div></div>
+    </div>
+  </div>
+
+  <div class="inject">
+    <div class="panel map-panel">
+      <h2>Carte 2D — position NED</h2>
+      <canvas id="mapCanvas" width="480" height="480"></canvas>
+      <div class="map-info" id="mapInfo">en attente…</div>
+    </div>
+  </div>
+
+<script>
+const STALE_MS = 2000;
+
+function renderSegment(elId, entry) {
+  const el = document.getElementById(elId);
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+
+  const fields = Object.entries(entry.fields).map(([k, v]) => {
+    const val = typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(4) : v;
+    return `<div class="field"><span class="k">${k}</span><span>${val}</span></div>`;
+  }).join('');
+
+  el.innerHTML = fields + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
+// Un point cloud complet (jusqu'à 360 points) est illisible en liste
+// champ/valeur — on affiche juste le compte + l'âge, pas chaque point.
+function renderLidar(elId, entry) {
+  const el = document.getElementById(elId);
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+  const count = entry.fields.count ?? 0;
+  el.innerHTML = `<div class="field"><span class="k">points valides</span><span>${count}</span></div>`
+    + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
+// Trace de la position NED (N/E, en mètres) — bornée pour ne pas grossir
+// indéfiniment sur une session HIL longue. z (down) affiché en info, pas
+// sur la carte (vue du dessus seulement).
+const mapTrail = [];
+const MAP_TRAIL_MAX = 600;
+
+function drawMap(entry) {
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const infoEl = document.getElementById('mapInfo');
+  const W = canvas.width, H = canvas.height;
+  const style = getComputedStyle(document.documentElement);
+  const border = style.getPropertyValue('--border');
+  const muted = style.getPropertyValue('--muted');
+  const accent = style.getPropertyValue('--accent');
+  const ok = style.getPropertyValue('--ok');
+
+  if (entry && 'state.pos.x' in entry.fields && 'state.pos.y' in entry.fields) {
+    const north = entry.fields['state.pos.x'];
+    const east = entry.fields['state.pos.y'];
+    const down = entry.fields['state.pos.z'] ?? 0;
+    const last = mapTrail[mapTrail.length - 1];
+    if (!last || last.north !== north || last.east !== east) {
+      mapTrail.push({ north, east });
+      if (mapTrail.length > MAP_TRAIL_MAX) mapTrail.shift();
+    }
+    infoEl.textContent = `N=${north.toFixed(2)}m  E=${east.toFixed(2)}m  Alt=${(-down).toFixed(2)}m`;
+  }
+
+  ctx.clearRect(0, 0, W, H);
+  if (mapTrail.length === 0) {
+    infoEl.textContent = 'en attente…';
+    return;
+  }
+
+  // Auto-scale sur l'étendue visitée, avec un plancher pour ne pas zoomer à
+  // l'infini sur un drone immobile au sol.
+  let maxAbs = 2;
+  for (const p of mapTrail) {
+    maxAbs = Math.max(maxAbs, Math.abs(p.north), Math.abs(p.east));
+  }
+  maxAbs *= 1.15;
+
+  const cx = W / 2, cy = H / 2;
+  const scale = (Math.min(W, H) / 2 - 20) / maxAbs; // px par mètre
+  const toScreen = (north, east) => [cx + east * scale, cy - north * scale];
+
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, 0); ctx.lineTo(cx, H);
+  ctx.moveTo(0, cy); ctx.lineTo(W, cy);
+  ctx.stroke();
+
+  ctx.fillStyle = muted;
+  ctx.font = '10px monospace';
+  ctx.fillText('N', cx + 4, 10);
+  ctx.fillText('E', W - 12, cy - 4);
+
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  mapTrail.forEach((p, i) => {
+    const [x, y] = toScreen(p.north, p.east);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  const [lx, ly] = toScreen(mapTrail[mapTrail.length - 1].north, mapTrail[mapTrail.length - 1].east);
+  ctx.fillStyle = ok;
+  ctx.beginPath();
+  ctx.arc(lx, ly, 4, 0, 2 * Math.PI);
+  ctx.fill();
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/api/bridge/status');
+    if (res.ok) {
+      const state = await res.json();
+      renderSegment('fc', state.HIL_FC);
+      renderSegment('nav', state.HIL_NAV);
+      renderSegment('sf', state.HIL_SF);
+      renderLidar('lidar', state.HIL_LIDAR);
+      renderSegment('sys', state.HIL_SYS);
+      drawMap(state.HIL_SF);
+    }
+  } catch (e) {
+    // silencieux : un poll raté ne doit pas spammer la console
+  }
+  setTimeout(poll, 300);
+}
+
+poll();
+</script>
+</body>
+</html>

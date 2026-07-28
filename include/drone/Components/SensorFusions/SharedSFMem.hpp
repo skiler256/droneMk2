@@ -5,17 +5,17 @@
 #include <array>
 #include <cstdint>
 
-// Échantillon GPS+cap : le cap est celui du magnétomètre pris au moment
-// de la réception GPS (pas une valeur indépendante) — permet de
-// construire GPS_INPUT côté MavlinkInterface sans recorréler deux
-// horodatages différents.
+// Échantillon GPS. Nommé GpsMagSample par héritage (le cap magnétique y
+// était bundlé, envoyé dans GPS_INPUT.yaw) — le magnétomètre est câblé
+// directement sur le FC depuis la bascule d'archi (cf. SENSORFUSION.md),
+// donc plus de champ heading ici : GPS_INPUT.yaw part à 0 ("inconnu" selon
+// la spec MAVLink), l'EKF3 du FC utilise son propre compas.
 struct GpsMagSample {
   TYPES::TimePoint ts{};
   double latitude{0.0};     // degrés WGS84
   double longitude{0.0};
   float altMsl{0.0f};       // m, MSL
   TYPES::Velocity velNed{}; // vn, ve, vd
-  TYPES::Radians heading{0.0f};
   float hdop{0.0f};
   float vdop{0.0f};
   float speedAccuracy{0.0f};
@@ -23,22 +23,25 @@ struct GpsMagSample {
   float vertAccuracy{0.0f};
   uint8_t fixType{0};
   uint8_t satellitesVisible{0};
+
+  // Temps GPS (semaine + ms dans la semaine), calculé par le récepteur —
+  // PAS `ts` (horloge interne, steady_clock, sans rapport avec le temps
+  // GPS) : c'est ce que MavlinkInterface envoie tel quel dans
+  // GPS_INPUT.time_week/time_week_ms pour l'EKF3 du FC.
+  uint16_t gpsWeek{0};
+  uint32_t gpsTowMs{0};
 };
 
-// Carte LIDAR post-TiltCompensator (déjà corrigée de l'assiette du drone).
-// distanceMm[i] == 0 : aucune mesure reçue à cet angle ce tour-ci
-// (convention déjà utilisée par LidarData, distance physique nulle
-// impossible).
+// Nuage de points LIDAR en NED, relatif au drone, projeté via l'attitude
+// courante. points[i].isZero() : aucune mesure à cet angle ce tour-ci.
 struct LidarMap {
   TYPES::TimePoint ts{};
-  std::array<uint16_t, 360> distanceMm{};
+  std::array<TYPES::Vec3, 360> points{};
   std::array<uint8_t, 360> intensity{};
 };
 
-// État dynamique fusionné, repère NED — la donnée que Nav/MissionControl
-// consomment comme vérité terrain. attitude est relayée depuis
-// SharedFCStatus (pas re-fusionnée ici), posNed/velNed sont calibrés
-// (offset HomeCalibrator appliqué).
+// État dynamique fusionné, repère NED — vérité terrain pour Nav/MC.
+// posNed a l'offset HomeCalibrator appliqué, attitude relayée du FC.
 struct DynamicState {
   TYPES::TimePoint ts{};
   TYPES::Position posNed{};
@@ -63,14 +66,12 @@ public:
                               SharedSFMem &SF)
       : SharedCompMemHandler(SF.compMem, id, timeout), SF_(SF) {};
 
-  // Écriture — appelée par les Task de SensorFusion (GPSTask/MagTask,
-  // LidarTask, EKFTask — pas encore implémentées).
+  // Écriture — appelée par les Task de SensorFusion (GPSTask, LidarTask, EKFTask).
   void setGpsMag(GpsMagSample s) { setData(id_, timeout_, SF_.data.gpsMag, s); }
   void setLidarMap(LidarMap m) { setData(id_, timeout_, SF_.data.lidar, m); }
   void setDynamicState(DynamicState s) { setData(id_, timeout_, SF_.data.state, s); }
 
-  // Lecture — Navigation (state), MissionControl (lidar pour évitement),
-  // MavlinkInterface (gpsMag pour construire GPS_INPUT).
+  // Lecture — Nav (state), MissionControl (lidar), MavlinkInterface (gpsMag).
   [[nodiscard]] std::optional<GpsMagSample> getGpsMag() {
     return getData(id_, timeout_, SF_.data.gpsMag);
   }
