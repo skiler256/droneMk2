@@ -37,6 +37,12 @@ enum class PacketID : uint8_t {
   CMD_RTL = 14,
   CMD_LAND = 15,
   HEARTBEAT_GCS = 16,
+  CMD_EMERGENCY = 17,
+  CMD_TAKEOFF = 18,
+  CMD_HOLD = 19,
+  CMD_RESUME = 20,
+  CMD_ANSWER = 21,
+  MC_QUERY = 22,
 };
 
 struct PosPkt {
@@ -254,22 +260,22 @@ struct MissionStatePkt {
 
 struct AutopilotModePkt {
   static constexpr PacketID kId = PacketID::AUTOPILOT_MODE;
-  static constexpr size_t kSize = 12;
-  uint8_t lateral_engaged{};
-  uint8_t lateral_armed{};
-  uint8_t vertical_engaged{};
-  uint8_t vertical_armed{};
+  static constexpr size_t kSize = 24;
+  uint32_t lateral_engaged{};
+  uint32_t lateral_armed{};
+  uint32_t vertical_engaged{};
+  uint32_t vertical_armed{};
   float target_altitude{};
   float target_speed{};
 
   [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
     std::array<std::byte, kSize> buf{};
     std::memcpy(buf.data() + 0, &lateral_engaged, sizeof(lateral_engaged));
-    std::memcpy(buf.data() + 1, &lateral_armed, sizeof(lateral_armed));
-    std::memcpy(buf.data() + 2, &vertical_engaged, sizeof(vertical_engaged));
-    std::memcpy(buf.data() + 3, &vertical_armed, sizeof(vertical_armed));
-    std::memcpy(buf.data() + 4, &target_altitude, sizeof(target_altitude));
-    std::memcpy(buf.data() + 8, &target_speed, sizeof(target_speed));
+    std::memcpy(buf.data() + 4, &lateral_armed, sizeof(lateral_armed));
+    std::memcpy(buf.data() + 8, &vertical_engaged, sizeof(vertical_engaged));
+    std::memcpy(buf.data() + 12, &vertical_armed, sizeof(vertical_armed));
+    std::memcpy(buf.data() + 16, &target_altitude, sizeof(target_altitude));
+    std::memcpy(buf.data() + 20, &target_speed, sizeof(target_speed));
     return buf;
   }
 
@@ -277,11 +283,11 @@ struct AutopilotModePkt {
     AutopilotModePkt out{};
     if (bytes.size() < kSize) return out;
     std::memcpy(&out.lateral_engaged, bytes.data() + 0, sizeof(out.lateral_engaged));
-    std::memcpy(&out.lateral_armed, bytes.data() + 1, sizeof(out.lateral_armed));
-    std::memcpy(&out.vertical_engaged, bytes.data() + 2, sizeof(out.vertical_engaged));
-    std::memcpy(&out.vertical_armed, bytes.data() + 3, sizeof(out.vertical_armed));
-    std::memcpy(&out.target_altitude, bytes.data() + 4, sizeof(out.target_altitude));
-    std::memcpy(&out.target_speed, bytes.data() + 8, sizeof(out.target_speed));
+    std::memcpy(&out.lateral_armed, bytes.data() + 4, sizeof(out.lateral_armed));
+    std::memcpy(&out.vertical_engaged, bytes.data() + 8, sizeof(out.vertical_engaged));
+    std::memcpy(&out.vertical_armed, bytes.data() + 12, sizeof(out.vertical_armed));
+    std::memcpy(&out.target_altitude, bytes.data() + 16, sizeof(out.target_altitude));
+    std::memcpy(&out.target_speed, bytes.data() + 20, sizeof(out.target_speed));
     return out;
   }
 };
@@ -416,6 +422,117 @@ struct HeartbeatGcsPkt {
   }
 };
 
+struct CmdEmergencyPkt {
+  static constexpr PacketID kId = PacketID::CMD_EMERGENCY;
+  static constexpr size_t kSize = 0;
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    return buf;
+  }
+
+  [[nodiscard]] static CmdEmergencyPkt unpack(std::span<const std::byte> bytes) noexcept {
+    CmdEmergencyPkt out{};
+    if (bytes.size() < kSize) return out;
+    return out;
+  }
+};
+
+struct CmdTakeoffPkt {
+  static constexpr PacketID kId = PacketID::CMD_TAKEOFF;
+  static constexpr size_t kSize = 4;
+  float altitude{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &altitude, sizeof(altitude));
+    return buf;
+  }
+
+  [[nodiscard]] static CmdTakeoffPkt unpack(std::span<const std::byte> bytes) noexcept {
+    CmdTakeoffPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.altitude, bytes.data() + 0, sizeof(out.altitude));
+    return out;
+  }
+};
+
+struct CmdHoldPkt {
+  static constexpr PacketID kId = PacketID::CMD_HOLD;
+  static constexpr size_t kSize = 0;
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    return buf;
+  }
+
+  [[nodiscard]] static CmdHoldPkt unpack(std::span<const std::byte> bytes) noexcept {
+    CmdHoldPkt out{};
+    if (bytes.size() < kSize) return out;
+    return out;
+  }
+};
+
+struct CmdResumePkt {
+  static constexpr PacketID kId = PacketID::CMD_RESUME;
+  static constexpr size_t kSize = 0;
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    return buf;
+  }
+
+  [[nodiscard]] static CmdResumePkt unpack(std::span<const std::byte> bytes) noexcept {
+    CmdResumePkt out{};
+    if (bytes.size() < kSize) return out;
+    return out;
+  }
+};
+
+struct CmdAnswerPkt {
+  static constexpr PacketID kId = PacketID::CMD_ANSWER;
+  static constexpr size_t kSize = 5;
+  uint32_t seq{};
+  uint8_t choice{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &seq, sizeof(seq));
+    std::memcpy(buf.data() + 4, &choice, sizeof(choice));
+    return buf;
+  }
+
+  [[nodiscard]] static CmdAnswerPkt unpack(std::span<const std::byte> bytes) noexcept {
+    CmdAnswerPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.seq, bytes.data() + 0, sizeof(out.seq));
+    std::memcpy(&out.choice, bytes.data() + 4, sizeof(out.choice));
+    return out;
+  }
+};
+
+struct McQueryPkt {
+  static constexpr PacketID kId = PacketID::MC_QUERY;
+  static constexpr size_t kSize = 5;
+  uint32_t seq{};
+  uint8_t query_type{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &seq, sizeof(seq));
+    std::memcpy(buf.data() + 4, &query_type, sizeof(query_type));
+    return buf;
+  }
+
+  [[nodiscard]] static McQueryPkt unpack(std::span<const std::byte> bytes) noexcept {
+    McQueryPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.seq, bytes.data() + 0, sizeof(out.seq));
+    std::memcpy(&out.query_type, bytes.data() + 4, sizeof(out.query_type));
+    return out;
+  }
+};
+
 // Une entrée par paquet : priorité/taux/taille, utilisée par le scheduler
 // d'émission (choix du prochain paquet dû) sans dupliquer ces constantes.
 struct Meta {
@@ -429,7 +546,7 @@ struct Meta {
   const char *name;
 };
 
-inline constexpr std::array<Meta, 17> kTable{{
+inline constexpr std::array<Meta, 23> kTable{{
     Meta{PacketID::POS, Direction::Down, Priority::Routine, 10, 0, static_cast<uint8_t>(Link::Main), 12, "POS"},
     Meta{PacketID::VELNED, Direction::Down, Priority::Routine, 10, 0, static_cast<uint8_t>(Link::Main), 12, "VELNED"},
     Meta{PacketID::ATTITUDE, Direction::Down, Priority::Routine, 10, 0, static_cast<uint8_t>(Link::Main), 16, "ATTITUDE"},
@@ -439,7 +556,7 @@ inline constexpr std::array<Meta, 17> kTable{{
     Meta{PacketID::CODE, Direction::Down, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 8, "CODE"},
     Meta{PacketID::ARM_STATE, Direction::Down, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 2, "ARM_STATE"},
     Meta{PacketID::MISSION_STATE, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 1, "MISSION_STATE"},
-    Meta{PacketID::AUTOPILOT_MODE, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main), 12, "AUTOPILOT_MODE"},
+    Meta{PacketID::AUTOPILOT_MODE, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main), 24, "AUTOPILOT_MODE"},
     Meta{PacketID::CMD_ARM, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_ARM"},
     Meta{PacketID::CMD_DISARM, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_DISARM"},
     Meta{PacketID::CMD_MODE, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 1, "CMD_MODE"},
@@ -447,6 +564,12 @@ inline constexpr std::array<Meta, 17> kTable{{
     Meta{PacketID::CMD_RTL, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_RTL"},
     Meta{PacketID::CMD_LAND, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_LAND"},
     Meta{PacketID::HEARTBEAT_GCS, Direction::Up, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "HEARTBEAT_GCS"},
+    Meta{PacketID::CMD_EMERGENCY, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_EMERGENCY"},
+    Meta{PacketID::CMD_TAKEOFF, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 4, "CMD_TAKEOFF"},
+    Meta{PacketID::CMD_HOLD, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_HOLD"},
+    Meta{PacketID::CMD_RESUME, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_RESUME"},
+    Meta{PacketID::CMD_ANSWER, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 5, "CMD_ANSWER"},
+    Meta{PacketID::MC_QUERY, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 5, "MC_QUERY"},
 }};
 
 [[nodiscard]] constexpr const Meta *find(PacketID id) noexcept {

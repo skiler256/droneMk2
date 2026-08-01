@@ -14,6 +14,7 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o: /home/jules/droneMk
   /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
+  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
   /home/jules/droneMk2/include/drone/IntegrationTests/ShmPaths.hpp \
   /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
   /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
@@ -1506,11 +1507,7 @@ libdrone_lib.a:
 
 /usr/include/c++/14/bits/atomic_timed_wait.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_param_ext_set.h:
-
-/usr/include/c++/14/complex:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_extended_sys_state.h:
+/usr/include/c++/14/bits/atomic_base.h:
 
 /usr/include/aarch64-linux-gnu/bits/posix1_lim.h:
 
@@ -1570,8 +1567,6 @@ libdrone_lib.a:
 
 /usr/include/aarch64-linux-gnu/bits/socket.h:
 
-/usr/include/c++/14/bits/atomic_base.h:
-
 /usr/include/aarch64-linux-gnu/bits/types/time_t.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_ack.h:
@@ -1579,16 +1574,6 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_message_interval.h:
 
 /usr/include/aarch64-linux-gnu/sys/user.h:
-
-/usr/include/c++/14/bits/postypes.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mount_orientation.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_manual_setpoint.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_onboard_computer_status.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_generator_status.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_count.h:
 
@@ -1676,6 +1661,12 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /usr/include/aarch64-linux-gnu/sys/ucontext.h:
 
+/usr/include/c++/14/complex:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_extended_sys_state.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_param_ext_set.h:
+
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_logging_data.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_encapsulated_data.h:
@@ -1697,6 +1688,12 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_item.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/icarous/mavlink_msg_icarous_heartbeat.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_onboard_computer_status.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_generator_status.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_manual_setpoint.h:
 
 /usr/include/c++/14/bits/refwrap.h:
 
@@ -1744,21 +1741,15 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_storage_information.h:
 
+/usr/lib/linux/uapi/arm64/asm/unistd_64.h:
+
+/usr/include/eigen3/Eigen/src/Core/util/ConfigureVectorization.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_camera_tracking_image_status.h:
+
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_ekf_status_report.h:
 
 /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h:
-
-/usr/include/eigen3/Eigen/src/Core/CwiseUnaryView.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_current_event_sequence.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_battery_info.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_isbd_link_status.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_radio.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_mount_status.h:
 
 /usr/include/c++/14/thread:
 
@@ -1804,12 +1795,6 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_log_entry.h:
 
-/usr/include/c++/14/bits/locale_facets_nonio.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_request_int.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_data32.h:
-
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_obstacle_distance_3d.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/loweheiser/loweheiser.h:
@@ -1839,6 +1824,28 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_9_to_12.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_v2_extension.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_log_request_end.h:
+
+/usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
+
+/usr/lib/gcc/aarch64-linux-gnu/14/include/arm_fp16.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_named_value_float.h:
+
+/usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
+
+/home/jules/droneMk2/include/drone/Components/MissionControl/SharedCmdMem.hpp:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/cubepilot/cubepilot.h:
+
+/usr/include/c++/14/bits/streambuf_iterator.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_device_op_read.h:
+
+/usr/include/eigen3/Eigen/src/Core/ArrayBase.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_simstate.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_gps_inject_data.h:
 
@@ -1900,10 +1907,6 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/signum-arch.h:
 
-/usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_log_request_end.h:
-
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_ais_vessel.h:
 
 /usr/include/c++/14/bits/allocator.h:
@@ -1940,12 +1943,6 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp:
 
-/usr/lib/linux/uapi/arm64/asm/unistd_64.h:
-
-/usr/include/eigen3/Eigen/src/Core/util/ConfigureVectorization.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_camera_tracking_image_status.h:
-
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_command_ack.h:
 
 /usr/include/c++/14/bits/locale_facets.tcc:
@@ -1966,23 +1963,17 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_17_to_20.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/include/arm_fp16.h:
+/usr/include/c++/14/bits/locale_facets_nonio.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_named_value_float.h:
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_data32.h:
 
-/usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_request_int.h:
 
-/home/jules/droneMk2/include/drone/Components/MissionControl/SharedCmdMem.hpp:
+/usr/include/c++/14/bits/postypes.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/cubepilot/cubepilot.h:
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mount_orientation.h:
 
-/usr/include/c++/14/bits/streambuf_iterator.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_device_op_read.h:
-
-/usr/include/eigen3/Eigen/src/Core/ArrayBase.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_simstate.h:
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_tunnel.h:
 
 /usr/include/c++/14/cstdint:
 
@@ -2003,6 +1994,18 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 /usr/include/c++/14/bits/shared_ptr_base.h:
 
 /home/jules/droneMk2/include/drone/Components/MavlinkInterface/PendingAck.hpp:
+
+/usr/include/eigen3/Eigen/src/Core/CwiseUnaryView.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_current_event_sequence.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_battery_info.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_isbd_link_status.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_radio.h:
+
+/home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_auth_key.h:
 
@@ -2045,6 +2048,8 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 /usr/include/c++/14/pstl/glue_algorithm_defs.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_aoa_ssa.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_mount_status.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_gimbal_control.h:
 
@@ -2226,9 +2231,9 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_rally_fetch_point.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_21_to_24.h:
-
 /usr/include/aarch64-linux-gnu/bits/thread-shared-types.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_21_to_24.h:
 
 /usr/include/aarch64-linux-gnu/bits/endianness.h:
 
@@ -2441,8 +2446,6 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_trajectory_representation_bezier.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_trajectory_representation_waypoints.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_tunnel.h:
 
 /usr/include/eigen3/Eigen/src/Core/NoAlias.h:
 

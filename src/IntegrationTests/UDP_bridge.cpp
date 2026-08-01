@@ -30,6 +30,7 @@
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
+#include "drone/Components/System Monitoring/SharedComMem.hpp"
 #include "drone/IntegrationTests/ShmPaths.hpp"
 #include "drone/core/SharedSysStateMem.hpp"
 #include "drone/generated/codes.hpp"
@@ -277,6 +278,74 @@ std::string serializeSys(std::string_view ns, SharedSysStateMemHandler &h) {
   };
   dumpComponent("mavlink", ComponentID::MavlinkInterface);
   dumpComponent("sensorfusion", ComponentID::SensorFusion);
+  dumpComponent("navigation", ComponentID::Navigation);
+  dumpComponent("sysmonitoring", ComponentID::SysMonitoring);
+  dumpComponent("missioncontrol", ComponentID::MissionControl);
+
+  return os.str();
+}
+
+[[nodiscard]] std::string_view missionStateName(MissionState s) {
+  switch (s) {
+  case MissionState::Idle: return "Idle";
+  case MissionState::PreFlight: return "PreFlight";
+  case MissionState::Armed: return "Armed";
+  case MissionState::Mission: return "Mission";
+  case MissionState::Manual: return "Manual";
+  case MissionState::Hold: return "Hold";
+  case MissionState::Landing: return "Landing";
+  case MissionState::Emergency: return "Emergency";
+  }
+  return "?";
+}
+
+[[nodiscard]] std::string_view queryTypeName(QueryType t) {
+  switch (t) {
+  case QueryType::None: return "None";
+  case QueryType::ObstacleNonContournable: return "ObstacleNonContournable";
+  case QueryType::EmergencyRecoverable: return "EmergencyRecoverable";
+  case QueryType::LidarLost: return "LidarLost";
+  }
+  return "?";
+}
+
+// État MissionControl (MissionState + question GCS en cours) — vit dans
+// SharedCmdMem comme le reste (armé/engagé/progress, cf. serializeSegment),
+// même handler `cmd`, pas de segment shm dédié.
+std::string serializeMc(std::string_view ns, SharedCmdMemHandler &h) {
+  std::ostringstream os;
+  os << "SEGMENT=" << ns << "_MC\n";
+
+  if (auto st = h.getMissionState())
+    os << "state=" << missionStateName(*st) << "\n";
+
+  if (auto q = h.getPendingQuery(); q && q->type != QueryType::None)
+    os << "query.type=" << queryTypeName(q->type) << "\nquery.seq=" << q->seq << "\n";
+
+  if (auto hb = h.getHeartbeat()) {
+    auto ageMs = UTILITIES::msBetween(*hb, Clock::now());
+    os << "heartbeat.age_ms=" << ageMs.count() << "\n";
+  }
+
+  return os.str();
+}
+
+// Heartbeat GCS (SharedComMem) — MC_SITL uniquement, GCSRxTask n'existe
+// pas dans ce binaire (pas de SysMonitoring), donc rien d'autre ne pousse
+// jamais lastHeartbeatMain/Sec ici (les injecter via CMD=GCSCMD est une
+// autre affaire — ce champ mesure l'âge, pas la présence de commandes).
+std::string serializeCom(std::string_view ns, SharedComMemHandler &h) {
+  std::ostringstream os;
+  os << "SEGMENT=" << ns << "_COM\n";
+
+  if (auto hb = h.getLastHeartbeatMain()) {
+    auto ageMs = UTILITIES::msBetween(*hb, Clock::now());
+    os << "heartbeat_main.age_ms=" << ageMs.count() << "\n";
+  }
+  if (auto hb = h.getLastHeartbeatSec()) {
+    auto ageMs = UTILITIES::msBetween(*hb, Clock::now());
+    os << "heartbeat_sec.age_ms=" << ageMs.count() << "\n";
+  }
 
   return os.str();
 }
@@ -330,19 +399,23 @@ struct TestNamespace {
   std::string_view label; // "SITL" ou "HIL", préfixe des segments envoyés
   bool allowGpsMagInject; // faux pour HIL : SensorFusion réel est déjà writer
 
-  std::string_view navPath, sfPath, sysPath, fcPath, cmdPath;
+  std::string_view navPath, sfPath, sysPath, fcPath, cmdPath, comPath;
 
   std::optional<ShmPublisher<SharedNavMem>> navShm;
   std::optional<ShmPublisher<SharedSFMem>> sfShm;
   std::optional<ShmPublisher<SharedSysStateMem>> sysShm;
   std::optional<ShmPublisher<SharedFCStatus>> fcShm;
   std::optional<ShmPublisher<SharedCmdMem>> cmdShm;
+  std::optional<ShmPublisher<SharedComMem>> comShm;
 
   std::optional<SharedNavMemHandler> nav;
   std::optional<SharedSFMemHandler> sf;
   std::optional<SharedSysStateMemHandler> sys;
   std::optional<SharedFCStatusHandler> fc;
   std::optional<SharedCmdMemHandler> cmd;
+  // Absent (comPath vide) pour SITL/HIL/NAV_SITL — seul MC_SITL en a besoin
+  // (injection de commandes GCS, cf. CMD=GCSCMD).
+  std::optional<SharedComMemHandler> com;
 
   // Rafraîchissement périodique de la dernière commande injectée — un
   // NavCommand/GpsMagSample écrit une seule fois expire côté ArduPilot
@@ -396,6 +469,12 @@ struct TestNamespace {
         cmd.emplace(ComponentID::GlobalWatchdog, Us(2000), *cmdShm->ptr);
       }
     }
+    if (!com && !comPath.empty()) {
+      if (auto r = attachSharedMemory<SharedComMem>(comPath)) {
+        comShm = *r;
+        com.emplace(ComponentID::GlobalWatchdog, Us(2000), *comShm->ptr);
+      }
+    }
   }
 
   void pushStatus(int statusFd) {
@@ -409,8 +488,12 @@ struct TestNamespace {
     }
     if (sys)
       sendSegment(statusFd, serializeSys(label, *sys));
-    if (cmd)
+    if (cmd) {
       sendSegment(statusFd, serializeSegment(label, *cmd, lastNavReport));
+      sendSegment(statusFd, serializeMc(label, *cmd));
+    }
+    if (com)
+      sendSegment(statusFd, serializeCom(label, *com));
   }
 
   void refreshInjectedCommands(TYPES::TimePoint now) {
@@ -426,22 +509,75 @@ struct TestNamespace {
   }
 };
 
+// Tables de correspondance texte -> enum pour l'injection MC_SITL — noms
+// choisis pour matcher directement les identifiants C++/CODES::, pas de
+// couche d'indirection cosmétique côté dashboard.
+[[nodiscard]] std::optional<ComponentID> parseComponentId(std::string_view s) {
+  if (s == "Navigation") return ComponentID::Navigation;
+  if (s == "SensorFusion") return ComponentID::SensorFusion;
+  if (s == "MavlinkInterface") return ComponentID::MavlinkInterface;
+  if (s == "SysMonitoring") return ComponentID::SysMonitoring;
+  if (s == "MissionControl") return ComponentID::MissionControl;
+  return std::nullopt;
+}
+
+// Liste volontairement fermée aux codes pertinents pour tester le failsafe
+// MC (cf. MISSIONCONTROL.md §6) — pas un lookup générique par nom (pas
+// construit côté CODES::, et ouvrirait à injecter n'importe quoi).
+[[nodiscard]] std::optional<CODES::Code> parseInjectableCode(std::string_view s) {
+  if (s == "SFS002") return CODES::SFS002; // GPS perdu (recoverable)
+  if (s == "SFS004") return CODES::SFS004; // Lidar perdu (ni l'un ni l'autre)
+  if (s == "SFS005") return CODES::SFS005; // EKF mort (recoverable)
+  if (s == "MVC004") return CODES::MVC004; // Lien FC perdu (recoverable)
+  if (s == "MVP001") return CODES::MVP001; // RPM bas (unrecoverable)
+  if (s == "FCP003") return CODES::FCP003; // Batterie critique (unrecoverable)
+  if (s == "SMO001") return CODES::SMO001; // E-stop GCS (unrecoverable)
+  if (s == "SMC002") return CODES::SMC002; // Lien GCS principal perdu
+  if (s == "SMC003") return CODES::SMC003; // Lien GCS secondaire perdu (les 2 = recoverable)
+  if (s == "NVA004") return CODES::NVA004; // Obstacle (-> HOLD)
+  return std::nullopt;
+}
+
+[[nodiscard]] std::optional<ComponentHealth> parseHealth(std::string_view s) {
+  if (s == "NOMINAL") return ComponentHealth::NOMINAL;
+  if (s == "DEGRADED") return ComponentHealth::DEGRADED;
+  if (s == "SICK") return ComponentHealth::SICK;
+  if (s == "DEAD") return ComponentHealth::DEAD;
+  return std::nullopt;
+}
+
+[[nodiscard]] std::optional<GCSCommandType> parseGcsCmdType(std::string_view s) {
+  if (s == "Arm") return GCSCommandType::Arm;
+  if (s == "Disarm") return GCSCommandType::Disarm;
+  if (s == "Takeoff") return GCSCommandType::Takeoff;
+  if (s == "Mode") return GCSCommandType::Mode;
+  if (s == "Hold") return GCSCommandType::Hold;
+  if (s == "Resume") return GCSCommandType::Resume;
+  if (s == "Land") return GCSCommandType::Land;
+  if (s == "Answer") return GCSCommandType::Answer;
+  return std::nullopt;
+}
+
 // Applique une commande reçue en UDP (CMD=NAV, CMD=GPSMAG, CMD=MCCMD,
-// CMD=SEGMENT) sur le namespace ciblé (NS=SITL|HIL|NAV_SITL) — testable avec :
+// CMD=SEGMENT, CMD=GCSCMD, CMD=CODE, CMD=HEALTH, CMD=FCARMED) sur le
+// namespace ciblé (NS=SITL|HIL|NAV_SITL|MC_SITL) — testable avec :
 // echo -e "CMD=NAV\nNS=SITL\nvel.x=1.0" | nc -u -w0 127.0.0.1 15000
 // echo -e "CMD=MCCMD\nNS=HIL\ncode=takeoff\npayload=500" | nc -u -w0 127.0.0.1 15000
 // echo -e "CMD=SEGMENT\nNS=NAV_SITL\nnorth=20\neast=0\nalt=-10\nspeed=3" | nc -u -w0 127.0.0.1 15000
+// echo -e "CMD=GCSCMD\nNS=MC_SITL\ntype=Arm" | nc -u -w0 127.0.0.1 15000
+// echo -e "CMD=CODE\nNS=MC_SITL\ncomponent=SensorFusion\ncode=SFS002\naction=raise" | nc -u -w0 127.0.0.1 15000
 void handleCommand(std::string_view text, TestNamespace &sitlNs, TestNamespace &hilNs,
-                   TestNamespace &navSitlNs) {
+                   TestNamespace &navSitlNs, TestNamespace &mcSitlNs) {
   auto fields = parseLines(text);
   auto cmdIt = fields.find("CMD");
   auto nsIt = fields.find("NS");
   if (cmdIt == fields.end() || nsIt == fields.end())
     return;
 
-  TestNamespace &ns = (nsIt->second == "HIL")       ? hilNs
-                      : (nsIt->second == "NAV_SITL") ? navSitlNs
-                                                     : sitlNs;
+  TestNamespace &ns = (nsIt->second == "HIL")        ? hilNs
+                      : (nsIt->second == "NAV_SITL")  ? navSitlNs
+                      : (nsIt->second == "MC_SITL")   ? mcSitlNs
+                                                      : sitlNs;
 
   if (cmdIt->second == "MCCMD") {
     if (!ns.cmd)
@@ -518,6 +654,70 @@ void handleCommand(std::string_view text, TestNamespace &sitlNs, TestNamespace &
     fillGpsWeek(sample);
     ns.sf->setGpsMag(sample);
     ns.lastGpsMag = sample;
+  } else if (cmdIt->second == "GCSCMD") {
+    // Simule une commande GCS -> MissionControl, en direct dans
+    // SharedComMem::gcsCmds — remplace GCSRxTask (absent, pas de
+    // SysMonitoring dans MC_SITL, cf. MC_SITL.cpp).
+    if (!ns.com)
+      return;
+    auto typeIt = fields.find("type");
+    if (typeIt == fields.end())
+      return;
+    auto type = parseGcsCmdType(typeIt->second);
+    if (!type)
+      return;
+
+    GCSCommand c{.type = *type};
+    c.mode = static_cast<uint8_t>(parseFloatOr(fields, "mode", 0.0f));
+    c.altitude = Meters{parseFloatOr(fields, "altitude", 0.0f)};
+    c.answerSeq = static_cast<uint32_t>(parseFloatOr(fields, "answerSeq", 0.0f));
+    c.answerChoice = static_cast<uint8_t>(parseFloatOr(fields, "answerChoice", 0.0f));
+    [[maybe_unused]] auto pushed = ns.com->pushGCSCommand(c);
+  } else if (cmdIt->second == "CODE") {
+    // Lève/efface un code sous l'identité d'un AUTRE composant (self-report
+    // oblige, cf. SharedSysStateMemHandler) — simule "SensorFusion a levé
+    // SFS002" sans faire tourner SensorFusion pour de vrai.
+    if (!ns.sysShm)
+      return;
+    auto compIt = fields.find("component");
+    auto codeIt = fields.find("code");
+    auto actionIt = fields.find("action");
+    if (compIt == fields.end() || codeIt == fields.end() || actionIt == fields.end())
+      return;
+    auto compId = parseComponentId(compIt->second);
+    auto code = parseInjectableCode(codeIt->second);
+    if (!compId || !code)
+      return;
+
+    SharedSysStateMemHandler fake(*ns.sysShm->ptr, *compId, Us(2000));
+    if (actionIt->second == "raise")
+      fake.raiseCode(*code);
+    else if (actionIt->second == "clear")
+      fake.clearCode(*code);
+  } else if (cmdIt->second == "HEALTH") {
+    // Même principe que CODE — simule un composant DEAD/SICK sans le faire
+    // vraiment crasher (cf. escalade sur crash, MISSIONCONTROL.md §6).
+    if (!ns.sysShm)
+      return;
+    auto compIt = fields.find("component");
+    auto healthIt = fields.find("health");
+    if (compIt == fields.end() || healthIt == fields.end())
+      return;
+    auto compId = parseComponentId(compIt->second);
+    auto health = parseHealth(healthIt->second);
+    if (!compId || !health)
+      return;
+
+    SharedSysStateMemHandler fake(*ns.sysShm->ptr, *compId, Us(2000));
+    fake.setHealth(*health);
+  } else if (cmdIt->second == "FCARMED") {
+    // Rien d'autre ne confirme jamais l'armement dans MC_SITL (pas de
+    // MavlinkInterface) — sans ce toggle, ARMED->MISSION resterait bloqué
+    // indéfiniment (armError sur timeout de confirmation).
+    if (!ns.fc)
+      return;
+    bool armed = parseFloatOr(fields, "armed", 0.0f) != 0.0f;
+    ns.fc->setArmed(armed);
   }
 }
 
@@ -552,10 +752,22 @@ int main() {
   navSitlNs.sysPath = NAV_SITL::kSysShmPath;
   navSitlNs.fcPath = NAV_SITL::kFCShmPath;
   navSitlNs.cmdPath = NAV_SITL::kCmdShmPath;
+  navSitlNs.comPath = NAV_SITL::kComShmPath;
+
+  TestNamespace mcSitlNs{};
+  mcSitlNs.label = "MC_SITL";
+  mcSitlNs.allowGpsMagInject = false; // pas de SensorFusion dans MC_SITL
+  mcSitlNs.navPath = MC_SITL::kNavShmPath;
+  mcSitlNs.sfPath = MC_SITL::kSFShmPath;
+  mcSitlNs.sysPath = MC_SITL::kSysShmPath;
+  mcSitlNs.fcPath = MC_SITL::kFCShmPath;
+  mcSitlNs.cmdPath = MC_SITL::kCmdShmPath;
+  mcSitlNs.comPath = MC_SITL::kComShmPath;
 
   sitlNs.tryAttachMissing();
   hilNs.tryAttachMissing();
   navSitlNs.tryAttachMissing();
+  mcSitlNs.tryAttachMissing();
 
   int statusFd = openStatusSocket();
   int commandFd = openCommandSocket();
@@ -567,7 +779,8 @@ int main() {
   std::cout << "UDP_bridge: pret — statut vers " << kStatusPort << ", commandes sur "
            << kCommandPort << " — SITL " << (sitlNs.fc ? "actif" : "absent") << ", HIL "
            << (hilNs.fc ? "actif" : "absent") << ", NAV_SITL "
-           << (navSitlNs.fc ? "actif" : "absent") << "\n";
+           << (navSitlNs.fc ? "actif" : "absent") << ", MC_SITL "
+           << (mcSitlNs.fc ? "actif" : "absent") << "\n";
 
   auto nextPush = Clock::now();
   auto nextRefresh = Clock::now();
@@ -581,9 +794,11 @@ int main() {
       sitlNs.pollReports();
       hilNs.pollReports();
       navSitlNs.pollReports();
+      mcSitlNs.pollReports();
       sitlNs.pushStatus(statusFd);
       hilNs.pushStatus(statusFd);
       navSitlNs.pushStatus(statusFd);
+      mcSitlNs.pushStatus(statusFd);
       nextPush = now + kPushPeriod;
     }
 
@@ -591,6 +806,7 @@ int main() {
       sitlNs.refreshInjectedCommands(now);
       hilNs.refreshInjectedCommands(now);
       navSitlNs.refreshInjectedCommands(now);
+      mcSitlNs.refreshInjectedCommands(now);
       nextRefresh = now + kRefreshPeriod;
     }
 
@@ -598,6 +814,7 @@ int main() {
       sitlNs.tryAttachMissing();
       hilNs.tryAttachMissing();
       navSitlNs.tryAttachMissing();
+      mcSitlNs.tryAttachMissing();
       nextAttachRetry = now + kAttachRetryPeriod;
     }
 
@@ -605,7 +822,7 @@ int main() {
     if (n > 0) {
       handleCommand(std::string_view(reinterpret_cast<const char *>(cmdBuf.data()),
                                      static_cast<size_t>(n)),
-                    sitlNs, hilNs, navSitlNs);
+                    sitlNs, hilNs, navSitlNs, mcSitlNs);
     } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
       std::cerr << "UDP_bridge: erreur lecture commande\n";
     }

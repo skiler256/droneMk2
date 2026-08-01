@@ -841,11 +841,15 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \
  /usr/include/c++/14/deque /usr/include/c++/14/bits/stl_deque.h \
  /usr/include/c++/14/bits/deque.tcc \
+ /home/jules/droneMk2/include/drone/Components/MissionControl/MissionControl.hpp \
+ /home/jules/droneMk2/include/drone/Components/MissionControl/MissionPlan.hpp \
+ /home/jules/droneMk2/include/drone/generated/missionplan.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpTelemetryDriver.hpp \
@@ -854,7 +858,6 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SysMonitoring.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/PacketScheduler.hpp \
  /home/jules/droneMk2/include/drone/generated/telemetry.hpp \
- /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
  /home/jules/droneMk2/include/drone/shm.hpp /usr/include/c++/14/csignal \
  /usr/include/signal.h \

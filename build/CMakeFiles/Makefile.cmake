@@ -68,6 +68,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/generate_codes.dir/DependInfo.cmake"
   "CMakeFiles/generate_telemetry.dir/DependInfo.cmake"
+  "CMakeFiles/generate_missionplan.dir/DependInfo.cmake"
   "CMakeFiles/drone_lib.dir/DependInfo.cmake"
   "CMakeFiles/drone.dir/DependInfo.cmake"
   "CMakeFiles/test_types.dir/DependInfo.cmake"
@@ -75,6 +76,8 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/test_watchdog.dir/DependInfo.cmake"
   "CMakeFiles/test_telemetry.dir/DependInfo.cmake"
   "CMakeFiles/test_navigation.dir/DependInfo.cmake"
+  "CMakeFiles/test_missionplan.dir/DependInfo.cmake"
+  "CMakeFiles/test_missioncontrol.dir/DependInfo.cmake"
   "CMakeFiles/test_mavlink.dir/DependInfo.cmake"
   "CMakeFiles/test_sensorfusion.dir/DependInfo.cmake"
   "CMakeFiles/test_stub_child.dir/DependInfo.cmake"
@@ -82,5 +85,6 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/mv_sitl.dir/DependInfo.cmake"
   "CMakeFiles/hil_sf_mv.dir/DependInfo.cmake"
   "CMakeFiles/nav_sitl.dir/DependInfo.cmake"
+  "CMakeFiles/mc_sitl.dir/DependInfo.cmake"
   "CMakeFiles/udp_bridge.dir/DependInfo.cmake"
   )

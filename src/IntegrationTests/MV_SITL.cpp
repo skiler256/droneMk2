@@ -49,8 +49,9 @@ int main() {
   auto sys = publishSharedMemory<SharedSysStateMem>(SITL::kSysShmPath);
   auto fc = publishSharedMemory<SharedFCStatus>(SITL::kFCShmPath);
   auto cmd = publishSharedMemory<SharedCmdMem>(SITL::kCmdShmPath);
+  auto com = publishSharedMemory<SharedComMem>(SITL::kComShmPath);
 
-  if (!nav || !sf || !sys || !fc || !cmd) {
+  if (!nav || !sf || !sys || !fc || !cmd || !com) {
     std::cerr << "MV_SITL: echec publication shm\n";
     return 1;
   }
@@ -67,6 +68,8 @@ int main() {
                                   *fc->ptr);
   SharedCmdMemHandler cmdHandler(ComponentID::MavlinkInterface, Us(2000),
                                  *cmd->ptr);
+  SharedComMemHandler comHandler(ComponentID::MavlinkInterface, Us(2000),
+                                 *com->ptr);
 
   UdpMavlinkLink link(kSitlUdpLocalPort);
 
@@ -77,7 +80,7 @@ int main() {
     // démontage (SEGV constaté en session, use-after-unmap).
     ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 0};
     MavlinkInterface composant(config, sysHandler, fcHandler, navHandler,
-                               sfHandler, cmdHandler, link);
+                               sfHandler, cmdHandler, comHandler, link);
     // requestInitStreams() se déclenche automatiquement au premier
     // HEARTBEAT reçu du FC (cf. TRxTask::loop()), plus de bootstrap manuel.
 
@@ -94,6 +97,7 @@ int main() {
   destroySharedMemory(SITL::kSysShmPath, sys.value());
   destroySharedMemory(SITL::kFCShmPath, fc.value());
   destroySharedMemory(SITL::kCmdShmPath, cmd.value());
+  destroySharedMemory(SITL::kComShmPath, com.value());
 
   return 0;
 }

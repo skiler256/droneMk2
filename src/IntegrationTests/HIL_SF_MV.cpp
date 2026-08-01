@@ -51,8 +51,9 @@ int main() {
   auto sys = publishSharedMemory<SharedSysStateMem>(HIL::kSysShmPath);
   auto fc = publishSharedMemory<SharedFCStatus>(HIL::kFCShmPath);
   auto cmd = publishSharedMemory<SharedCmdMem>(HIL::kCmdShmPath);
+  auto com = publishSharedMemory<SharedComMem>(HIL::kComShmPath);
 
-  if (!nav || !sf || !sys || !fc || !cmd) {
+  if (!nav || !sf || !sys || !fc || !cmd || !com) {
     std::cerr << "HIL_SF_MV: echec publication shm\n";
     return 1;
   }
@@ -64,6 +65,7 @@ int main() {
   SharedSysStateMemHandler sysHandlerMv(*sys->ptr, ComponentID::MavlinkInterface, Us(2000));
   SharedFCStatusHandler fcHandlerMv(ComponentID::MavlinkInterface, Us(2000), *fc->ptr);
   SharedCmdMemHandler cmdHandler(ComponentID::MavlinkInterface, Us(2000), *cmd->ptr);
+  SharedComMemHandler comHandler(ComponentID::MavlinkInterface, Us(2000), *com->ptr);
 
   SharedSFMemHandler sfHandlerSf(ComponentID::SensorFusion, Us(2000), *sf->ptr);
   SharedSysStateMemHandler sysHandlerSf(*sys->ptr, ComponentID::SensorFusion, Us(2000));
@@ -88,7 +90,7 @@ int main() {
     // (SEGV use-after-unmap constaté en session).
     ComponenConfig mvConfig{.id = ComponentID::MavlinkInterface, .CompCore = 0};
     MavlinkInterface mvComposant(mvConfig, sysHandlerMv, fcHandlerMv, navHandler,
-                                 sfHandlerMv, cmdHandler, link);
+                                 sfHandlerMv, cmdHandler, comHandler, link);
     // requestInitStreams() se déclenche automatiquement au premier
     // HEARTBEAT reçu du FC (cf. TRxTask::loop()), plus de bootstrap manuel.
 
@@ -108,6 +110,7 @@ int main() {
   destroySharedMemory(HIL::kSysShmPath, sys.value());
   destroySharedMemory(HIL::kFCShmPath, fc.value());
   destroySharedMemory(HIL::kCmdShmPath, cmd.value());
+  destroySharedMemory(HIL::kComShmPath, com.value());
 
   return 0;
 }

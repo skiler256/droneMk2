@@ -100,7 +100,7 @@ CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o: \
  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
  /usr/include/c++/14/pstl/execution_defs.h \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SysMonitoring.hpp \
- /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
+ /home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp \
  /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
  /home/jules/droneMk2/include/drone/types.hpp \
@@ -470,7 +470,10 @@ CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /home/jules/droneMk2/include/drone/Components/MissionControl/SharedCmdMem.hpp \
+ /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
  /home/jules/droneMk2/include/drone/generated/codes.hpp \
+ /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/PacketScheduler.hpp \
@@ -479,4 +482,4 @@ CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o: \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \
  /usr/include/c++/14/deque /usr/include/c++/14/bits/stl_deque.h \
- /usr/include/c++/14/bits/deque.tcc /usr/include/c++/14/iostream
+ /usr/include/c++/14/bits/deque.tcc

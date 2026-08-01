@@ -153,6 +153,19 @@ generate_telemetry/fast:
 .PHONY : generate_telemetry/fast
 
 #=============================================================================
+# Target rules for targets named generate_missionplan
+
+# Build rule for target.
+generate_missionplan: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 generate_missionplan
+.PHONY : generate_missionplan
+
+# fast build rule for target.
+generate_missionplan/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/generate_missionplan.dir/build.make CMakeFiles/generate_missionplan.dir/build
+.PHONY : generate_missionplan/fast
+
+#=============================================================================
 # Target rules for targets named drone_lib
 
 # Build rule for target.
@@ -244,6 +257,32 @@ test_navigation/fast:
 .PHONY : test_navigation/fast
 
 #=============================================================================
+# Target rules for targets named test_missionplan
+
+# Build rule for target.
+test_missionplan: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_missionplan
+.PHONY : test_missionplan
+
+# fast build rule for target.
+test_missionplan/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missionplan.dir/build.make CMakeFiles/test_missionplan.dir/build
+.PHONY : test_missionplan/fast
+
+#=============================================================================
+# Target rules for targets named test_missioncontrol
+
+# Build rule for target.
+test_missioncontrol: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_missioncontrol
+.PHONY : test_missioncontrol
+
+# fast build rule for target.
+test_missioncontrol/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missioncontrol.dir/build.make CMakeFiles/test_missioncontrol.dir/build
+.PHONY : test_missioncontrol/fast
+
+#=============================================================================
 # Target rules for targets named test_mavlink
 
 # Build rule for target.
@@ -333,6 +372,19 @@ nav_sitl: cmake_check_build_system
 nav_sitl/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/build
 .PHONY : nav_sitl/fast
+
+#=============================================================================
+# Target rules for targets named mc_sitl
+
+# Build rule for target.
+mc_sitl: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mc_sitl
+.PHONY : mc_sitl
+
+# fast build rule for target.
+mc_sitl/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mc_sitl.dir/build.make CMakeFiles/mc_sitl.dir/build
+.PHONY : mc_sitl/fast
 
 #=============================================================================
 # Target rules for targets named udp_bridge
@@ -442,6 +494,30 @@ src/IntegrationTests/HIL_SF_MV.s: src/IntegrationTests/HIL_SF_MV.cpp.s
 src/IntegrationTests/HIL_SF_MV.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/hil_sf_mv.dir/build.make CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.s
 .PHONY : src/IntegrationTests/HIL_SF_MV.cpp.s
+
+src/IntegrationTests/MC_SITL.o: src/IntegrationTests/MC_SITL.cpp.o
+.PHONY : src/IntegrationTests/MC_SITL.o
+
+# target to build an object file
+src/IntegrationTests/MC_SITL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mc_sitl.dir/build.make CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o
+.PHONY : src/IntegrationTests/MC_SITL.cpp.o
+
+src/IntegrationTests/MC_SITL.i: src/IntegrationTests/MC_SITL.cpp.i
+.PHONY : src/IntegrationTests/MC_SITL.i
+
+# target to preprocess a source file
+src/IntegrationTests/MC_SITL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mc_sitl.dir/build.make CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.i
+.PHONY : src/IntegrationTests/MC_SITL.cpp.i
+
+src/IntegrationTests/MC_SITL.s: src/IntegrationTests/MC_SITL.cpp.s
+.PHONY : src/IntegrationTests/MC_SITL.s
+
+# target to generate assembly for a file
+src/IntegrationTests/MC_SITL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mc_sitl.dir/build.make CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.s
+.PHONY : src/IntegrationTests/MC_SITL.cpp.s
 
 src/IntegrationTests/MV_SITL.o: src/IntegrationTests/MV_SITL.cpp.o
 .PHONY : src/IntegrationTests/MV_SITL.o
@@ -586,6 +662,54 @@ src/MavlinkInterface/UdpMavlinkLink.s: src/MavlinkInterface/UdpMavlinkLink.cpp.s
 src/MavlinkInterface/UdpMavlinkLink.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MavlinkInterface/UdpMavlinkLink.cpp.s
 .PHONY : src/MavlinkInterface/UdpMavlinkLink.cpp.s
+
+src/MissionControl/MissionControl.o: src/MissionControl/MissionControl.cpp.o
+.PHONY : src/MissionControl/MissionControl.o
+
+# target to build an object file
+src/MissionControl/MissionControl.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.o
+.PHONY : src/MissionControl/MissionControl.cpp.o
+
+src/MissionControl/MissionControl.i: src/MissionControl/MissionControl.cpp.i
+.PHONY : src/MissionControl/MissionControl.i
+
+# target to preprocess a source file
+src/MissionControl/MissionControl.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.i
+.PHONY : src/MissionControl/MissionControl.cpp.i
+
+src/MissionControl/MissionControl.s: src/MissionControl/MissionControl.cpp.s
+.PHONY : src/MissionControl/MissionControl.s
+
+# target to generate assembly for a file
+src/MissionControl/MissionControl.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.s
+.PHONY : src/MissionControl/MissionControl.cpp.s
+
+src/MissionControl/MissionPlan.o: src/MissionControl/MissionPlan.cpp.o
+.PHONY : src/MissionControl/MissionPlan.o
+
+# target to build an object file
+src/MissionControl/MissionPlan.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.o
+.PHONY : src/MissionControl/MissionPlan.cpp.o
+
+src/MissionControl/MissionPlan.i: src/MissionControl/MissionPlan.cpp.i
+.PHONY : src/MissionControl/MissionPlan.i
+
+# target to preprocess a source file
+src/MissionControl/MissionPlan.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.i
+.PHONY : src/MissionControl/MissionPlan.cpp.i
+
+src/MissionControl/MissionPlan.s: src/MissionControl/MissionPlan.cpp.s
+.PHONY : src/MissionControl/MissionPlan.s
+
+# target to generate assembly for a file
+src/MissionControl/MissionPlan.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.s
+.PHONY : src/MissionControl/MissionPlan.cpp.s
 
 src/Navigation/Navigation.o: src/Navigation/Navigation.cpp.o
 .PHONY : src/Navigation/Navigation.o
@@ -803,6 +927,54 @@ tests/test_mavlink.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mavlink.dir/build.make CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.s
 .PHONY : tests/test_mavlink.cpp.s
 
+tests/test_missioncontrol.o: tests/test_missioncontrol.cpp.o
+.PHONY : tests/test_missioncontrol.o
+
+# target to build an object file
+tests/test_missioncontrol.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missioncontrol.dir/build.make CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o
+.PHONY : tests/test_missioncontrol.cpp.o
+
+tests/test_missioncontrol.i: tests/test_missioncontrol.cpp.i
+.PHONY : tests/test_missioncontrol.i
+
+# target to preprocess a source file
+tests/test_missioncontrol.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missioncontrol.dir/build.make CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.i
+.PHONY : tests/test_missioncontrol.cpp.i
+
+tests/test_missioncontrol.s: tests/test_missioncontrol.cpp.s
+.PHONY : tests/test_missioncontrol.s
+
+# target to generate assembly for a file
+tests/test_missioncontrol.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missioncontrol.dir/build.make CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.s
+.PHONY : tests/test_missioncontrol.cpp.s
+
+tests/test_missionplan.o: tests/test_missionplan.cpp.o
+.PHONY : tests/test_missionplan.o
+
+# target to build an object file
+tests/test_missionplan.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missionplan.dir/build.make CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.o
+.PHONY : tests/test_missionplan.cpp.o
+
+tests/test_missionplan.i: tests/test_missionplan.cpp.i
+.PHONY : tests/test_missionplan.i
+
+# target to preprocess a source file
+tests/test_missionplan.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missionplan.dir/build.make CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.i
+.PHONY : tests/test_missionplan.cpp.i
+
+tests/test_missionplan.s: tests/test_missionplan.cpp.s
+.PHONY : tests/test_missionplan.s
+
+# target to generate assembly for a file
+tests/test_missionplan.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_missionplan.dir/build.make CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.s
+.PHONY : tests/test_missionplan.cpp.s
+
 tests/test_navigation.o: tests/test_navigation.cpp.o
 .PHONY : tests/test_navigation.o
 
@@ -957,14 +1129,18 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... generate_codes"
+	@echo "... generate_missionplan"
 	@echo "... generate_telemetry"
 	@echo "... drone"
 	@echo "... drone_lib"
 	@echo "... hil_sf_mv"
+	@echo "... mc_sitl"
 	@echo "... mv_sitl"
 	@echo "... nav_sitl"
 	@echo "... test_global_watchdog"
 	@echo "... test_mavlink"
+	@echo "... test_missioncontrol"
+	@echo "... test_missionplan"
 	@echo "... test_navigation"
 	@echo "... test_sensorfusion"
 	@echo "... test_shared_state"
@@ -985,6 +1161,9 @@ help:
 	@echo "... src/IntegrationTests/HIL_SF_MV.o"
 	@echo "... src/IntegrationTests/HIL_SF_MV.i"
 	@echo "... src/IntegrationTests/HIL_SF_MV.s"
+	@echo "... src/IntegrationTests/MC_SITL.o"
+	@echo "... src/IntegrationTests/MC_SITL.i"
+	@echo "... src/IntegrationTests/MC_SITL.s"
 	@echo "... src/IntegrationTests/MV_SITL.o"
 	@echo "... src/IntegrationTests/MV_SITL.i"
 	@echo "... src/IntegrationTests/MV_SITL.s"
@@ -1003,6 +1182,12 @@ help:
 	@echo "... src/MavlinkInterface/UdpMavlinkLink.o"
 	@echo "... src/MavlinkInterface/UdpMavlinkLink.i"
 	@echo "... src/MavlinkInterface/UdpMavlinkLink.s"
+	@echo "... src/MissionControl/MissionControl.o"
+	@echo "... src/MissionControl/MissionControl.i"
+	@echo "... src/MissionControl/MissionControl.s"
+	@echo "... src/MissionControl/MissionPlan.o"
+	@echo "... src/MissionControl/MissionPlan.i"
+	@echo "... src/MissionControl/MissionPlan.s"
 	@echo "... src/Navigation/Navigation.o"
 	@echo "... src/Navigation/Navigation.i"
 	@echo "... src/Navigation/Navigation.s"
@@ -1030,6 +1215,12 @@ help:
 	@echo "... tests/test_mavlink.o"
 	@echo "... tests/test_mavlink.i"
 	@echo "... tests/test_mavlink.s"
+	@echo "... tests/test_missioncontrol.o"
+	@echo "... tests/test_missioncontrol.i"
+	@echo "... tests/test_missioncontrol.s"
+	@echo "... tests/test_missionplan.o"
+	@echo "... tests/test_missionplan.i"
+	@echo "... tests/test_missionplan.s"
 	@echo "... tests/test_navigation.o"
 	@echo "... tests/test_navigation.i"
 	@echo "... tests/test_navigation.s"

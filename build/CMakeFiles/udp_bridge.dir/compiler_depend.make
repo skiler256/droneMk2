@@ -7,6 +7,7 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: /home/jules/dro
   /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
+  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
   /home/jules/droneMk2/include/drone/IntegrationTests/ShmPaths.hpp \
   /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
   /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
@@ -714,6 +715,8 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/libintl.h:
 
+/usr/include/fcntl.h:
+
 /usr/include/c++/14/bits/semaphore_base.h:
 
 /usr/include/c++/14/bit:
@@ -864,10 +867,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/asm-generic/errno.h:
 
-/usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
-
-/usr/include/ctype.h:
-
 /usr/include/aarch64-linux-gnu/c++/14/bits/cpu_defines.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/wint_t.h:
@@ -929,6 +928,12 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/eigen3/Eigen/src/Core/ConditionEstimator.h:
 
 /usr/include/eigen3/Eigen/src/Core/Map.h:
+
+/usr/include/c++/14/bits/specfun.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/__sigval_t.h:
+
+/usr/include/eigen3/Eigen/Jacobi:
 
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes.h:
 
@@ -1020,13 +1025,13 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/Core/CwiseUnaryOp.h:
 
+/home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp:
+
 /usr/include/c++/14/bits/basic_ios.tcc:
 
 /usr/include/aarch64-linux-gnu/bits/confname.h:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/ctype_inline.h:
-
-/home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
 
@@ -1041,10 +1046,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/aarch64-linux-gnu/bits/siginfo-consts-arch.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h:
-
-/usr/include/c++/14/bits/node_handle.h:
-
-/usr/include/aarch64-linux-gnu/bits/stat.h:
 
 /usr/include/strings.h:
 
@@ -1099,6 +1100,16 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/eigen3/Eigen/src/Core/arch/Default/TypeCasting.h:
 
 /usr/include/aarch64-linux-gnu/bits/local_lim.h:
+
+/usr/include/aarch64-linux-gnu/bits/stat.h:
+
+/usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
+
+/usr/include/ctype.h:
+
+/home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp:
+
+/usr/include/c++/14/bits/node_handle.h:
 
 /home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp:
 
@@ -1178,12 +1189,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/Geometry/Quaternion.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/__sigval_t.h:
-
-/usr/include/c++/14/bits/specfun.h:
-
-/usr/include/eigen3/Eigen/Jacobi:
-
 /usr/include/aarch64-linux-gnu/bits/siginfo-arch.h:
 
 /usr/include/aarch64-linux-gnu/bits/siginfo-consts.h:
@@ -1200,15 +1205,15 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/aarch64-linux-gnu/bits/signum-generic.h:
 
+/usr/include/eigen3/Eigen/src/Core/MathFunctionsImpl.h:
+
+/usr/include/aarch64-linux-gnu/bits/mman.h:
+
 /usr/include/aarch64-linux-gnu/sys/single_threaded.h:
 
 /usr/include/aarch64-linux-gnu/bits/mathcalls-macros.h:
 
 /home/jules/droneMk2/include/drone/shm.hpp:
-
-/usr/include/eigen3/Eigen/src/Core/MathFunctionsImpl.h:
-
-/usr/include/aarch64-linux-gnu/bits/mman.h:
 
 /usr/include/stdio.h:
 
@@ -1353,6 +1358,12 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 /usr/include/c++/14/bits/exception.h:
 
 /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h:
+
+/usr/include/linux/limits.h:
+
+/usr/include/eigen3/Eigen/src/Core/MathFunctions.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h:
 
 /home/jules/droneMk2/include/drone/core/CommandFifo.hpp:
 
@@ -1648,12 +1659,6 @@ libdrone_lib.a:
 
 /usr/include/eigen3/Eigen/src/Core/arch/Default/GenericPacketMathFunctionsFwd.h:
 
-/usr/include/linux/limits.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h:
-
-/usr/include/eigen3/Eigen/src/Core/MathFunctions.h:
-
 /usr/include/c++/14/tr1/modified_bessel_func.tcc:
 
 /usr/include/eigen3/Eigen/src/Core/PermutationMatrix.h:
@@ -1837,5 +1842,3 @@ libdrone_lib.a:
 /usr/include/endian.h:
 
 /usr/include/errno.h:
-
-/usr/include/fcntl.h:

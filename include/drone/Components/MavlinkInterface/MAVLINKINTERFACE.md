@@ -7,10 +7,11 @@ SITL). Complète `GUIDE_COMPOSANTS.md` (générique) et le SDD (`Document de
 Conception Logicielle.pdf`, §3.5 et §4).
 
 **État** : implémenté et validé en vol SITL (arm/guided/takeoff/vitesse
-horizontale/altitude/GPS_INPUT). `TCmd`↔`MissionControl` fonctionne déjà
-via `SharedCmdMem`, bien que `MissionControl` lui-même n'existe pas
-encore. Revue de code complémentaire passée en session (résultats ACK,
-staleness, failsafe FC, observabilité) — cf. §6/§7/§9/§10.
+horizontale/altitude/GPS_INPUT). `TCmd`↔`MissionControl` fonctionne pour
+de vrai (`MissionControl` existe désormais, cf. `MISSIONCONTROL.md`).
+`FSTask` fait maintenant aussi office de dernier filet de sécurité :
+RPM/batterie (voyants GCS) et fallback `LAND` autonome si MC ou le GCS ne
+répondent plus — cf. §9.
 
 ## 1. Vue d'ensemble
 
@@ -49,7 +50,7 @@ au constructeur — jamais un type concret dans le composant lui-même.
 | `TTxACK` | Dépile `ackQueue_` (une commande ACK'd à la fois), gère retry/timeout | 20Hz, retry 500ms×3 |
 | `TRx` | Drain UDP/UART, parse, dispatch vers `SharedFCStatus`/`ackFifo_` | 100Hz, jusqu'à 64 datagrammes/tick |
 | `TCmd` | Dépile `SharedCmdMem`, traduit en `COMMAND_LONG` poussé dans `ackQueue_` | 50Hz |
-| `FSTask` | Surveille la fraîcheur de `SharedFCStatus.lastHeartbeat`, lève `MVC004` (§9) | 20Hz |
+| `FSTask` | Lien FC (`MVC004`), RPM/batterie (`MVP001`/`FCP001`/`FCP003`), et fallback autonome `LAND` si MC ou le GCS ne répondent plus (`MVC005`/`MVC006`) — cf. §9 | 20Hz |
 
 Contrairement à ce qui était envisagé avant implémentation, il n'y a
 **pas** de classe `MavScheduler` à score continu — `TTx` fait un simple
@@ -271,6 +272,7 @@ Ordres actuellement traduits par `TCmdTask::loop()` :
 | `MCO002` (set_mode_guided) | `MAV_CMD_DO_SET_MODE` | `base_mode=MAV_MODE_FLAG_CUSTOM_MODE_ENABLED`, `custom_mode=COPTER_MODE_GUIDED` |
 | `MCO003` (arm) | `MAV_CMD_COMPONENT_ARM_DISARM` | param1=1 |
 | `MCO004` (disarm) | `MAV_CMD_COMPONENT_ARM_DISARM` | param1=0 |
+| `MCO006` (land) | `MAV_CMD_DO_SET_MODE` | `base_mode=MAV_MODE_FLAG_CUSTOM_MODE_ENABLED`, `custom_mode=COPTER_MODE_LAND` — même construction que le fallback autonome de `FSTask` (§9), factorisée dans `enqueueLandCommand()` |
 
 Un code inconnu de `TCmd` ne part jamais sur le lien MAVLink (pas encore
 de `CODES::` dédié à ce cas — à ajouter si de nouveaux ordres arrivent
@@ -278,18 +280,54 @@ sans traduction ici), mais pousse quand même un `CommandReport{success=
 false}` — sinon MissionControl attendrait indéfiniment un report qui ne
 viendrait jamais pour un ordre qu'il a pourtant bien émis.
 
-## 9. `FSTask` — détection de perte de lien FC (observabilité, pas d'action)
+## 9. `FSTask` — surveillance FC + dernier filet de sécurité autonome
+
+### Lien FC — observabilité seulement
 
 `FSTask::loop()` compare `SharedFCStatus.lastHeartbeat` à `Clock::now()`
 (`kFcLinkTimeout=3000ms`, aligné sur le failsafe GCS natif d'ArduPilot,
 2-3s) et lève/efface `CODES::MVC004` (edge-triggered). **Volontairement
-pas d'action autonome côté Pi** : le failsafe GCS d'ArduPilot bascule
-déjà en LAND de façon indépendante du Pi en cas de perte de lien (SDD
-§4, "Dernier filet de sécurité") — dupliquer cette décision côté
-`MavlinkInterface` sans coordination avec `MissionControl` serait un
-choix d'archi à part, pas pris ici. `FSTask` rend juste l'info
-observable (logs, futur dashboard/MissionControl) là où elle était
-avant totalement invisible côté Pi.
+pas d'action autonome pour ce cas précis** : le failsafe GCS d'ArduPilot
+bascule déjà en LAND de façon indépendante du Pi en cas de perte de lien
+UART/UDP avec le FC (SDD §4, "Dernier filet de sécurité") — dupliquer
+cette décision serait redondant, le FC s'en charge déjà mieux que nous.
+
+### RPM / batterie — voyants GCS (`MVP001`/`FCP001`/`FCP003`)
+
+Cf. `MISSIONCONTROL.md` §4/§6 pour le détail des seuils
+(`kMinArmedRpm`/`kBattLowVoltage`/`kBattCriticalVoltage`, tous à calibrer
+sur banc) — décidé de les faire vivre ici plutôt que côté MissionControl
+puisque c'est `FSTask` qui a la donnée ESC/batterie sous la main en
+premier, et que ces voyants ont un intérêt pour le GCS indépendamment de
+toute décision de MissionControl.
+
+### Fallback autonome `LAND` — MC et GCS ne font jamais de cold-start pour rien
+
+**Point à retenir** : `MissionControl` ne fait jamais de cold-start (cf.
+`CLAUDE.md`) — s'il meurt, rien ne le redémarre en sécurité. Sans
+mécanisme dédié, un `MissionControl` mort laisserait le drone sans
+aucune décision de haut niveau, indéfiniment. Deux checks indépendants
+dans `FSTask`, chacun déclenchant `enqueueLandCommand()` (même
+construction MAVLink que `MCO006`, mais `fromMissionControl=false` — pas
+de `CommandReport` à pousser, rien n'attend cet ACK) :
+
+- **Heartbeat MC** (`SharedCmdMem::lastHeartbeat`, publié par
+  `TStateMachine` à chaque cycle 20Hz) — `kMcHeartbeatTimeout=2000ms`.
+  Absent/périmé → `CODES::MVC005`, `LAND` immédiat.
+- **Perte simultanée des deux liens GCS** (`SharedComMem::
+  lastHeartbeatMain/Sec`) — `kGcsIndependentTimeout=30000ms`. Lu
+  **indépendamment** de `SysMonitoring`/`MissionControl` (défense en
+  profondeur, cf. SDD §4 "timeout géré par MavlinkInterface
+  indépendamment") : ne dépend pas des codes `SMC002`/`SMC003` déjà
+  calculés ailleurs, redérivé depuis les timestamps bruts — si
+  `SysMonitoring` lui-même a un problème, ce check reste valide.
+  → `CODES::MVC006`, `LAND` immédiat.
+
+Les deux sont edge-triggered (une seule commande enfilée par transition,
+pas de spam) et **totalement indépendants l'un de l'autre et de la
+state machine de MC** — c'est tout l'intérêt : si MC est mort, sa propre
+logique `EMERGENCY`/`HOLD` ne tourne plus, donc ce filet ne peut pas
+dépendre de quoi que ce soit calculé par MC.
 
 ## 10. Messages qu'ArduPilot SITL émet réellement — pas toujours les "standards"
 
@@ -504,10 +542,12 @@ satellites, converti en `GPS_INPUT` par `TTx`.
 
 ## 14. Ce qui n'est PAS encore fait / tranché
 
-- `FSTask` détecte la perte de HEARTBEAT (§9) mais ne déclenche aucune
-  action côté Pi — décision explicite (l'action existe déjà côté FC via
-  son propre failsafe GCS), mais si `MissionControl` doit un jour réagir
-  à `MVC004` (RTB, log, notif GCS...), le câblage reste à faire.
+- `FSTask` détecte la perte de HEARTBEAT FC (§9) mais ne déclenche aucune
+  action côté Pi pour ce cas précis — décision explicite (le FC gère déjà
+  son propre failsafe GCS). `MissionControl` réagit bien à `MVC004`
+  (`recoverableFailureActive_`, cf. `MISSIONCONTROL.md` §6) — câblage
+  fait pour ce cas, seul le lien FC lui-même reste volontairement
+  non dupliqué côté Pi.
 - Pas de vérification que le FC a bien pris en compte la dernière
   consigne `SET_POSITION_TARGET_LOCAL_NED` (écho `POSITION_TARGET_
   LOCAL_NED` non écouté par `TRx`, cf. §6).

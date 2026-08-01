@@ -80,6 +80,26 @@ add_custom_command(
 )
 add_custom_target(generate_telemetry ALL DEPENDS ${TELEMETRY_HPP})
 
+# ─── Plan de mission (MISSIONPLAN::) ──────────────────────────────────────────
+# Même principe que codes.hpp/telemetry.hpp ci-dessus : missionplan.hpp est
+# généré depuis MISSIONPLAN.csv (header + types de segment, source de vérité
+# unique). Le framing du plan complet (magic/version/CRC32/TLV) n'est PAS
+# généré — c'est de la logique écrite à la main, voir MissionControl/MissionPlan.hpp.
+set(MISSIONPLAN_CSV ${CMAKE_SOURCE_DIR}/MISSIONPLAN.csv)
+set(MISSIONPLAN_HPP ${CMAKE_SOURCE_DIR}/include/drone/generated/missionplan.hpp)
+
+add_custom_command(
+    OUTPUT  ${MISSIONPLAN_HPP}
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/gen_missionplan.py
+            --csv ${MISSIONPLAN_CSV} --out ${MISSIONPLAN_HPP}
+    DEPENDS ${MISSIONPLAN_CSV}
+            ${CMAKE_SOURCE_DIR}/tools/gen_missionplan.py
+            ${CMAKE_SOURCE_DIR}/tools/missionplan_common.py
+    COMMENT "Génération de missionplan.hpp depuis MISSIONPLAN.csv"
+    VERBATIM
+)
+add_custom_target(generate_missionplan ALL DEPENDS ${MISSIONPLAN_HPP})
+
 # ─── drone_core : headers publics + Eigen ────────────────────────────────────
 add_library(drone_core INTERFACE)
 target_include_directories(drone_core INTERFACE include)
@@ -106,7 +126,8 @@ target_include_directories(mavlink_c_library SYSTEM INTERFACE
 add_library(drone_lib STATIC
     src/SensorsFusion/SensorFusion.cpp
     src/Navigation/Navigation.cpp
-    # src/MissionControl/MissionControl.cpp
+    src/MissionControl/MissionPlan.cpp
+    src/MissionControl/MissionControl.cpp
     src/MavlinkInterface/MavlinkInterface.cpp
     src/MavlinkInterface/UartMavlinkLink.cpp
     src/MavlinkInterface/UdpMavlinkLink.cpp
@@ -121,14 +142,14 @@ add_library(drone_lib STATIC
 )
 target_link_libraries     (drone_lib PUBLIC drone_core mavlink_c_library)
 target_include_directories(drone_lib PUBLIC include)
-add_dependencies          (drone_lib generate_codes generate_telemetry)
+add_dependencies          (drone_lib generate_codes generate_telemetry generate_missionplan)
 
 # ════════════════════════════════════════════════════════════════════════════
 # BINAIRE PRINCIPAL — un seul exécutable, dispatch interne par argv
 # ════════════════════════════════════════════════════════════════════════════
 add_executable(drone src/main.cpp)
 target_link_libraries(drone PRIVATE drone_lib)
-add_dependencies(drone generate_codes generate_telemetry)
+add_dependencies(drone generate_codes generate_telemetry generate_missionplan)
 
 # ════════════════════════════════════════════════════════════════════════════
 # TESTS
@@ -143,7 +164,7 @@ macro(drone_test TARGET SRC)
     add_executable        (${TARGET} ${SRC})
     target_link_libraries (${TARGET} PRIVATE drone_lib GTest::gtest_main ${ARGN})
     target_compile_options(${TARGET} PRIVATE -fexceptions)
-    add_dependencies      (${TARGET} generate_codes generate_telemetry)
+    add_dependencies      (${TARGET} generate_codes generate_telemetry generate_missionplan)
     add_test              (NAME ${TARGET} COMMAND ${TARGET})
 endmacro()
 
@@ -152,6 +173,8 @@ drone_test(test_shared_state tests/test_shared_state.cpp)
 drone_test(test_watchdog     tests/test_watchdog.cpp)
 drone_test(test_telemetry    tests/test_telemetry.cpp)
 drone_test(test_navigation   tests/test_navigation.cpp)
+drone_test(test_missionplan  tests/test_missionplan.cpp)
+drone_test(test_missioncontrol tests/test_missioncontrol.cpp)
 # drone_test(test_kalman       tests/test_kalman.cpp)
 drone_test(test_mavlink      tests/test_mavlink.cpp)
 drone_test(test_sensorfusion tests/test_sensorfusion.cpp)
@@ -190,9 +213,13 @@ if(BUILD_ITESTS)
     target_link_libraries(nav_sitl PRIVATE drone_lib)
     add_dependencies(nav_sitl generate_codes generate_telemetry)
 
+    add_executable(mc_sitl src/IntegrationTests/MC_SITL.cpp)
+    target_link_libraries(mc_sitl PRIVATE drone_lib)
+    add_dependencies(mc_sitl generate_codes generate_telemetry generate_missionplan)
+
     add_executable(udp_bridge src/IntegrationTests/UDP_bridge.cpp)
     target_link_libraries(udp_bridge PRIVATE drone_lib)
-    add_dependencies(udp_bridge generate_codes generate_telemetry)
+    add_dependencies(udp_bridge generate_codes generate_telemetry generate_missionplan)
 endif()
 
 # ─── Cross-compilation ARM64 Pi5 ─────────────────────────────────────────────

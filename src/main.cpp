@@ -38,6 +38,7 @@
 #include "drone/Components/Drivers/NEO-M8N.hpp"
 #include "drone/Components/MavlinkInterface/Driver/UartMavlinkLink.hpp"
 #include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"
+#include "drone/Components/MissionControl/MissionControl.hpp"
 #include "drone/Components/Navigation/Navigation.hpp"
 #include "drone/Components/SensorFusions/SensorsFusion.hpp"
 #include "drone/Components/System Monitoring/Driver/UdpTelemetryDriver.hpp"
@@ -131,8 +132,10 @@ int runSysMonitoring() {
   auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
   auto com = attachSharedMemory<SharedComMem>(kComShmPath);
+  auto fc = attachSharedMemory<SharedFCStatus>(kFCShmPath);
+  auto cmd = attachSharedMemory<SharedCmdMem>(kCmdShmPath);
 
-  if (!nav || !sf || !sys || !com) {
+  if (!nav || !sf || !sys || !com || !fc || !cmd) {
     std::cerr << "SysMonitoring: echec attach shm\n";
     return 1;
   }
@@ -144,6 +147,8 @@ int runSysMonitoring() {
                                       Us(2000));
   SharedComMemHandler comHandler(ComponentID::SysMonitoring, Us(2000),
                                  *com->ptr);
+  SharedFCStatusHandler fcHandler(ComponentID::SysMonitoring, Us(2000), *fc->ptr);
+  SharedCmdMemHandler cmdHandler(ComponentID::SysMonitoring, Us(2000), *cmd->ptr);
 
   // Drivers factices (UDP loopback) — a remplacer par WFB_NG_Driver/
   // CC1101_Driver quand le hardware RF sera cable. SysMonitoring ne
@@ -155,7 +160,7 @@ int runSysMonitoring() {
 
   ComponenConfig config{.id = ComponentID::SysMonitoring, .CompCore = 3};
   SysMonitoring composant(config, sysHandler, comHandler, navHandler, sfHandler,
-                          mainLink, secLink, videoSource);
+                          fcHandler, cmdHandler, mainLink, secLink, videoSource);
 
   while (true)
     sleep(2);
@@ -168,8 +173,9 @@ int runMavlinkInterface() {
   auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
   auto fc = attachSharedMemory<SharedFCStatus>(kFCShmPath);
   auto cmd = attachSharedMemory<SharedCmdMem>(kCmdShmPath);
+  auto com = attachSharedMemory<SharedComMem>(kComShmPath);
 
-  if (!nav || !sf || !sys || !fc || !cmd) {
+  if (!nav || !sf || !sys || !fc || !cmd || !com) {
     std::cerr << "MavlinkInterface: echec attach shm\n";
     return 1;
   }
@@ -180,12 +186,42 @@ int runMavlinkInterface() {
                                       Us(2000));
   SharedFCStatusHandler fcHandler(ComponentID::MavlinkInterface, Us(2000), *fc->ptr);
   SharedCmdMemHandler cmdHandler(ComponentID::MavlinkInterface, Us(2000), *cmd->ptr);
+  SharedComMemHandler comHandler(ComponentID::MavlinkInterface, Us(2000), *com->ptr);
 
   UartMavlinkLink link(kFcUartPort);
 
   ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 2};
   MavlinkInterface composant(config, sysHandler, fcHandler, navHandler, sfHandler,
-                             cmdHandler, link);
+                             cmdHandler, comHandler, link);
+
+  while (true)
+    sleep(2);
+  return 0;
+}
+
+int runMissionControl() {
+  auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
+  auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
+  auto sys = attachSharedMemory<SharedSysStateMem>(kSysShmPath);
+  auto fc = attachSharedMemory<SharedFCStatus>(kFCShmPath);
+  auto cmd = attachSharedMemory<SharedCmdMem>(kCmdShmPath);
+  auto com = attachSharedMemory<SharedComMem>(kComShmPath);
+
+  if (!nav || !sf || !sys || !fc || !cmd || !com) {
+    std::cerr << "MissionControl: echec attach shm\n";
+    return 1;
+  }
+
+  SharedSysStateMemHandler sysHandler(*sys->ptr, ComponentID::MissionControl, Us(2000));
+  SharedCmdMemHandler cmdHandler(ComponentID::MissionControl, Us(2000), *cmd->ptr);
+  SharedFCStatusHandler fcHandler(ComponentID::MissionControl, Us(2000), *fc->ptr);
+  SharedNavMemHandler navHandler(ComponentID::MissionControl, Us(2000), *nav->ptr);
+  SharedSFMemHandler sfHandler(ComponentID::MissionControl, Us(2000), *sf->ptr);
+  SharedComMemHandler comHandler(ComponentID::MissionControl, Us(2000), *com->ptr);
+
+  ComponenConfig config{.id = ComponentID::MissionControl, .CompCore = 1};
+  MissionControl composant(config, sysHandler, cmdHandler, fcHandler, navHandler,
+                           sfHandler, comHandler);
 
   while (true)
     sleep(2);
@@ -205,6 +241,8 @@ int main(int argc, char **argv) {
     return runSysMonitoring();
   if (role == "mavlinkinterface")
     return runMavlinkInterface();
+  if (role == "missioncontrol")
+    return runMissionControl();
 
   // point d'entree par defaut : process parent
   GlobalWatchdog gwd(argv[0]);

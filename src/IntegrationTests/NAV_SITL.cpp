@@ -83,8 +83,9 @@ int main() {
   auto sys = publishSharedMemory<SharedSysStateMem>(NAV_SITL::kSysShmPath);
   auto fc = publishSharedMemory<SharedFCStatus>(NAV_SITL::kFCShmPath);
   auto cmd = publishSharedMemory<SharedCmdMem>(NAV_SITL::kCmdShmPath);
+  auto com = publishSharedMemory<SharedComMem>(NAV_SITL::kComShmPath);
 
-  if (!nav || !sf || !sys || !fc || !cmd) {
+  if (!nav || !sf || !sys || !fc || !cmd || !com) {
     std::cerr << "NAV_SITL: echec publication shm\n";
     return 1;
   }
@@ -96,6 +97,7 @@ int main() {
   SharedSysStateMemHandler sysHandlerMv(*sys->ptr, ComponentID::MavlinkInterface, Us(2000));
   SharedFCStatusHandler fcHandlerMv(ComponentID::MavlinkInterface, Us(2000), *fc->ptr);
   SharedCmdMemHandler cmdHandlerMv(ComponentID::MavlinkInterface, Us(2000), *cmd->ptr);
+  SharedComMemHandler comHandlerMv(ComponentID::MavlinkInterface, Us(2000), *com->ptr);
 
   SharedNavMemHandler navHandlerNav(ComponentID::Navigation, Us(2000), *nav->ptr);
   SharedSFMemHandler sfHandlerNav(ComponentID::Navigation, Us(2000), *sf->ptr);
@@ -115,7 +117,7 @@ int main() {
     // détruits avant le nettoyage shm.
     ComponenConfig mvConfig{.id = ComponentID::MavlinkInterface, .CompCore = 0};
     MavlinkInterface mvComposant(mvConfig, sysHandlerMv, fcHandlerMv, navHandlerMv,
-                                 sfHandlerMv, cmdHandlerMv, link);
+                                 sfHandlerMv, cmdHandlerMv, comHandlerMv, link);
 
     ComponenConfig navConfig{.id = ComponentID::Navigation, .CompCore = 1};
     Navigation navComposant(navConfig, sysHandlerNav, navHandlerNav, sfHandlerNav,
@@ -136,6 +138,7 @@ int main() {
   destroySharedMemory(NAV_SITL::kSysShmPath, sys.value());
   destroySharedMemory(NAV_SITL::kFCShmPath, fc.value());
   destroySharedMemory(NAV_SITL::kCmdShmPath, cmd.value());
+  destroySharedMemory(NAV_SITL::kComShmPath, com.value());
 
   return 0;
 }

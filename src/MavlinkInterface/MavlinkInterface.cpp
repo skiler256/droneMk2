@@ -35,6 +35,66 @@ constexpr TYPES::Ms kMaxSampleAge{300};
 // le FC bascule lui-même en LAND autonome.
 constexpr TYPES::Ms kFcLinkTimeout{3000};
 
+// Valeur de départ arbitraire — à calibrer sur banc avec les vrais
+// moteurs/ESC/hélices. Sous ce seuil pendant que le FC est armé : moteur
+// mort ou à l'arrêt malgré l'armement, panne mécanique/électrique probable.
+constexpr float kMinArmedRpm = 1000.0f;
+
+// Pas de nouvelle ESC_STATUS depuis ce délai = donnée absente (capteur/
+// télémétrie en panne), traité comme une anomalie au même titre qu'un RPM
+// trop bas — cf. FSTask::loop().
+constexpr TYPES::Ms kEscStaleThreshold{500};
+
+// Seuils de départ arbitraires, mêmes valeurs que les défauts du header
+// MISSIONPLAN.csv (battWarningV/battCriticalV) pour la cohérence — à
+// calibrer sur le vrai pack/ESC. kBattCriticalVoltage doit rester
+// confortablement au-dessus du seuil de coupure moteur de l'ESC (constaté :
+// l'ESC coupe les moteurs sous un certain seuil, gravissime en vol).
+constexpr float kBattLowVoltage = 14.0f;
+constexpr float kBattCriticalVoltage = 12.5f;
+
+// TStateMachine publie à 20Hz (50ms/cycle) — largement au-dessus si MC est
+// bloqué/mort plutôt qu'en simple lag. MissionControl ne fait jamais de
+// cold-start (cf. CLAUDE.md) : si son heartbeat s'arrête, rien d'autre ne
+// le redémarrera en sécurité — FSTask est le seul filet (cf. §9 du .md).
+constexpr TYPES::Ms kMcHeartbeatTimeout{2000};
+
+// Vu indépendamment de SysMonitoring/MissionControl (défense en
+// profondeur, cf. SDD §4 "Double perte lien ... timeout géré par
+// MavlinkInterface indépendamment") — même valeur que kEmergencyTimeout
+// côté MC pour la cohérence, mais calculée ici à partir des timestamps
+// bruts, pas des codes SMC002/003 (ne pas dépendre de SysMonitoring pour
+// détecter que SysMonitoring lui-même a un problème).
+constexpr TYPES::Ms kGcsIndependentTimeout{30000};
+
+// Construit et enfile un MAV_CMD_DO_SET_MODE/LAND — utilisé par TCmdTask
+// (MCO006, ordre normal de MissionControl) et FSTask (fallback autonome
+// si MC ou le GCS ne répondent plus). fromMissionControl=false : pas de
+// CommandReport à pousser, rien n'attend cet ACK côté SharedCmdMem.
+void enqueueLandCommand(MavlinkInterface &comp, bool fromMissionControl,
+                        uint32_t seq, CODES::Code code) {
+  mavlink_message_t msg{};
+  mavlink_msg_command_long_pack_chan(
+      kGcsSystemId, kGcsComponentId, kTxChanTTxAck, &msg, kFcSystemId, kFcComponentId,
+      MAV_CMD_DO_SET_MODE, /*confirmation=*/0,
+      /*base_mode=*/static_cast<float>(MAV_MODE_FLAG_CUSTOM_MODE_ENABLED),
+      /*custom_mode=*/static_cast<float>(COPTER_MODE_LAND), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+  PendingAck req{};
+  req.kind = PendingKind::Command;
+  req.command = MAV_CMD_DO_SET_MODE;
+  req.frameLen = static_cast<size_t>(
+      mavlink_msg_to_send_buffer(reinterpret_cast<uint8_t *>(req.frame.data()), &msg));
+  req.fromMissionControl = fromMissionControl;
+  req.cmdSeq = seq;
+  req.cmdCode = code;
+  if (!comp.ackQueue_.push(req)) {
+    comp.sysState_.raiseCode(CODES::MVC003);
+    if (fromMissionControl)
+      [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkReport(seq, code, false);
+  }
+}
+
 // Vitesse pure sur les 3 axes + cap absolu, position/accélérations ignorées.
 // ArduCopter bascule tout le message en mode vitesse dès qu'un seul axe de
 // vitesse est actif et ignore le champ position, même si z n'est pas dans
@@ -54,9 +114,10 @@ MavlinkInterface::MavlinkInterface(ComponenConfig config,
                                    SharedFCStatusHandler &fc,
                                    SharedNavMemHandler &nav,
                                    SharedSFMemHandler &sf,
-                                   SharedCmdMemHandler &cmd, IMavlinkLink &link)
+                                   SharedCmdMemHandler &cmd,
+                                   SharedComMemHandler &com, IMavlinkLink &link)
     : ComponentBase<5>(config, fc, sysState), fc_(fc), sysState_(sysState),
-      nav_(nav), sf_(sf), cmd_(cmd), link_(link),
+      nav_(nav), sf_(sf), cmd_(cmd), com_(com), link_(link),
       TTx(*this,
           {.id = 0,
            .RTpriority = 75,
@@ -170,6 +231,89 @@ void FSTask::loop() {
     comp.sysState_.clearCode(CODES::MVC004);
     linkLostActive_ = false;
   }
+
+  // RPM bas ou ESC_STATUS absente/aberrante pendant que le FC est armé —
+  // pour le tableau de voyants GCS (façon hélico), pas seulement pour
+  // MissionControl. Pas de vérif si désarmé : RPM=0 y est normal.
+  bool rpmFault = false;
+  if (comp.fc_.getArmed().value_or(false)) {
+    auto escTs = comp.fc_.getEscStatusTs();
+    bool escStale = !escTs || UTILITIES::msBetween(*escTs, Clock::now()) > kEscStaleThreshold;
+    if (escStale) {
+      rpmFault = true;
+    } else if (auto esc = comp.fc_.getEscStatus()) {
+      for (float rpm : esc->rpmValue) {
+        if (!(rpm >= 0.0f) || rpm < kMinArmedRpm) { // !(>=0) attrape aussi NaN
+          rpmFault = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (rpmFault && !rpmLowActive_) {
+    comp.sysState_.raiseCode(CODES::MVP001);
+    rpmLowActive_ = true;
+  } else if (!rpmFault && rpmLowActive_) {
+    comp.sysState_.clearCode(CODES::MVP001);
+    rpmLowActive_ = false;
+  }
+
+  // Tension batterie — pas conditionné à l'armement (contrairement au RPM,
+  // la tension sague indépendamment). voltage<=0 : jamais reçu de
+  // BATTERY_STATUS, rien à signaler encore.
+  float voltage = comp.fc_.getBattery().value_or(FCBatteryStatus{}).voltage.v;
+  bool battLow = voltage > 0.0f && voltage < kBattLowVoltage;
+  bool battCritical = voltage > 0.0f && voltage < kBattCriticalVoltage;
+
+  if (battLow && !battLowActive_) {
+    comp.sysState_.raiseCode(CODES::FCP001);
+    battLowActive_ = true;
+  } else if (!battLow && battLowActive_) {
+    comp.sysState_.clearCode(CODES::FCP001);
+    battLowActive_ = false;
+  }
+
+  // Seuil critique — proche de la coupure moteur ESC (constaté), MC
+  // atterrit immédiatement sans attendre de récupération (cf. MISSIONCONTROL.md §6).
+  if (battCritical && !battCriticalActive_) {
+    comp.sysState_.raiseCode(CODES::FCP003);
+    battCriticalActive_ = true;
+  } else if (!battCritical && battCriticalActive_) {
+    comp.sysState_.clearCode(CODES::FCP003);
+    battCriticalActive_ = false;
+  }
+
+  // Fallback autonome — MissionControl ne fait jamais de cold-start (cf.
+  // CLAUDE.md) : s'il est mort, rien d'autre ne le redémarre en sécurité.
+  // FSTask est le seul filet, indépendant de MC lui-même par construction.
+  auto mcHb = comp.cmd_.getHeartbeat();
+  bool mcLost = !mcHb || UTILITIES::msBetween(*mcHb, Clock::now()) > kMcHeartbeatTimeout;
+  if (mcLost && !mcHeartbeatLostActive_) {
+    comp.sysState_.raiseCode(CODES::MVC005);
+    mcHeartbeatLostActive_ = true;
+    enqueueLandCommand(comp, /*fromMissionControl=*/false, 0, CODES::MVC005);
+  } else if (!mcLost && mcHeartbeatLostActive_) {
+    comp.sysState_.clearCode(CODES::MVC005);
+    mcHeartbeatLostActive_ = false;
+  }
+
+  // Perte simultanée des deux liens GCS, vue indépendamment de
+  // SysMonitoring/MissionControl (défense en profondeur, cf. SDD §4).
+  auto hbMain = comp.com_.getLastHeartbeatMain();
+  auto hbSec = comp.com_.getLastHeartbeatSec();
+  bool mainLost = !hbMain || UTILITIES::msBetween(*hbMain, Clock::now()) > kGcsIndependentTimeout;
+  bool secLost = !hbSec || UTILITIES::msBetween(*hbSec, Clock::now()) > kGcsIndependentTimeout;
+  bool bothGcsLost = mainLost && secLost;
+
+  if (bothGcsLost && !gcsBothLostActive_) {
+    comp.sysState_.raiseCode(CODES::MVC006);
+    gcsBothLostActive_ = true;
+    enqueueLandCommand(comp, /*fromMissionControl=*/false, 0, CODES::MVC006);
+  } else if (!bothGcsLost && gcsBothLostActive_) {
+    comp.sysState_.clearCode(CODES::MVC006);
+    gcsBothLostActive_ = false;
+  }
 }
 
 // Traduit un ordre MissionControl (SharedCmdMem) en COMMAND_LONG poussé
@@ -198,6 +342,11 @@ void TCmdTask::loop() {
         command, /*confirmation=*/0,
         /*base_mode=*/static_cast<float>(MAV_MODE_FLAG_CUSTOM_MODE_ENABLED),
         /*custom_mode=*/static_cast<float>(COPTER_MODE_GUIDED), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+  } else if (order->code == CODES::MCO006) {
+    // Même helper que le fallback autonome de FSTask (cf. enqueueLandCommand)
+    // — enfile et retourne directement, ne retombe pas dans la queue générique.
+    enqueueLandCommand(comp, /*fromMissionControl=*/true, order->seq, order->code);
+    return;
   } else if (order->code == CODES::MCO003 || order->code == CODES::MCO004) {
     // Arm/disarm, même commande (param2=0 : pas de bypass des vérifs pré-armement).
     command = MAV_CMD_COMPONENT_ARM_DISARM;
@@ -491,6 +640,10 @@ void TRxTask::loop() {
         // Ne compte que le HEARTBEAT du FC lui-même — du trafic parasite
         // (sonde MAVProxy, autre GCS) peut arriver sur le même canal.
         if (msg.sysid == kFcSystemId && msg.compid == kFcComponentId) {
+          mavlink_heartbeat_t hb{};
+          mavlink_msg_heartbeat_decode(&msg, &hb);
+          comp.fc_.setArmed((hb.base_mode & MAV_MODE_FLAG_SAFETY_ARMED) != 0);
+
           comp.fc_.setLastHeartbeat(now);
           // Premier HEARTBEAT réel = preuve que le lien est vivant.
           if (!comp.initStreamsRequested_) {

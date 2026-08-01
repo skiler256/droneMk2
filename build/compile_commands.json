@@ -13,6 +13,18 @@
 },
 {
   "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -o CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.o -c /home/jules/droneMk2/src/MissionControl/MissionPlan.cpp",
+  "file": "/home/jules/droneMk2/src/MissionControl/MissionPlan.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -o CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.o -c /home/jules/droneMk2/src/MissionControl/MissionControl.cpp",
+  "file": "/home/jules/droneMk2/src/MissionControl/MissionControl.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
   "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -o CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.o -c /home/jules/droneMk2/src/MavlinkInterface/MavlinkInterface.cpp",
   "file": "/home/jules/droneMk2/src/MavlinkInterface/MavlinkInterface.cpp",
   "output": "CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.o"
@@ -103,6 +115,18 @@
 },
 {
   "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.o -c /home/jules/droneMk2/tests/test_missionplan.cpp",
+  "file": "/home/jules/droneMk2/tests/test_missionplan.cpp",
+  "output": "CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o -c /home/jules/droneMk2/tests/test_missioncontrol.cpp",
+  "file": "/home/jules/droneMk2/tests/test_missioncontrol.cpp",
+  "output": "CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
   "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o -c /home/jules/droneMk2/tests/test_mavlink.cpp",
   "file": "/home/jules/droneMk2/tests/test_mavlink.cpp",
   "output": "CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o"
@@ -142,6 +166,12 @@
   "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -o CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/NAV_SITL.cpp",
   "file": "/home/jules/droneMk2/src/IntegrationTests/NAV_SITL.cpp",
   "output": "CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build",
+  "command": "/usr/bin/c++  -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -o CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/MC_SITL.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/MC_SITL.cpp",
+  "output": "CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o"
 },
 {
   "directory": "/home/jules/droneMk2/build",

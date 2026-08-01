@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -fsanitize=address,undefined -Wl,--dependency-file=CMakeFiles/test_missionplan.dir/link.d CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.o -o test_missionplan  libdrone_lib.a /usr/lib/aarch64-linux-gnu/libgtest_main.a /usr/lib/aarch64-linux-gnu/libgtest.a

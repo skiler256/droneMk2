@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SITL MissionControl — droneMk2</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b92a1;
+    --accent: #4f8cff;
+    --ok: #3ecf8e;
+    --warn: #ff9f43;
+    --danger: #ff5c5c;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1d23;
+      --muted: #5b6472;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+  }
+  a.back { color: var(--muted); font-size: .8rem; text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-size: 1.1rem; margin: .5rem 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; max-width: 900px; }
+  .segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .panel h2 { font-size: .85rem; margin: 0 0 .6rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .field { display: flex; justify-content: space-between; font-size: .8rem; padding: .15rem 0; border-bottom: 1px solid var(--border); gap: .5rem; }
+  .field:last-child { border-bottom: none; }
+  .field .k { color: var(--muted); }
+  .empty { color: var(--muted); font-style: italic; font-size: .82rem; }
+  .age { font-size: .68rem; margin-top: .5rem; }
+  .age.fresh { color: var(--ok); }
+  .age.stale { color: var(--muted); }
+  .state-badge {
+    display: inline-block; padding: .2rem .6rem; border-radius: 999px;
+    font-size: .78rem; font-weight: 700; background: var(--accent); color: #fff;
+    margin-bottom: .6rem;
+  }
+  .state-badge.Emergency, .state-badge.Landing { background: var(--danger); }
+  .state-badge.Hold { background: var(--warn); }
+  .state-badge.Mission, .state-badge.Armed { background: var(--ok); color: #0f1115; }
+
+  .inject { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .inject form { display: flex; flex-direction: column; gap: .5rem; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+  label { font-size: .72rem; color: var(--muted); display: block; margin-bottom: .15rem; }
+  input, select {
+    width: 100%; padding: .35rem .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: .82rem;
+  }
+  button {
+    padding: .45rem .7rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--accent); color: #fff; font-family: inherit; font-size: .8rem;
+    cursor: pointer; font-weight: 600; margin-top: .3rem;
+  }
+  button.danger { background: var(--danger); }
+  button.secondary { background: var(--panel); color: var(--text); }
+  .inject-status { font-size: .72rem; color: var(--muted); min-height: 1.2em; margin-top: .3rem; }
+  .inject-status.ok { color: var(--ok); }
+  .inject-status.error { color: var(--danger); }
+</style>
+</head>
+<body>
+  <a class="back" href="/">&larr; retour au menu</a>
+  <h1>SITL — MissionControl</h1>
+  <div class="subtitle">
+    MissionControl réel face à un plan de mission prédéfini (4 segments,
+    cf. MC_SITL.cpp) et un faux Nav qui simule armé→engagé→Atteint — pas de
+    vol réel, pas de moteur 3D. Sert à valider la state machine, le
+    séquenceur et les failsafe via injection de pannes.
+  </div>
+
+  <div class="segments">
+    <div class="panel">
+      <h2>MissionState</h2>
+      <div id="mc"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Segment (armé/engagé/avancement)</h2>
+      <div id="seg"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>SysState (santé + codes)</h2>
+      <div id="sys"><div class="empty">en attente…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Liens GCS (heartbeat)</h2>
+      <div id="com"><div class="empty">en attente…</div></div>
+    </div>
+  </div>
+
+  <div class="inject">
+    <div class="panel">
+      <h2>Ordres GCS</h2>
+      <div class="btnrow">
+        <button id="armBtn" type="button">Arm</button>
+        <button id="disarmBtn" type="button" class="secondary">Disarm</button>
+        <button id="holdBtn" type="button" class="secondary">Hold</button>
+        <button id="resumeBtn" type="button" class="secondary">Resume</button>
+        <button id="landBtn" type="button" class="danger">Land</button>
+      </div>
+      <div class="row2" style="margin-top:.6rem;">
+        <div>
+          <label for="takeoff_alt">altitude décollage (m)</label>
+          <input id="takeoff_alt" type="number" step="any" value="10">
+        </div>
+        <div>
+          <label for="mode_val">mode (uint8)</label>
+          <input id="mode_val" type="number" step="1" value="4">
+        </div>
+      </div>
+      <div class="btnrow">
+        <button id="takeoffBtn" type="button" class="secondary">Takeoff</button>
+        <button id="modeBtn" type="button" class="secondary">Mode</button>
+      </div>
+      <div class="inject-status" id="gcsStatus"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Répondre à une question (CMD_ANSWER)</h2>
+      <div class="row2">
+        <div>
+          <label for="answer_seq">seq</label>
+          <input id="answer_seq" type="number" step="1" value="0">
+        </div>
+        <div>
+          <label for="answer_choice">choix (0/1)</label>
+          <input id="answer_choice" type="number" step="1" min="0" max="1" value="0">
+        </div>
+      </div>
+      <button id="answerBtn" type="button">Envoyer Answer</button>
+      <div class="empty" style="margin-top:.4rem;">
+        0 = reprendre (previous), 1 = Manual — le seq affiché ci-dessus dans
+        le panneau MissionState se remplit automatiquement à réception d'une
+        question.
+      </div>
+      <div class="inject-status" id="answerStatus"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Armement FC (simulé)</h2>
+      <div class="empty" style="margin-bottom:.6rem;">
+        MC_SITL n'a pas de vrai MavlinkInterface — c'est ce toggle qui
+        confirme l'armement (sinon armError sur timeout).
+      </div>
+      <div class="btnrow">
+        <button id="fcArmedOnBtn" type="button">FCARMED=1</button>
+        <button id="fcArmedOffBtn" type="button" class="secondary">FCARMED=0</button>
+      </div>
+      <div class="inject-status" id="fcStatus"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Injection de code (composant tiers)</h2>
+      <form id="codeForm">
+        <label for="code_component">composant</label>
+        <select id="code_component">
+          <option>Navigation</option>
+          <option>SensorFusion</option>
+          <option>MavlinkInterface</option>
+          <option>SysMonitoring</option>
+          <option>MissionControl</option>
+        </select>
+        <label for="code_code">code</label>
+        <select id="code_code">
+          <option>SFS002</option>
+          <option>SFS004</option>
+          <option>SFS005</option>
+          <option>MVC004</option>
+          <option>MVP001</option>
+          <option>FCP003</option>
+          <option>SMO001</option>
+          <option>SMC002</option>
+          <option>SMC003</option>
+          <option>NVA004</option>
+        </select>
+        <div class="btnrow">
+          <button type="submit" data-action="raise">Lever</button>
+          <button type="button" id="codeClearBtn" class="secondary">Effacer</button>
+        </div>
+        <div class="inject-status" id="codeStatus"></div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Santé d'un composant</h2>
+      <form id="healthForm">
+        <label for="health_component">composant</label>
+        <select id="health_component">
+          <option>Navigation</option>
+          <option>SensorFusion</option>
+          <option>MavlinkInterface</option>
+          <option>SysMonitoring</option>
+          <option>MissionControl</option>
+        </select>
+        <label for="health_value">santé</label>
+        <select id="health_value">
+          <option>NOMINAL</option>
+          <option>DEGRADED</option>
+          <option>SICK</option>
+          <option>DEAD</option>
+        </select>
+        <button type="submit">Envoyer CMD=HEALTH</button>
+        <div class="inject-status" id="healthStatus"></div>
+      </form>
+    </div>
+  </div>
+
+<script>
+const STALE_MS = 2000;
+
+function renderFields(elId, entry, formatKey) {
+  const el = document.getElementById(elId);
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+  const fields = Object.entries(entry.fields).map(([k, v]) => {
+    const val = typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(4) : v;
+    return `<div class="field"><span class="k">${formatKey ? formatKey(k) : k}</span><span>${val}</span></div>`;
+  }).join('');
+  el.innerHTML = fields + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
+function renderMc(entry) {
+  const el = document.getElementById('mc');
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+  const f = entry.fields;
+  const state = f.state || '?';
+  let html = `<span class="state-badge ${state}">${state}</span>`;
+  if (f['query.type']) {
+    html += `<div class="field"><span class="k">query.type</span><span>${f['query.type']}</span></div>`;
+    html += `<div class="field"><span class="k">query.seq</span><span>${f['query.seq']}</span></div>`;
+    // Pré-remplit le formulaire de réponse pour éviter une saisie manuelle du seq.
+    const seqInput = document.getElementById('answer_seq');
+    if (document.activeElement !== seqInput)
+      seqInput.value = f['query.seq'];
+  }
+  if ('heartbeat.age_ms' in f) {
+    const stale = f['heartbeat.age_ms'] > 2000;
+    html += `<div class="field"><span class="k">heartbeat.age_ms</span>` +
+            `<span style="color:${stale ? 'var(--danger)' : 'var(--ok)'}">${f['heartbeat.age_ms']}</span></div>`;
+  }
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+  html += `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+  el.innerHTML = html;
+}
+
+function renderCom(entry) {
+  const el = document.getElementById('com');
+  if (!entry) {
+    el.innerHTML = '<div class="empty">aucune donnée reçue</div>';
+    return;
+  }
+  renderFields('com', entry);
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/api/bridge/status');
+    if (res.ok) {
+      const state = await res.json();
+      renderMc(state.MC_SITL_MC);
+      renderFields('seg', state.MC_SITL_SEG);
+      renderFields('sys', state.MC_SITL_SYS);
+      renderCom(state.MC_SITL_COM);
+    }
+  } catch (e) {
+    // silencieux : un poll raté ne doit pas spammer la console
+  }
+  setTimeout(poll, 300);
+}
+poll();
+
+async function inject(cmd, fields, statusEl) {
+  statusEl.textContent = 'envoi…';
+  statusEl.className = 'inject-status';
+  try {
+    const res = await fetch('/api/bridge/inject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ns: 'MC_SITL', cmd, fields }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    statusEl.textContent = `${cmd} envoyé`;
+    statusEl.className = 'inject-status ok';
+    return true;
+  } catch (e) {
+    statusEl.textContent = `erreur: ${e.message}`;
+    statusEl.className = 'inject-status error';
+    return false;
+  }
+}
+
+const gcsStatus = document.getElementById('gcsStatus');
+document.getElementById('armBtn').addEventListener('click', () => inject('GCSCMD', { type: 'Arm' }, gcsStatus));
+document.getElementById('disarmBtn').addEventListener('click', () => inject('GCSCMD', { type: 'Disarm' }, gcsStatus));
+document.getElementById('holdBtn').addEventListener('click', () => inject('GCSCMD', { type: 'Hold' }, gcsStatus));
+document.getElementById('resumeBtn').addEventListener('click', () => inject('GCSCMD', { type: 'Resume' }, gcsStatus));
+document.getElementById('landBtn').addEventListener('click', () => inject('GCSCMD', { type: 'Land' }, gcsStatus));
+document.getElementById('takeoffBtn').addEventListener('click', () => {
+  inject('GCSCMD', { type: 'Takeoff', altitude: document.getElementById('takeoff_alt').value }, gcsStatus);
+});
+document.getElementById('modeBtn').addEventListener('click', () => {
+  inject('GCSCMD', { type: 'Mode', mode: document.getElementById('mode_val').value }, gcsStatus);
+});
+
+document.getElementById('answerBtn').addEventListener('click', () => {
+  inject('GCSCMD', {
+    type: 'Answer',
+    answerSeq: document.getElementById('answer_seq').value,
+    answerChoice: document.getElementById('answer_choice').value,
+  }, document.getElementById('answerStatus'));
+});
+
+const fcStatus = document.getElementById('fcStatus');
+document.getElementById('fcArmedOnBtn').addEventListener('click', () => inject('FCARMED', { armed: 1 }, fcStatus));
+document.getElementById('fcArmedOffBtn').addEventListener('click', () => inject('FCARMED', { armed: 0 }, fcStatus));
+
+document.getElementById('codeForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  inject('CODE', {
+    component: document.getElementById('code_component').value,
+    code: document.getElementById('code_code').value,
+    action: 'raise',
+  }, document.getElementById('codeStatus'));
+});
+document.getElementById('codeClearBtn').addEventListener('click', () => {
+  inject('CODE', {
+    component: document.getElementById('code_component').value,
+    code: document.getElementById('code_code').value,
+    action: 'clear',
+  }, document.getElementById('codeStatus'));
+});
+
+document.getElementById('healthForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  inject('HEALTH', {
+    component: document.getElementById('health_component').value,
+    health: document.getElementById('health_value').value,
+  }, document.getElementById('healthStatus'));
+});
+</script>
+</body>
+</html>

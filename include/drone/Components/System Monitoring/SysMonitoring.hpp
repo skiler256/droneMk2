@@ -1,4 +1,6 @@
 #pragma once
+#include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
+#include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/Components/System Monitoring/Driver.hpp"
@@ -42,6 +44,8 @@ public:
 private:
   SysMonitoring &comp;
   void loop() override;
+  bool mainLostActive_{false};
+  bool secLostActive_{false};
 };
 
 // Relai vidéo (WFB-NG uniquement) — RT priority basse, tolérante à la perte.
@@ -64,13 +68,16 @@ public:
   // (portabilité inter-véhicules, cf. discussion archi).
   explicit SysMonitoring(ComponenConfig config, SharedSysStateMemHandler &sysState,
                          SharedComMemHandler &com, SharedNavMemHandler &nav,
-                         SharedSFMemHandler &sf, ITelemetryLink &mainLink,
+                         SharedSFMemHandler &sf, SharedFCStatusHandler &fc,
+                         SharedCmdMemHandler &cmd, ITelemetryLink &mainLink,
                          ITelemetryLink &secLink, IVideoSource &videoSource);
 
   SharedComMemHandler &com_;
   SharedSysStateMemHandler &sysState_; // pour raiseCode/clearCode depuis les Task
-  SharedNavMemHandler &nav_;           // source POS/VELNED/ATTITUDE
+  SharedNavMemHandler &nav_;           // source POS/VELNED/ATTITUDE/AUTOPILOT_MODE (FMA)
   SharedSFMemHandler &sf_;             // source GPSFIX
+  SharedFCStatusHandler &fc_;          // source BATTERY
+  SharedCmdMemHandler &cmd_;           // source MISSION_STATE, AUTOPILOT_MODE (cible)
 
   ITelemetryLink &mainLink_;
   ITelemetryLink &secLink_;

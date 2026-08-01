@@ -8,6 +8,36 @@
 // Segments Line/Curve ajoutés seulement quand ils existeront réellement.
 enum class SegmentType : uint8_t { Waypoint };
 
+// États du système — cf. SDD §3.6.2 (noms des états uniquement, le graphe
+// de transitions n'est pas encore implémenté). Défini ici (pas dans
+// MissionControl.hpp) pour que SysMonitoring puisse lire l'état courant
+// via cmd_ sans dépendre du header du composant MissionControl lui-même.
+// Pas de RTB en V1 (décidé explicitement) — cf. MC_CONV::step().
+enum class MissionState : uint8_t {
+  Idle,
+  PreFlight,
+  Armed,
+  Mission,
+  Manual,
+  Hold,
+  Landing,
+  Emergency
+};
+
+// Question active posée au GCS (cf. MC_QUERY dans TELEMETRY.csv) — pas un
+// paquet par question, un type + un seq de corrélation avec CMD_ANSWER.
+enum class QueryType : uint8_t {
+  None,                     // aucune question active
+  ObstacleNonContournable,  // choice: 0=RTB, 1=MANUAL
+  EmergencyRecoverable,     // choice: 0=resume, 1=land
+  LidarLost                 // choice: 0=reprendre sans évitement d'obstacle, 1=MANUAL
+};
+
+struct PendingQuery {
+  uint32_t seq{0};
+  QueryType type{QueryType::None};
+};
+
 // Cible continue que TAP poursuit jusqu'à complétion — pas un ordre
 // ponctuel comme PendingCommand, donc valeur unique (pas de FIFO). MC
 // écrit armedSegment (le suivant, en attente) ; TSeq promeut armedSegment
@@ -65,6 +95,22 @@ struct SharedCmdMem {
     NavSegment engagedSegment{}; // écrit par TSeq (Nav)
     SegmentProgress segmentProgress{};
     uint32_t nextSegmentSeq{1}; // commence à 1, 0 = sentinel "rien d'armé"
+
+    // État système courant — écrit par TStateMachine (MC), lu par
+    // SysMonitoring pour MISSION_STATE. Pas encore écrit (TStateMachine
+    // n'a pas de logique, cf. MissionControl.hpp) : reste à Idle jusque-là.
+    MissionState state{MissionState::Idle};
+
+    // Question active posée au GCS — écrit par MC, lu par SysMonitoring
+    // pour MC_QUERY. La réponse (CMD_ANSWER) revient via SharedComMem::gcsCmds.
+    PendingQuery query{};
+    uint32_t nextQuerySeq{1}; // commence à 1, 0 = sentinel côté seq initial
+
+    // Preuve de vie de TStateMachine — lu par MavlinkInterface (FSTask)
+    // avec son propre timeout, pour un fallback autonome (LAND) si MC ne
+    // répond plus. Personne d'autre ne redémarre MC en sécurité (cf.
+    // CLAUDE.md, jamais de cold-start), donc c'est le seul filet.
+    TYPES::TimePoint lastHeartbeat{};
   };
   payload data;
 };
@@ -153,6 +199,35 @@ public:
 
   [[nodiscard]] std::optional<SegmentProgress> getSegmentProgress() {
     return getData(id_, timeout_, cmd_.data.segmentProgress);
+  }
+
+  // État système — écrit par TStateMachine (MC), lu par SysMonitoring.
+  void setMissionState(MissionState s) { setData(id_, timeout_, cmd_.data.state, s); }
+
+  [[nodiscard]] std::optional<MissionState> getMissionState() {
+    return getData(id_, timeout_, cmd_.data.state);
+  }
+
+  // Question au GCS — seq assigné ici (même raison que setArmedSegment),
+  // jamais par l'appelant.
+  void setPendingQuery(QueryType type) {
+    auto seq = getData(id_, timeout_, cmd_.data.nextQuerySeq).value_or(1);
+    auto next = seq + 1;
+    setData(id_, timeout_, cmd_.data.nextQuerySeq, next);
+    PendingQuery q{.seq = seq, .type = type};
+    setData(id_, timeout_, cmd_.data.query, q);
+  }
+
+  [[nodiscard]] std::optional<PendingQuery> getPendingQuery() {
+    return getData(id_, timeout_, cmd_.data.query);
+  }
+
+  // Heartbeat MC — écrit par TStateMachine à chaque cycle, lu par
+  // MavlinkInterface (FSTask) pour détecter un MC mort.
+  void setHeartbeat(TYPES::TimePoint t) { setData(id_, timeout_, cmd_.data.lastHeartbeat, t); }
+
+  [[nodiscard]] std::optional<TYPES::TimePoint> getHeartbeat() {
+    return getData(id_, timeout_, cmd_.data.lastHeartbeat);
   }
 
 private:

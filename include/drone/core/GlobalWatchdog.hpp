@@ -66,7 +66,7 @@ private:
   std::optional<SharedFCStatusHandler> fcHandler_;
   std::optional<SharedCmdMemHandler> cmdHandler_;
 
-  std::array<ChildProc, 4> children_{};
+  std::array<ChildProc, 5> children_{};
 
   static inline std::atomic<bool> keepRunning_{true};
 
@@ -108,9 +108,6 @@ private:
     if (!fc) return false;
     fcShm_ = fc.value();
 
-    // MissionControl n'est pas encore implémenté (cf. CLAUDE.md, ordre de
-    // dépendance) — segment publié dès maintenant (MavlinkInterface::TCmd
-    // le consomme déjà), aucun writer réel avant l'arrivée du composant.
     auto cmd = publishSharedMemory<SharedCmdMem>(kCmdShmPath);
     if (!cmd) return false;
     cmdShm_ = cmd.value();
@@ -140,6 +137,7 @@ private:
     children_[1] = spawn(TYPES::ComponentID::SensorFusion, "sensorfusion");
     children_[2] = spawn(TYPES::ComponentID::SysMonitoring, "sysmonitoring");
     children_[3] = spawn(TYPES::ComponentID::MavlinkInterface, "mavlinkinterface");
+    children_[4] = spawn(TYPES::ComponentID::MissionControl, "missioncontrol");
   }
 
   ChildProc spawn(TYPES::ComponentID id, const char *role) {

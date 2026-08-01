@@ -842,6 +842,7 @@ CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.o: \
  /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \

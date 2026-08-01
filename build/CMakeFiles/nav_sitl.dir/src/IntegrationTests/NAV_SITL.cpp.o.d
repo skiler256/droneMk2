@@ -831,6 +831,7 @@ CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o: \
  /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/SharedNavMem.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/ComponentBase.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
  /home/jules/droneMk2/include/drone/core/watchdog.hpp \

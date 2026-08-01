@@ -52,9 +52,12 @@ struct SharedFCStatus {
     TYPES::TimePoint localPosVelTs{}; // idem, LOCAL_POSITION_NED
     FCBatteryStatus battery{};        // BATTERY_STATUS
     FCEscStatus esc{};                // ESC_STATUS
+    TYPES::TimePoint escTs{};         // idem, pour détecter une donnée absente (TFSTask)
     FCPressure pressure{};            // SCALED_PRESSURE
     FCSensorHealth sensorHealth{};    // SYS_STATUS
     TYPES::TimePoint lastHeartbeat{}; // HEARTBEAT — pour TimeoutMonitor/FSTask
+    bool armed{false};                // HEARTBEAT.base_mode & MAV_MODE_FLAG_SAFETY_ARMED
+    TYPES::TimePoint armedTs{};
   };
   payload data;
 };
@@ -83,6 +86,8 @@ public:
   }
   void setEscStatus(FCEscStatus e) {
     setData(id_, timeout_, fc_.data.esc, e);
+    auto now = TYPES::Clock::now();
+    setData(id_, timeout_, fc_.data.escTs, now);
   }
   void setPressure(FCPressure p) {
     setData(id_, timeout_, fc_.data.pressure, p);
@@ -92,6 +97,11 @@ public:
   }
   void setLastHeartbeat(TYPES::TimePoint t) {
     setData(id_, timeout_, fc_.data.lastHeartbeat, t);
+  }
+  void setArmed(bool a) {
+    setData(id_, timeout_, fc_.data.armed, a);
+    auto now = TYPES::Clock::now();
+    setData(id_, timeout_, fc_.data.armedTs, now);
   }
 
   // Lecture — SensorFusion (attitude/position/vitesse), MissionControl
@@ -114,6 +124,9 @@ public:
   [[nodiscard]] std::optional<FCEscStatus> getEscStatus() {
     return getData(id_, timeout_, fc_.data.esc);
   }
+  [[nodiscard]] std::optional<TYPES::TimePoint> getEscStatusTs() {
+    return getData(id_, timeout_, fc_.data.escTs);
+  }
   [[nodiscard]] std::optional<FCPressure> getPressure() {
     return getData(id_, timeout_, fc_.data.pressure);
   }
@@ -122,6 +135,9 @@ public:
   }
   [[nodiscard]] std::optional<TYPES::TimePoint> getLastHeartbeat() {
     return getData(id_, timeout_, fc_.data.lastHeartbeat);
+  }
+  [[nodiscard]] std::optional<bool> getArmed() {
+    return getData(id_, timeout_, fc_.data.armed);
   }
 
 private:

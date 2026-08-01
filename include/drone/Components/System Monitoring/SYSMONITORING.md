@@ -169,18 +169,37 @@ inter-véhicules : seule l'implémentation concrète change.
 
 ## 9. Ce qui n'est PAS encore fait
 
-- **Sourcing réel des données** : `TelMainTask`/`TelSecTask` construisent
-  encore les paquets avec des valeurs par défaut (`TELEM::PosPkt{}`, etc.)
-  — `nav_`/`sf_` n'exposent pour l'instant que des champs de stub
-  (`bloup`/`blip`), pas les payloads POS/VELNED/ATTITUDE/GPSFIX réels.
+- **`ARM_STATE`** : toujours à valeurs par défaut — `MavlinkInterface` ne
+  parse/stocke pas encore le bit `MAV_MODE_FLAG_SAFETY_ARMED` de
+  `HEARTBEAT.base_mode` dans `SharedFCStatus`. Gap côté MavlinkInterface,
+  pas SysMonitoring.
 - **Relai vidéo** : `VideoTask::loop()` poll bien `videoSource_.pollFrame()`
   mais ne relaie nulle part (`TODO` explicite) — pas de consommateur
   défini (dashboard, export réseau...).
-- **Dispatch GCSRx** : les commandes reçues (`CMD_ARM`, `CMD_WAYPOINT`,
-  ...) sont juste loguées (`std::cout`), pas encore routées vers
-  `MissionControl`/`Navigation` (qui n'existent pas encore pour la
-  logique métier correspondante).
-- **`WFB_NG_Driver`/`CC1101_Driver`** : non implémentés (cf. §7).
-- **`SharedComMem`** : payload vital minimal, quasiment vide — SysMonitoring
-  n'a pas vraiment d'état à restaurer au hot-restart (composant de
-  canalisation/parsing, pas de state métier propre).
+- **Consommation côté MissionControl** : `GCSRxTask` pousse maintenant les
+  commandes GCS dans `SharedComMem::gcsCmds` (FIFO) et l'E-stop via
+  `CODES::SMO001` (cf. §10 ci-dessous) — mais `MissionControl::TGCSCmdRouter`
+  et `TSafetyMonitor` n'ont pas encore de logique (`loop()` en stub) pour
+  les dépiler/réagir. Le plombage est prêt, pas le métier.
+- **`WFB_NG_Driver`/`CC1101_Driver`** : non implémentés (cf. §7) — pas de
+  RSSI/qualité de lien matérielle réelle, seul le timestamp du dernier
+  `HEARTBEAT_GCS` par lien est dispo (`SharedComMem::lastHeartbeatMain/Sec`).
+- **`SharedComMem`** : n'a plus grand chose de "quasiment vide" (cf. §10)
+  mais SysMonitoring n'a toujours pas d'état métier propre à restaurer au
+  hot-restart (composant de canalisation/parsing).
+
+## 10. `SharedComMem` — commandes GCS et heartbeat
+
+- **`gcsCmds`** (`RingBuffer<GCSCommand, 8>`) : `CMD_ARM`/`CMD_DISARM`/
+  `CMD_MODE`/`CMD_WAYPOINT`/`CMD_RTL`/`CMD_LAND` poussés par `GCSRxTask`
+  (`pushGCSCommand`), dépilés côté MissionControl (`popGCSCommand`, pas
+  encore appelé — cf. §9). `GCSCommand` est une struct à plat (pas
+  d'union) : les champs hors-sujet pour un `type` donné restent à zéro,
+  compromis simple accepté pour une commande ponctuelle GCS.
+- **`CMD_EMERGENCY`** court-circuite volontairement ce FIFO : signalée via
+  `CODES::SMO001` (`sysState_.raiseCode`), lue par `TSafetyMonitor`
+  indépendamment du rythme de dépilement — un ordre d'urgence ne doit
+  jamais attendre son tour derrière une commande normale en file.
+- **`lastHeartbeatMain`/`lastHeartbeatSec`** : horodatage du dernier
+  `HEARTBEAT_GCS` reçu par lien, mis à jour par `GCSRxTask`. Sert de proxy
+  de fraîcheur/qualité de lien en l'absence de RSSI matériel (cf. §9).

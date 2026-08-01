@@ -10,6 +10,7 @@ inline constexpr std::string_view kSFShmPath = "/drone_sitl_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_sitl_sysstate";
 inline constexpr std::string_view kFCShmPath = "/drone_sitl_fc";
 inline constexpr std::string_view kCmdShmPath = "/drone_sitl_cmd";
+inline constexpr std::string_view kComShmPath = "/drone_sitl_com";
 } // namespace SITL
 
 // HIL (hil_sf_mv) : SensorFusion + MavlinkInterface face au vrai matériel.
@@ -19,6 +20,7 @@ inline constexpr std::string_view kSFShmPath = "/drone_hil_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_hil_sysstate";
 inline constexpr std::string_view kFCShmPath = "/drone_hil_fc";
 inline constexpr std::string_view kCmdShmPath = "/drone_hil_cmd";
+inline constexpr std::string_view kComShmPath = "/drone_hil_com";
 } // namespace HIL
 
 // NAV_SITL (nav_sitl) : Navigation + MavlinkInterface face à ArduPilot
@@ -31,4 +33,16 @@ inline constexpr std::string_view kSFShmPath = "/drone_navsitl_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_navsitl_sysstate";
 inline constexpr std::string_view kFCShmPath = "/drone_navsitl_fc";
 inline constexpr std::string_view kCmdShmPath = "/drone_navsitl_cmd";
+inline constexpr std::string_view kComShmPath = "/drone_navsitl_com";
 } // namespace NAV_SITL
+
+// MC_SITL (mc_sitl) : MissionControl seul, face à un plan de mission
+// prédéfini et un faux Nav minimal (pas de vol réel) — cf. MC_SITL.cpp.
+namespace MC_SITL {
+inline constexpr std::string_view kNavShmPath = "/drone_mcsitl_nav";
+inline constexpr std::string_view kSFShmPath = "/drone_mcsitl_sf";
+inline constexpr std::string_view kSysShmPath = "/drone_mcsitl_sysstate";
+inline constexpr std::string_view kFCShmPath = "/drone_mcsitl_fc";
+inline constexpr std::string_view kCmdShmPath = "/drone_mcsitl_cmd";
+inline constexpr std::string_view kComShmPath = "/drone_mcsitl_com";
+} // namespace MC_SITL

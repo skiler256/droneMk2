@@ -7,6 +7,7 @@
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
+#include "drone/Components/System Monitoring/SharedComMem.hpp"
 #include "drone/core/ComponentBase.hpp"
 
 class MavlinkInterface;
@@ -71,6 +72,12 @@ private:
   MavlinkInterface &comp;
   void loop() override;
   bool linkLostActive_{false};
+  bool rpmLowActive_{false};
+  bool battLowActive_{false};
+  bool battCriticalActive_{false};
+  // Fallback autonome (LAND) — cf. MAVLINKINTERFACE.md.
+  bool mcHeartbeatLostActive_{false};
+  bool gcsBothLostActive_{false};
 };
 
 class MavlinkInterface : public ComponentBase<5> {
@@ -80,7 +87,7 @@ public:
                             SharedSysStateMemHandler &sysState,
                             SharedFCStatusHandler &fc, SharedNavMemHandler &nav,
                             SharedSFMemHandler &sf, SharedCmdMemHandler &cmd,
-                            IMavlinkLink &link);
+                            SharedComMemHandler &com, IMavlinkLink &link);
 
   // Empile un MAV_CMD_SET_MESSAGE_INTERVAL par message d'intérêt. Déclenchée
   // par TRx au premier HEARTBEAT du FC (cf. initStreamsRequested_), jamais
@@ -92,6 +99,7 @@ public:
   SharedNavMemHandler &nav_;           // source consigne vitesse (SET_POSITION_TARGET_LOCAL_NED)
   SharedSFMemHandler &sf_;             // source GPS_INPUT (position/vitesse brutes + cap fusionné)
   SharedCmdMemHandler &cmd_;           // ordres ponctuels de MissionControl (TCmd), cf. §10
+  SharedComMemHandler &com_;           // heartbeat GCS, lu indépendamment par FSTask (fallback autonome)
   IMavlinkLink &link_;
 
   // Garde requestInitStreams() : déclenchée une seule fois, au premier
