@@ -21,6 +21,7 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
   /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
   /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp \
   /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver.hpp \
+  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/LinuxThermalZoneDriver.hpp \
   /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpTelemetryDriver.hpp \
   /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpVideoDriver.hpp \
   /home/jules/droneMk2/include/drone/Components/System\ Monitoring/PacketScheduler.hpp \
@@ -31,6 +32,7 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
   /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
   /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
   /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
+  /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp \
   /home/jules/droneMk2/include/drone/core/watchdog.hpp \
   /home/jules/droneMk2/include/drone/generated/codes.hpp \
   /home/jules/droneMk2/include/drone/generated/missionplan.hpp \
@@ -990,19 +992,14 @@ drone: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/drone.dir/src/main.cpp.o \
   libdrone_lib.a
 
 
 CMakeFiles/drone.dir/src/main.cpp.o:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a:
 
@@ -1368,8 +1365,6 @@ libdrone_lib.a:
 
 /usr/include/c++/14/bits/uses_allocator.h:
 
-/usr/include/c++/14/bits/unordered_map.h:
-
 /usr/include/c++/14/bits/unique_ptr.h:
 
 /usr/include/c++/14/bits/uniform_int_dist.h:
@@ -1549,6 +1544,8 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/sys/user.h:
 
 /usr/include/aarch64-linux-gnu/sys/ucontext.h:
+
+/usr/include/aarch64-linux-gnu/sys/types.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_nav_controller_output.h:
 
@@ -1780,11 +1777,11 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_request_data_stream.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_pid_tuning.h:
-
 /usr/include/alloca.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_5_to_8.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_pid_tuning.h:
 
 /usr/include/eigen3/Eigen/src/Core/Array.h:
 
@@ -1806,7 +1803,27 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_9_to_12.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_log_entry.h:
+/usr/include/aarch64-linux-gnu/sys/ttydefaults.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_v2_extension.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_attitude_target.h:
+
+/usr/include/eigen3/Eigen/src/Core/CwiseUnaryView.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_current_event_sequence.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_battery_info.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_isbd_link_status.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_radio.h:
+
+/usr/include/eigen3/Eigen/src/Core/ArrayWrapper.h:
+
+/usr/include/c++/14/bits/shared_ptr_base.h:
+
+/home/jules/droneMk2/include/drone/Components/MavlinkInterface/PendingAck.hpp:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_obstacle_distance_3d.h:
 
@@ -1827,10 +1844,6 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_timesync.h:
 
 /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpTelemetryDriver.hpp:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_camera_status.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h:
 
 /usr/include/c++/14/bits/std_mutex.h:
 
@@ -1872,9 +1885,23 @@ libdrone_lib.a:
 
 /usr/include/aarch64-linux-gnu/bits/timex.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_device_op_write.h:
+/usr/include/c++/14/bits/unordered_map.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_autopilot_state_for_gimbal_device.h:
+/home/jules/droneMk2/include/drone/core/WatchdogControl.hpp:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_command_ack.h:
+
+/usr/include/c++/14/bits/locale_facets.tcc:
+
+/usr/include/c++/14/bits/chrono.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/mavlink_conversions.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/standard/mavlink_msg_autopilot_version.h:
+
+/usr/include/aarch64-linux-gnu/bits/siginfo-consts-arch.h:
+
+/home/jules/droneMk2/include/drone/core/SharedMemory.hpp:
 
 /home/jules/droneMk2/include/drone/Components/MissionControl/MissionControl.hpp:
 
@@ -1887,8 +1914,6 @@ libdrone_lib.a:
 /home/jules/droneMk2/include/drone/Components/Drivers/NEO-M8N.hpp:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_gimbal_control.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_open_drone_id_authentication.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_17_to_20.h:
 
@@ -1917,22 +1942,6 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/bits/termios-c_lflag.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_ahrs2.h:
-
-/usr/include/eigen3/Eigen/src/Core/CwiseUnaryView.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_current_event_sequence.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_battery_info.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_isbd_link_status.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_radio.h:
-
-/usr/include/eigen3/Eigen/src/Core/ArrayWrapper.h:
-
-/usr/include/c++/14/bits/shared_ptr_base.h:
-
-/home/jules/droneMk2/include/drone/Components/MavlinkInterface/PendingAck.hpp:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
 
@@ -1994,20 +2003,6 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_hil_controls.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_command_ack.h:
-
-/usr/include/c++/14/bits/locale_facets.tcc:
-
-/usr/include/c++/14/bits/chrono.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/mavlink_conversions.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/standard/mavlink_msg_autopilot_version.h:
-
-/usr/include/aarch64-linux-gnu/bits/siginfo-consts-arch.h:
-
-/home/jules/droneMk2/include/drone/core/SharedMemory.hpp:
-
 /usr/include/c++/14/bits/streambuf.tcc:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_follow_target.h:
@@ -2018,15 +2013,15 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpVideoDriver.hpp:
 
+/usr/include/c++/14/bits/postypes.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mount_orientation.h:
+
 /usr/include/c++/14/bits/locale_facets_nonio.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_data32.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_request_int.h:
-
-/usr/include/c++/14/bits/postypes.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mount_orientation.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_global_position_int_cov.h:
 
@@ -2035,8 +2030,6 @@ libdrone_lib.a:
 /usr/include/c++/14/tr1/beta_function.tcc:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_terrain_check.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_attitude_target.h:
 
 /home/jules/droneMk2/include/drone/Components/System\ Monitoring/PacketScheduler.hpp:
 
@@ -2054,10 +2047,6 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_safety_allowed_area.h:
 
-/usr/include/c++/14/bits/stl_construct.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_device_op_read_reply.h:
-
 /usr/include/c++/14/bits/exception.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/ardupilotmega.h:
@@ -2069,6 +2058,12 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_gps_global_origin.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_named_value_string.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_camera_status.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h:
+
+/usr/include/aarch64-linux-gnu/bits/termios-c_cflag.h:
 
 /usr/include/c++/14/bits/exception_ptr.h:
 
@@ -2097,6 +2092,16 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_battery_status.h:
 
 /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h:
+
+/usr/include/c++/14/bits/stl_construct.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_device_op_read_reply.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_autopilot_state_for_gimbal_device.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_device_op_write.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_log_entry.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_ekf_status_report.h:
 
@@ -2136,6 +2141,12 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_param_ext_value.h:
 
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/common.h:
+
+/usr/include/c++/14/bits/requires_hosted.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_mcu_status.h:
+
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_gps2_raw.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_utm_global_position.h:
@@ -2145,8 +2156,6 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_fence_fetch_point.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_mount_status.h:
-
-/usr/include/aarch64-linux-gnu/bits/termios-c_cflag.h:
 
 /usr/include/eigen3/Eigen/src/Geometry/Rotation2D.h:
 
@@ -2169,6 +2178,12 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_gimbal_torque_cmd_report.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_gopro_get_request.h:
+
+/home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/LinuxThermalZoneDriver.hpp:
+
+/usr/include/stdio.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/clockid_t.h:
 
 /usr/include/c++/14/bits/hashtable.h:
 
@@ -2310,10 +2325,6 @@ libdrone_lib.a:
 
 /usr/include/aarch64-linux-gnu/bits/endianness.h:
 
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_v2_extension.h:
-
-/usr/include/aarch64-linux-gnu/sys/ttydefaults.h:
-
 /usr/include/eigen3/Eigen/src/Core/arch/Default/TypeCasting.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_mission_item_reached.h:
@@ -2354,12 +2365,6 @@ libdrone_lib.a:
 
 /usr/include/aarch64-linux-gnu/bits/sigstksz.h:
 
-/usr/include/c++/14/bits/requires_hosted.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_mcu_status.h:
-
-/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/common.h:
-
 /usr/include/c++/14/bits/functexcept.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/error_t.h:
@@ -2375,6 +2380,8 @@ libdrone_lib.a:
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_obstacle_distance.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/csAirLink/mavlink_msg_airlink_auth.h:
+
+/home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_open_drone_id_authentication.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_open_drone_id_system.h:
 
@@ -2560,8 +2567,6 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_uavcan_node_status.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
-
 /usr/include/c++/14/bits/stl_algobase.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_vfr_hud.h:
@@ -2705,8 +2710,6 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/bits/endian.h:
 
 /usr/include/aarch64-linux-gnu/bits/errno.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
 
 /usr/include/eigen3/Eigen/src/Core/Replicate.h:
 
@@ -2882,10 +2885,6 @@ libdrone_lib.a:
 
 /usr/include/aarch64-linux-gnu/bits/types/locale_t.h:
 
-/usr/include/stdio.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/clockid_t.h:
-
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega/mavlink_msg_esc_telemetry_29_to_32.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/idtype_t.h:
@@ -2989,5 +2988,3 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/sys/syscall.h:
 
 /usr/include/aarch64-linux-gnu/sys/time.h:
-
-/usr/include/aarch64-linux-gnu/sys/types.h:

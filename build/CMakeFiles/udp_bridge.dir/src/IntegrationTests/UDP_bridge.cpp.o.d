@@ -472,17 +472,10 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/IntegrationTests/ShmPaths.hpp \
+ /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
- /home/jules/droneMk2/include/drone/shm.hpp /usr/include/arpa/inet.h \
- /usr/include/netinet/in.h /usr/include/aarch64-linux-gnu/sys/socket.h \
- /usr/include/aarch64-linux-gnu/bits/socket.h \
- /usr/include/aarch64-linux-gnu/bits/socket_type.h \
- /usr/include/aarch64-linux-gnu/bits/sockaddr.h \
- /usr/lib/linux/uapi/arm64/asm/socket.h /usr/include/asm-generic/socket.h \
- /usr/lib/linux/uapi/arm64/asm/sockios.h \
- /usr/include/asm-generic/sockios.h \
- /usr/include/aarch64-linux-gnu/bits/types/struct_osockaddr.h \
- /usr/include/aarch64-linux-gnu/bits/in.h /usr/include/c++/14/csignal \
+ /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp \
+ /home/jules/droneMk2/include/drone/shm.hpp /usr/include/c++/14/csignal \
  /usr/include/signal.h \
  /usr/include/aarch64-linux-gnu/bits/signum-generic.h \
  /usr/include/aarch64-linux-gnu/bits/signum-arch.h \
@@ -513,4 +506,15 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h \
  /usr/include/aarch64-linux-gnu/bits/sigthread.h \
  /usr/include/aarch64-linux-gnu/bits/signal_ext.h \
- /usr/include/c++/14/iostream
+ /usr/include/c++/14/iostream /usr/include/aarch64-linux-gnu/sys/wait.h \
+ /usr/include/aarch64-linux-gnu/bits/types/idtype_t.h \
+ /usr/include/arpa/inet.h /usr/include/netinet/in.h \
+ /usr/include/aarch64-linux-gnu/sys/socket.h \
+ /usr/include/aarch64-linux-gnu/bits/socket.h \
+ /usr/include/aarch64-linux-gnu/bits/socket_type.h \
+ /usr/include/aarch64-linux-gnu/bits/sockaddr.h \
+ /usr/lib/linux/uapi/arm64/asm/socket.h /usr/include/asm-generic/socket.h \
+ /usr/lib/linux/uapi/arm64/asm/sockios.h \
+ /usr/include/asm-generic/sockios.h \
+ /usr/include/aarch64-linux-gnu/bits/types/struct_osockaddr.h \
+ /usr/include/aarch64-linux-gnu/bits/in.h

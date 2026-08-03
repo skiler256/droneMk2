@@ -89,7 +89,7 @@ def generate(packets, csv_path: Path) -> str:
     lines.append("  uint16_t rateHz;       // 0 = événementiel")
     lines.append("  uint16_t redundancyHz; // pour événementiel : renvoi périodique même sans changement")
     lines.append("  uint8_t linkMask;      // combinaison de Link (Main | Sec)")
-    lines.append("  uint8_t size;")
+    lines.append("  uint16_t size;         // u16 : un paquet à tableau (ex: LIDAR_SCAN) dépasse 255 octets")
     lines.append("  const char *name;")
     lines.append("};")
     lines.append("")

@@ -978,17 +978,12 @@ hil_sf_mv: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.o \
   libdrone_lib.a
 
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a:
 
@@ -2478,8 +2473,6 @@ libdrone_lib.a:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_uavcan_node_status.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
-
 /usr/include/c++/14/bits/stl_algobase.h:
 
 /home/jules/droneMk2/third_party/mavlink/c_library_v2/common/mavlink_msg_vfr_hud.h:
@@ -2641,8 +2634,6 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/bits/endian.h:
 
 /usr/include/aarch64-linux-gnu/bits/errno.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
 
 /usr/include/eigen3/Eigen/src/Core/Replicate.h:
 

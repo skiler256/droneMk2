@@ -3,6 +3,7 @@
 #include "drone/generated/codes.hpp"
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
+#include <algorithm>
 
 using namespace TYPES;
 using namespace CODES;
@@ -97,6 +98,17 @@ void GPSTask::loop() {
       sample.vdop = d.vdop;
       sample.fixType = SF_CONV::mapUbxFixType(d.fixType);
       sample.satellitesVisible = static_cast<std::uint8_t>(d.sats.size());
+
+      sample.satId.fill(0);
+      sample.satStrength.fill(0);
+      sample.satQuality.fill(0);
+      std::size_t n = std::min(d.sats.size(), GpsMagSample::kMaxSatellites);
+      for (std::size_t i = 0; i < n; ++i) {
+        sample.satId[i] = d.sats[i].id;
+        sample.satStrength[i] = d.sats[i].strength;
+        sample.satQuality[i] = d.sats[i].quality;
+      }
+
       sample.gpsWeek = SF_CONV::gpsWeekFromUbxDate(d.timeArray);
       sample.gpsTowMs = d.iTowMs;
       sample.ts = now;
@@ -192,6 +204,7 @@ void LidarTask::loop() {
     float distM = static_cast<float>(distMm) / 1000.0f;
     map.points[i] = SF_CONV::lidarPointNed(distM, static_cast<float>(i), q);
     map.intensity[i] = scan->intensity[i];
+    map.rangeMm[i] = distMm;
   }
 
   comp.SF_.setLidarMap(map);

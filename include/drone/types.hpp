@@ -19,11 +19,23 @@
 #include <expected>
 #include <string_view>
 
+#ifdef DRONE_USE_SIM_CLOCK
+#include "drone/core/SimClock.hpp"
+#endif
+
 namespace TYPES {
 
 // ─── Horloge commune ────────────────────────────────────────────────────────
-
+//
+// Résolu à la compilation (option CMake DRONE_USE_SIM_CLOCK), pas de
+// dispatch virtuel — cf. INTEGRATION_TEST.md §8.2. Les deux horloges sont
+// TrivialClock, donc TimePoint/Ms/Us restent valides sans changement dans
+// le reste du code (Task, ComponentBase, msBetween, ...).
+#ifdef DRONE_USE_SIM_CLOCK
+using Clock = SimClock;
+#else
 using Clock = std::chrono::steady_clock;
+#endif
 using TimePoint = Clock::time_point;
 using Ms = std::chrono::milliseconds;
 using Us = std::chrono::microseconds;

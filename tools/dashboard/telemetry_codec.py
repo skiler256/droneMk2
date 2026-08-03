@@ -31,7 +31,11 @@ class PacketDef:
         self.direction = packet.direction
         self.priority = packet.priority
         self.fields = packet.fields
-        fmt = "<" + "".join(STRUCT_FMT[f.type_token] for f in packet.fields)
+        # Un champ tableau ('u16[360]') compte pour `count` éléments répétés
+        # dans le format struct — le préfixe numérique de struct fait ça
+        # nativement (ex: "360H").
+        fmt = "<" + "".join(
+            (str(f.count) if f.is_array else "") + STRUCT_FMT[f.elem_token] for f in packet.fields)
         self.struct = struct.Struct(fmt)
 
 
@@ -56,15 +60,17 @@ def decode(packets_by_id, data: bytes):
 
     payload = data[1:1 + pdef.struct.size]
     if len(payload) < pdef.struct.size:
-        values = (0,) * len(pdef.fields)
+        flat = (0,) * sum(f.count for f in pdef.fields)
     else:
-        values = pdef.struct.unpack(payload)
+        flat = pdef.struct.unpack(payload)
 
-    return {
-        "id": pdef.id,
-        "name": pdef.name,
-        "fields": dict(zip((f.name for f in pdef.fields), values)),
-    }
+    fields = {}
+    idx = 0
+    for f in pdef.fields:
+        fields[f.name] = list(flat[idx:idx + f.count]) if f.is_array else flat[idx]
+        idx += f.count
+
+    return {"id": pdef.id, "name": pdef.name, "fields": fields}
 
 
 def encode(packets_by_name, name: str, field_values: dict) -> bytes:
@@ -72,5 +78,11 @@ def encode(packets_by_name, name: str, field_values: dict) -> bytes:
     ordered = []
     for f in pdef.fields:
         v = field_values.get(f.name, 0)
-        ordered.append(float(v) if f.type_token == "f32" else int(v))
+        conv = float if f.elem_token == "f32" else int
+        if f.is_array:
+            vals = list(v) if isinstance(v, (list, tuple)) else []
+            vals = (vals + [0] * f.count)[:f.count]
+            ordered.extend(conv(x) for x in vals)
+        else:
+            ordered.append(conv(v))
     return bytes([pdef.id]) + pdef.struct.pack(*ordered)

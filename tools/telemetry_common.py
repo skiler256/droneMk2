@@ -6,6 +6,7 @@
 # Même esprit que codes_common.py pour les codes de diagnostic.
 
 import csv
+import re
 import sys
 from pathlib import Path
 
@@ -20,6 +21,12 @@ FIELD_TYPES = {
     "f32": ("float", 4),
 }
 
+# 'u16[360]' -> tableau taille fixe (ex: nuage lidar) — même esprit que le
+# 'bytesN' de missionplan_common.py, mais typé élément par élément plutôt
+# qu'un blob opaque (les deux côtés ont besoin d'interpréter chaque valeur,
+# pas juste de la transporter).
+_ARRAY_RE = re.compile(r"^(u8|u16|u32|i8|i16|i32|f32)\[(\d+)\]$")
+
 DIRECTIONS = {"DOWN", "UP"}
 PRIORITIES = {"Routine", "Critical"}
 LINKS = {"MAIN", "BOTH"}  # pas de "SEC" seul : TelSec est un sous-ensemble de TelMain
@@ -31,11 +38,28 @@ class TelemetryValidationError(Exception):
     pass
 
 
+def _resolve_type(type_token, where, field_name):
+    m = _ARRAY_RE.match(type_token)
+    if m:
+        elem_token, count = m.group(1), int(m.group(2))
+        if count == 0:
+            raise TelemetryValidationError(f"{where}taille de tableau nulle pour '{field_name}'")
+        elem_cpp, elem_size = FIELD_TYPES[elem_token]
+        return f"std::array<{elem_cpp}, {count}>", elem_size * count, elem_token, count
+    if type_token in FIELD_TYPES:
+        cpp_type, size = FIELD_TYPES[type_token]
+        return cpp_type, size, type_token, 1
+    raise TelemetryValidationError(
+        f"{where}type '{type_token}' inconnu pour le champ '{field_name}' "
+        f"(attendu: {', '.join(FIELD_TYPES)}, ou type[N])")
+
+
 class Field:
-    def __init__(self, name, type_token):
+    def __init__(self, name, type_token, where=""):
         self.name = name
         self.type_token = type_token
-        self.cpp_type, self.size = FIELD_TYPES[type_token]
+        self.cpp_type, self.size, self.elem_token, self.count = _resolve_type(type_token, where, name)
+        self.is_array = self.count > 1
 
 
 class TelemetryPacket:
@@ -81,14 +105,10 @@ def _parse_fields(raw, where):
         if ":" not in token:
             raise TelemetryValidationError(f"{where}champ '{token}' invalide, attendu name:type")
         name, type_token = (p.strip() for p in token.split(":", 1))
-        if type_token not in FIELD_TYPES:
-            raise TelemetryValidationError(
-                f"{where}type '{type_token}' inconnu pour le champ '{name}' "
-                f"(attendu: {', '.join(FIELD_TYPES)})")
         if name in seen:
             raise TelemetryValidationError(f"{where}champ '{name}' dupliqué")
         seen.add(name)
-        fields.append(Field(name, type_token))
+        fields.append(Field(name, type_token, where))
     return fields
 
 

@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega
 
-CXX_FLAGS = -g -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fsanitize=address,undefined -fexceptions -DGTEST_HAS_PTHREAD=1
+CXX_FLAGS = -std=c++23 -mcpu=cortex-a76 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1
 

@@ -46,3 +46,17 @@ inline constexpr std::string_view kFCShmPath = "/drone_mcsitl_fc";
 inline constexpr std::string_view kCmdShmPath = "/drone_mcsitl_cmd";
 inline constexpr std::string_view kComShmPath = "/drone_mcsitl_com";
 } // namespace MC_SITL
+
+// SYSMON_SITL (sysmon_sitl) : SysMonitoring seul, face à des données shm
+// injectées à la main (pas de vol réel, pas des autres composants réels) —
+// cf. SYSMON_SITL.cpp. Tourne sur les MÊMES ports UDP que main.cpp
+// (runSysMonitoring) exprès : le GCS/ dashboard Node.js n'a besoin d'aucune
+// config différente pour l'observer.
+namespace SYSMON_SITL {
+inline constexpr std::string_view kNavShmPath = "/drone_smsitl_nav";
+inline constexpr std::string_view kSFShmPath = "/drone_smsitl_sf";
+inline constexpr std::string_view kSysShmPath = "/drone_smsitl_sysstate";
+inline constexpr std::string_view kFCShmPath = "/drone_smsitl_fc";
+inline constexpr std::string_view kCmdShmPath = "/drone_smsitl_cmd";
+inline constexpr std::string_view kComShmPath = "/drone_smsitl_com";
+} // namespace SYSMON_SITL

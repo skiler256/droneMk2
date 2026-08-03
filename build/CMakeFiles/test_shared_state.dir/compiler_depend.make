@@ -643,12 +643,9 @@ test_shared_state: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o \
   libdrone_lib.a
 
@@ -1013,8 +1010,6 @@ CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o:
 
 /usr/include/c++/14/bits/stl_vector.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
-
 /usr/include/c++/14/bits/stl_algobase.h:
 
 /usr/include/eigen3/Eigen/src/Core/BandMatrix.h:
@@ -1343,8 +1338,6 @@ CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/syscall.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
-
 /home/jules/droneMk2/tests/test_shared_state.cpp:
 
 /usr/include/c++/14/bits/atomic_base.h:
@@ -1442,8 +1435,6 @@ CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/stdint-uintn.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
 
 /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h:
 

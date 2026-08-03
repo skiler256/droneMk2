@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SITL — Système complet (PROD)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8eb; --muted: #8b92a1; --accent: #4f8cff;
+    --ok: #3ecf8e; --warn: #ff9f43; --danger: #ff5c5c;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f5f6f8; --panel: #ffffff; --border: #dde1e7; --text: #1a1d23; --muted: #5b6472; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: ui-monospace, "SF Mono", Consolas, monospace; background: var(--bg); color: var(--text); padding: 2rem; }
+  a.back { color: var(--muted); font-size: .8rem; text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-size: 1.1rem; margin: .5rem 0 .25rem; }
+  .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 1rem; max-width: 900px; }
+  .note {
+    border: 1px solid var(--border); border-radius: 6px; padding: .6rem .8rem;
+    font-size: .78rem; color: var(--muted); margin-bottom: 1.5rem; max-width: 900px;
+  }
+  .segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .panel h2 { font-size: .85rem; margin: 0 0 .6rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .field { display: flex; justify-content: space-between; font-size: .78rem; padding: .12rem 0; border-bottom: 1px solid var(--border); gap: .5rem; }
+  .field:last-child { border-bottom: none; }
+  .field .k { color: var(--muted); overflow-wrap: anywhere; }
+  .field .v { text-align: right; overflow-wrap: anywhere; }
+  .empty { color: var(--muted); font-style: italic; font-size: .82rem; }
+  .age { font-size: .68rem; margin-top: .5rem; }
+  .age.fresh { color: var(--ok); }
+  .age.stale { color: var(--muted); }
+
+  .inject { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .inject form { display: flex; flex-direction: column; gap: .5rem; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+  label { font-size: .72rem; color: var(--muted); display: block; margin-bottom: .15rem; }
+  input, select {
+    width: 100%; padding: .35rem .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: .82rem;
+  }
+  button {
+    padding: .45rem .7rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--accent); color: #fff; font-family: inherit; font-size: .8rem;
+    cursor: pointer; font-weight: 600; margin-top: .3rem;
+  }
+  button.secondary { background: var(--panel); color: var(--text); }
+  .inject-status { font-size: .72rem; color: var(--muted); min-height: 1.2em; margin-top: .3rem; }
+  .inject-status.ok { color: var(--ok); }
+  .inject-status.error { color: var(--danger); }
+</style>
+</head>
+<body>
+  <a class="back" href="/">&larr; retour au menu</a>
+  <h1>SITL — Système complet (PROD)</h1>
+  <div class="subtitle">
+    Le vrai binaire `drone` (8 composants, -DDRONE_USE_SITL_DRIVERS) face à
+    ArduPilot SITL via le SITL_MASTER — vue directe des 9 segments shm de
+    production (namespace PROD de UDP_bridge.cpp), pas une simulation à part.
+  </div>
+  <div class="note">
+    "État de la simulation" ici = état du système observé via shm (santé,
+    codes, mission state). Le suivi de scénario de l'orchestrateur (id du
+    scénario en cours, critères pass/fail, temps écoulé) n'est pas encore
+    câblé — viendra avec le squelette orchestrateur (Phase C).
+  </div>
+
+  <div class="segments">
+    <div class="panel"><h2>FC (attitude/position/batterie)</h2><div id="fc"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>Navigation (consigne + FMA)</h2><div id="nav"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>SensorFusion (GPS + état fusionné)</h2><div id="sf"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>Lidar</h2><div id="lidar"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>Santé + codes (5 composants)</h2><div id="sys"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>Segment (armé/engagé/avancement)</h2><div id="seg"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>MissionControl</h2><div id="mc"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>Liens GCS</h2><div id="com"><div class="empty">en attente…</div></div></div>
+    <div class="panel"><h2>SharedWatchdogControl (respawn suspendu)</h2><div id="wdc"><div class="empty">en attente…</div></div></div>
+  </div>
+
+  <div class="inject">
+    <div class="panel">
+      <h2>Panne système — code (composant tiers)</h2>
+      <form id="codeForm">
+        <label for="code_component">composant</label>
+        <select id="code_component">
+          <option>Navigation</option><option>SensorFusion</option>
+          <option>MavlinkInterface</option><option>SysMonitoring</option>
+          <option>MissionControl</option>
+        </select>
+        <label for="code_code">code</label>
+        <select id="code_code">
+          <option>SFS002</option><option>SFS004</option><option>SFS005</option>
+          <option>MVC004</option><option>MVP001</option><option>FCP003</option>
+          <option>SMO001</option><option>SMC002</option><option>SMC003</option>
+          <option>NVA004</option>
+        </select>
+        <div class="row2">
+          <button type="submit">Lever</button>
+          <button type="button" id="codeClearBtn" class="secondary">Effacer</button>
+        </div>
+        <div class="inject-status" id="codeStatus"></div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Santé d'un composant</h2>
+      <form id="healthForm">
+        <label for="health_component">composant</label>
+        <select id="health_component">
+          <option>Navigation</option><option>SensorFusion</option>
+          <option>MavlinkInterface</option><option>SysMonitoring</option>
+          <option>MissionControl</option>
+        </select>
+        <label for="health_value">santé</label>
+        <select id="health_value">
+          <option>NOMINAL</option><option>DEGRADED</option>
+          <option>SICK</option><option>DEAD</option>
+        </select>
+        <button type="submit">Envoyer CMD=HEALTH</button>
+        <div class="inject-status" id="healthStatus"></div>
+      </form>
+    </div>
+  </div>
+
+<script>
+const STALE_MS = 2000;
+
+function renderFields(elId, entry) {
+  const el = document.getElementById(elId);
+  if (!entry) { el.innerHTML = '<div class="empty">aucune donnée reçue</div>'; return; }
+  const now = Date.now() / 1000;
+  const age = now - entry.ts;
+  const ageClass = age < STALE_MS / 1000 ? 'fresh' : 'stale';
+  const fields = Object.entries(entry.fields).map(([k, v]) => {
+    const val = typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(4) : v;
+    return `<div class="field"><span class="k">${k}</span><span class="v">${val}</span></div>`;
+  }).join('');
+  el.innerHTML = fields + `<div class="age ${ageClass}">reçu il y a ${age.toFixed(1)}s</div>`;
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/api/bridge/status');
+    if (res.ok) {
+      const state = await res.json();
+      renderFields('fc', state.PROD_FC);
+      renderFields('nav', state.PROD_NAV);
+      renderFields('sf', state.PROD_SF);
+      renderFields('lidar', state.PROD_LIDAR);
+      renderFields('sys', state.PROD_SYS);
+      renderFields('seg', state.PROD_SEG);
+      renderFields('mc', state.PROD_MC);
+      renderFields('com', state.PROD_COM);
+      renderFields('wdc', state.PROD_WDC);
+    }
+  } catch (e) { /* silencieux : un poll raté ne doit pas spammer la console */ }
+  setTimeout(poll, 300);
+}
+poll();
+
+async function inject(cmd, fields, statusEl) {
+  statusEl.textContent = 'envoi…';
+  statusEl.className = 'inject-status';
+  try {
+    const res = await fetch('/api/bridge/inject', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ns: 'PROD', cmd, fields }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    statusEl.textContent = `${cmd} envoyé`;
+    statusEl.className = 'inject-status ok';
+  } catch (e) {
+    statusEl.textContent = `erreur: ${e.message}`;
+    statusEl.className = 'inject-status error';
+  }
+}
+
+document.getElementById('codeForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  inject('CODE', {
+    component: document.getElementById('code_component').value,
+    code: document.getElementById('code_code').value,
+    action: 'raise',
+  }, document.getElementById('codeStatus'));
+});
+document.getElementById('codeClearBtn').addEventListener('click', () => {
+  inject('CODE', {
+    component: document.getElementById('code_component').value,
+    code: document.getElementById('code_code').value,
+    action: 'clear',
+  }, document.getElementById('codeStatus'));
+});
+document.getElementById('healthForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  inject('HEALTH', {
+    component: document.getElementById('health_component').value,
+    health: document.getElementById('health_value').value,
+  }, document.getElementById('healthStatus'));
+});
+</script>
+</body>
+</html>

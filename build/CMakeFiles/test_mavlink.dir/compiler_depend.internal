@@ -993,12 +993,9 @@ test_mavlink
  /usr/lib/aarch64-linux-gnu/libm.so
  /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o
  /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o
- /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so
- /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o
  /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a
  /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so
  /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so
- /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so
  /home/jules/droneMk2/build/CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o
  /home/jules/droneMk2/build/libdrone_lib.a
 

@@ -9,6 +9,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ─── Options de build ───────────────────────────────────────────────────────
 option(ENABLE_SANITIZERS "Activer ASan + UBSan (Debug uniquement)" ON)
 option(ENABLE_CLANG_TIDY  "Activer clang-tidy à la compilation"    OFF)
+# TYPES::Clock devient SimClock au lieu de std::chrono::steady_clock (cf.
+# include/drone/core/SimClock.hpp, INTEGRATION_TEST.md §8.2) — global et pas
+# par cible : un seul choix pour tout le binaire, jamais de mélange de
+# politiques d'horloge entre traductions units d'un même process.
+option(DRONE_USE_SIM_CLOCK "Utiliser SimClock (horloge simulée, SITL) au lieu de std::chrono::steady_clock" OFF)
+if(DRONE_USE_SIM_CLOCK)
+    add_compile_definitions(DRONE_USE_SIM_CLOCK)
+    message(STATUS "✓ DRONE_USE_SIM_CLOCK activé — TYPES::Clock = SimClock")
+endif()
+
+# Bascule main.cpp vers des drivers UDP factices (GPS/lidar/MAVLink) pour
+# SensorFusion/MavlinkInterface, à la place du vrai matériel I2C/UART — cf.
+# INTEGRATION_TEST.md §3.1 ("aucune modification du code de prod pour les
+# besoins du test" : ceci est un choix de build, pas un changement de
+# comportement du binaire de prod par défaut).
+option(DRONE_USE_SITL_DRIVERS "Utiliser des drivers UDP factices (GPS/lidar/MAVLink) au lieu du vrai matériel I2C/UART" OFF)
+if(DRONE_USE_SITL_DRIVERS)
+    add_compile_definitions(DRONE_USE_SITL_DRIVERS)
+    message(STATUS "✓ DRONE_USE_SITL_DRIVERS activé — drivers UDP factices (SITL)")
+endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
     add_compile_options(-mcpu=cortex-a76)
@@ -134,11 +154,14 @@ add_library(drone_lib STATIC
     src/SystemMonitoring/SystemMonitoring.cpp
     src/SystemMonitoring/UdpTelemetryDriver.cpp
     src/SystemMonitoring/UdpVideoDriver.cpp
+    src/SystemMonitoring/LinuxThermalZoneDriver.cpp
     # src/Watchdog/GlobalWatchdog.cpp
 
     src/Drivers/NEO-M8N.cpp
     src/Drivers/LIS3MDL.cpp
     src/Drivers/LD06.cpp
+    src/Drivers/UdpGpsDriver.cpp
+    src/Drivers/UdpLidarDriver.cpp
 )
 target_link_libraries     (drone_lib PUBLIC drone_core mavlink_c_library)
 target_include_directories(drone_lib PUBLIC include)
@@ -220,6 +243,10 @@ if(BUILD_ITESTS)
     add_executable(udp_bridge src/IntegrationTests/UDP_bridge.cpp)
     target_link_libraries(udp_bridge PRIVATE drone_lib)
     add_dependencies(udp_bridge generate_codes generate_telemetry generate_missionplan)
+
+    add_executable(sysmon_sitl src/IntegrationTests/SYSMON_SITL.cpp)
+    target_link_libraries(sysmon_sitl PRIVATE drone_lib)
+    add_dependencies(sysmon_sitl generate_codes generate_telemetry)
 endif()
 
 # ─── Cross-compilation ARM64 Pi5 ─────────────────────────────────────────────

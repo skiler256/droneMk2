@@ -1,683 +1,283 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet data-dc-atomics>
+<title>GCS · Drone autonome</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.150.1/three.min.js"></script>
-<style>
-  body{margin:0;background:#05080a;overflow:hidden}
-  *{box-sizing:border-box}
-  a{color:#4fd8ea;text-decoration:none}
-  a:hover{color:#8ce9f5}
-  @keyframes gcsSweepSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-  @keyframes gcsPulse{0%,100%{opacity:1}50%{opacity:.3}}
-  ::-webkit-scrollbar{width:5px;height:5px}
-  ::-webkit-scrollbar-thumb{background:rgba(79,216,234,.25);border-radius:3px}
-  ::-webkit-scrollbar-track{background:transparent}
-</style>
-</helmet>
-<div style="width:100vw;height:100vh;background:#05080a;overflow:hidden;position:relative;">
-<div style="position:absolute;left:0;top:0;width:1920px;height:1080px;transform:{{ stageTransform }};transform-origin:0 0;background:#05080a;color:#e6f1f4;font-family:'Rajdhani',sans-serif;display:grid;grid-template-columns:390px 1fr 446px;gap:16px;padding:16px;">
+<link rel="stylesheet" href="./css/gcs.css">
+</head>
 
-  <div style="display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden;">
+<body>
 
-    <div style="background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:12px 13px;display:flex;flex-direction:column;gap:9px;flex:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">GNSS / Satellites</div>
-        <div style="font:700 10.8px 'JetBrains Mono';color:#35d67c;border:1px solid rgba(53,214,124,.4);border-radius:2px;padding:2px 5px;">RTK FIX</div>
-      </div>
-      <div style="display:flex;gap:16px;">
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">SV Used</div><div style="font:700 19.2px 'JetBrains Mono';color:#eef4f6;">{{ satCount }}</div></div>
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">HDOP</div><div style="font:700 19.2px 'JetBrains Mono';color:#eef4f6;">{{ hdop }}</div></div>
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">VDOP</div><div style="font:700 19.2px 'JetBrains Mono';color:#eef4f6;">{{ vdop }}</div></div>
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:2px;height:30px;">
-        <sc-for list="{{ satBars }}" as="b" hint-placeholder-count="14">
-          <div style="width:100%;border-radius:1px;height:{{ b.h }}%;background:{{ b.c }};"></div>
-        </sc-for>
-      </div>
-      <div style="display:flex;justify-content:space-between;font:500 12px 'JetBrains Mono';color:rgba(230,241,244,.5);">
-        <span>{{ lat }}</span><span>{{ lon }}</span><span>{{ gpsAlt }} m</span>
-      </div>
-    </div>
+<!--
+  Toute valeur dynamique porte un attribut data-bind="<nom>".
+  Toute liste a longueur variable porte data-list="<nom>" sur son conteneur ;
+  les elements sont crees une fois au demarrage par render.js (pool fixe,
+  aucune allocation DOM dans la boucle) puis simplement mis a jour / masques.
+  Aucun style inline ici : tout est dans css/gcs.css.
+-->
 
-    <div style="background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:12px 13px 10px;display:flex;flex-direction:column;gap:8px;flex:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">Lidar &middot; Body Frame</div>
-        <div style="font:700 10.8px 'JetBrains Mono';color:rgba(230,241,244,.5);">FOV 200&deg; &middot; {{ lidarPointCount }} RET</div>
+<div class="gcs-viewport">
+<div class="gcs-stage" data-bind="stage">
+
+  <!-- ══════════════ COLONNE GAUCHE ══════════════ -->
+  <div class="col col--left">
+
+    <!-- GNSS -->
+    <section class="panel" data-bind="panelGnss">
+      <header class="panel__head">
+        <div class="t-title">GNSS / Satellites</div>
+        <div class="t-badge t-badge--boxed" data-bind="gnssFixLabel">NO FIX</div>
+      </header>
+      <div class="gnss__figures">
+        <div><div class="t-label">SV Used</div><div class="t-num-md" data-bind="satCount">--</div></div>
+        <div><div class="t-label">HDOP</div><div class="t-num-md" data-bind="hdop">--</div></div>
+        <div><div class="t-label">VDOP</div><div class="t-num-md" data-bind="vdop">--</div></div>
       </div>
-      <div style="position:relative;width:100%;height:224px;background:radial-gradient(circle at 50% 82%,#081018 0%,#03060a 78%);border-radius:3px;overflow:hidden;">
-        <svg viewBox="0 0 100 100" style="position:absolute;left:50%;top:82%;width:260px;height:260px;margin-left:-130px;margin-top:-130px;">
+      <div class="gnss__bars" data-list="satBars"></div>
+      <div class="gnss__fix">
+        <span data-bind="lat">--</span><span data-bind="lon">--</span><span data-bind="gpsAlt">-- m</span>
+      </div>
+    </section>
+
+    <!-- Lidar -->
+    <section class="panel" data-bind="panelLidar">
+      <header class="panel__head">
+        <div class="t-title">Lidar &middot; Body Frame</div>
+        <div class="t-badge" data-bind="lidarCount">FOV 200° · 0 RET</div>
+      </header>
+      <div class="lidar__scope">
+        <svg viewBox="0 0 100 100" class="lidar__grid">
           <path d="M50,50 L5.68,57.81 A45,45 0 1 1 94.32,57.81 Z" fill="rgba(79,216,234,.045)" stroke="rgba(79,216,234,.28)" stroke-width="0.5"/>
           <path d="M35.23,52.6 A15,15 0 0 1 64.77,52.6" fill="none" stroke="rgba(79,216,234,.18)" stroke-width="0.4" stroke-dasharray="1.4 1.6"/>
           <path d="M20.45,55.21 A30,30 0 0 1 79.55,55.21" fill="none" stroke="rgba(79,216,234,.18)" stroke-width="0.4" stroke-dasharray="1.4 1.6"/>
           <line x1="50" y1="50" x2="50" y2="5" stroke="rgba(79,216,234,.16)" stroke-width="0.4" stroke-dasharray="1.2 1.6"/>
         </svg>
-        <div style="position:absolute;left:calc(50% + 6px);top:26px;font:600 9.6px 'JetBrains Mono';color:rgba(79,216,234,.45);">45 m</div>
-        <div style="position:absolute;left:calc(50% + 6px);top:70px;font:600 9.6px 'JetBrains Mono';color:rgba(79,216,234,.45);">30 m</div>
-        <div style="position:absolute;left:calc(50% + 6px);top:114px;font:600 9.6px 'JetBrains Mono';color:rgba(79,216,234,.45);">15 m</div>
 
-        <div style="position:absolute;left:50%;top:82%;width:260px;height:260px;margin-left:-130px;margin-top:-130px;">
-          <sc-for list="{{ lidarPoints }}" as="pt" hint-placeholder-count="70">
-            <div style="position:absolute;left:{{ pt.x }}%;top:{{ pt.y }}%;width:{{ pt.r }}px;height:{{ pt.r }}px;border-radius:50%;background:{{ pt.c }};"></div>
-          </sc-for>
-        </div>
+        <div class="lidar__ring-label" style="top:26px"  data-bind="lidarRing3">45 m</div>
+        <div class="lidar__ring-label" style="top:70px"  data-bind="lidarRing2">30 m</div>
+        <div class="lidar__ring-label" style="top:114px" data-bind="lidarRing1">15 m</div>
 
-        <svg width="17" height="17" style="position:absolute;left:50%;top:82%;margin-left:-8.5px;margin-top:-8.5px;">
+        <div class="lidar__points" data-list="lidarPoints"></div>
+
+        <svg width="17" height="17" class="lidar__ship">
           <path d="M8.5,1 L15,15 L8.5,11 L2,15 Z" fill="#eef4f6"/>
         </svg>
-        <div style="position:absolute;left:8px;bottom:7px;font:600 9.6px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);">BODY FRAME &middot; NOSE UP</div>
-        <div style="position:absolute;right:8px;bottom:7px;font:600 10.8px 'JetBrains Mono';color:{{ lidarMinColor }};">MIN {{ lidarMinDist }} m</div>
-      </div>
-    </div>
 
-    <div style="background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:12px 13px;display:flex;flex-direction:column;gap:9px;flex:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">Battery</div>
-        <div style="font:700 10.8px 'JetBrains Mono';color:{{ batteryColor }};">{{ batteryTimeRemaining }} LEFT</div>
+        <div class="lidar__caption">BODY FRAME &middot; NOSE UP</div>
+        <div class="lidar__min" data-bind="lidarMin">MIN -- m</div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="display:flex;align-items:center;">
-          <div style="width:58px;height:28px;border:2px solid rgba(230,241,244,.45);border-radius:2px;padding:2px;">
-            <div style="height:100%;border-radius:1px;width:{{ batteryPct }}%;background:{{ batteryColor }};"></div>
-          </div>
-          <div style="width:3px;height:9px;background:rgba(230,241,244,.45);border-radius:0 2px 2px 0;"></div>
-        </div>
-        <div style="font:700 28.8px 'JetBrains Mono';color:{{ batteryColor }};">{{ batteryPct }}<span style="font-size:15.6px;">%</span></div>
-        <div style="flex:1;display:flex;gap:2px;height:22px;">
-          <sc-for list="{{ cellBars }}" as="c" hint-placeholder-count="6">
-            <div style="flex:1;border:1px solid rgba(255,255,255,.12);border-radius:1px;position:relative;overflow:hidden;">
-              <div style="position:absolute;bottom:0;left:0;right:0;height:{{ c.h }}%;background:{{ c.c }};"></div>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">Voltage</div><div style="font:600 15px 'JetBrains Mono';color:#eef4f6;">{{ batteryVoltage }} V</div></div>
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">Current</div><div style="font:600 15px 'JetBrains Mono';color:#eef4f6;">{{ batteryCurrent }} A</div></div>
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">Consumed</div><div style="font:600 15px 'JetBrains Mono';color:#eef4f6;">{{ batteryUsed }}</div></div>
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">RTL Need</div><div style="font:600 15px 'JetBrains Mono';color:#35d67c;">{{ rtlNeed }} %</div></div>
-        <div><div style="font:600 10.2px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);text-transform:uppercase;">Cycles</div><div style="font:600 15px 'JetBrains Mono';color:#eef4f6;">148</div></div>
-      </div>
-    </div>
+    </section>
 
-    <div style="background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:12px 13px;display:flex;flex-direction:column;gap:9px;flex:1;min-height:0;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">Actions</div>
-        <div style="font:700 10.8px 'JetBrains Mono';color:{{ armColor }};">{{ armLabel }}</div>
+    <!-- Batterie -->
+    <section class="panel" data-bind="panelBattery">
+      <header class="panel__head">
+        <div class="t-title">Battery</div>
+        <div class="t-badge" data-bind="battRemaining">-- MIN LEFT</div>
+      </header>
+      <div class="batt__row">
+        <div class="batt__shell">
+          <div class="batt__case"><div class="batt__fill" data-bind="battFill"></div></div>
+          <div class="batt__nub"></div>
+        </div>
+        <div class="t-num-xl" data-bind="battPctWrap"><span data-bind="battPct">--</span><span class="batt__pct-unit">%</span></div>
+        <div class="batt__cells" data-list="cellBars"></div>
       </div>
-      <div onClick="{{ toggleArm }}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:3px;cursor:pointer;border:1px solid {{ armBtnBorder }};background:{{ armBtnBg }};" style-hover="filter:brightness(1.25)">
-        <span style="font:700 15.6px 'Rajdhani';letter-spacing:1.6px;color:{{ armColor }};">{{ armBtnLabel }}</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v9M7 6a7 7 0 1 0 10 0" stroke="{{ armColor }}" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <div class="batt__grid">
+        <div><div class="t-label">Voltage</div><div class="t-num-sm" data-bind="battVoltage">-- V</div></div>
+        <div><div class="t-label">Current</div><div class="t-num-sm" data-bind="battCurrent">-- A</div></div>
+        <div><div class="t-label">Consumed</div><div class="t-num-sm" data-bind="battUsed">-- mAh</div></div>
+        <div><div class="t-label">RTL Need</div><div class="t-num-sm" data-bind="rtlNeed">-- %</div></div>
+        <div><div class="t-label">Cycles</div><div class="t-num-sm" data-bind="battCycles">--</div></div>
+        <div><div class="t-label">Temp</div><div class="t-num-sm" data-bind="battTemp">-- °C</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
-        <div onClick="{{ loadPlan }}" style="padding:8px 6px;text-align:center;border-radius:3px;border:1px solid rgba(79,216,234,.32);background:rgba(79,216,234,.07);font:700 12px 'Rajdhani';letter-spacing:1px;color:#4fd8ea;cursor:pointer;" style-hover="background:rgba(79,216,234,.16)">LOAD FLIGHT PLAN</div>
-        <div onClick="{{ startMission }}" style="padding:8px 6px;text-align:center;border-radius:3px;border:1px solid rgba(79,216,234,.32);background:rgba(79,216,234,.07);font:700 12px 'Rajdhani';letter-spacing:1px;color:#4fd8ea;cursor:pointer;" style-hover="background:rgba(79,216,234,.16)">START MISSION</div>
-        <div onClick="{{ pauseMission }}" style="padding:8px 6px;text-align:center;border-radius:3px;border:1px solid rgba(255,180,67,.32);background:rgba(255,180,67,.07);font:700 12px 'Rajdhani';letter-spacing:1px;color:#ffb443;cursor:pointer;" style-hover="background:rgba(255,180,67,.16)">HOLD / LOITER</div>
-        <div onClick="{{ rtl }}" style="padding:8px 6px;text-align:center;border-radius:3px;border:1px solid rgba(255,180,67,.32);background:rgba(255,180,67,.07);font:700 12px 'Rajdhani';letter-spacing:1px;color:#ffb443;cursor:pointer;" style-hover="background:rgba(255,180,67,.16)">RETURN TO LAUNCH</div>
+    </section>
+
+    <!-- Actions -->
+    <section class="panel panel--grow">
+      <header class="panel__head">
+        <div class="t-title">Actions</div>
+        <div class="t-badge" data-bind="armLabel">DISARMED</div>
+      </header>
+
+      <div class="act__arm" data-bind="armBtn" data-cmd="ARM_TOGGLE">
+        <span class="act__arm-label" data-bind="armBtnLabel">ARM MOTORS</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3v9M7 6a7 7 0 1 0 10 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
       </div>
-      <div style="margin-top:auto;font:500 11.4px 'JetBrains Mono';color:rgba(230,241,244,.35);letter-spacing:.3px;">PLAN &middot; {{ planName }} &middot; {{ planWpCount }} WP</div>
-    </div>
+
+      <div class="act__grid">
+        <div class="act__btn"              data-cmd="LOAD_PLAN">LOAD FLIGHT PLAN</div>
+        <div class="act__btn"              data-cmd="START_MISSION">START MISSION</div>
+        <div class="act__btn act__btn--warn" data-cmd="HOLD">HOLD / LOITER</div>
+        <div class="act__btn act__btn--warn" data-cmd="RTL">RETURN TO LAUNCH</div>
+      </div>
+
+      <div class="act__plan" data-bind="planFooter">PLAN &middot; -- &middot; 0 WP</div>
+    </section>
 
   </div>
 
-  <div style="display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0;">
+  <!-- ══════════════ COLONNE CENTRALE ══════════════ -->
+  <div class="col col--mid">
 
-    <div style="flex:none;background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
-      <div style="flex:none;padding-right:12px;border-right:1px solid rgba(255,255,255,.08);">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">Components</div>
-        <div style="font:700 11.4px 'JetBrains Mono';color:#35d67c;">5 / 5 OK</div>
+    <!-- Bandeau composants -->
+    <div class="comp">
+      <div class="comp__legend">
+        <div class="t-title">Components</div>
+        <div class="t-badge" data-bind="compSummary">0 / 0 OK</div>
       </div>
-      <div style="flex:1;min-width:0;display:flex;gap:8px;">
-        <sc-for list="{{ componentCells }}" as="c" hint-placeholder-count="5">
-          <div style="flex:1;min-width:0;border:1px solid {{ c.border }};border-left:3px solid {{ c.color }};border-radius:2px;padding:6px 9px;background:{{ c.bg }};">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-              <div style="font:700 12px 'Rajdhani';letter-spacing:.9px;color:#eef4f6;white-space:nowrap;">{{ c.name }}</div>
-              <div style="font:700 11.4px 'JetBrains Mono';color:{{ c.color }};white-space:nowrap;">{{ c.hz }}</div>
-            </div>
-            <div style="font:500 10.2px 'JetBrains Mono';color:rgba(230,241,244,.4);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.note }}</div>
-          </div>
-        </sc-for>
-      </div>
+      <div class="comp__cells" data-list="componentCells"></div>
     </div>
 
-    <div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;">
-      <div style="display:flex;gap:2px;background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:3px;">
-        <div onClick="{{ goCenter3d }}" style="padding:7px 15px;border-radius:2px;font:700 12.6px 'Rajdhani';letter-spacing:1.2px;cursor:pointer;background:{{ tab3dBg }};color:{{ tab3dColor }};">3D VIEWPORT</div>
-        <div onClick="{{ goCenterCam }}" style="padding:7px 15px;border-radius:2px;font:700 12.6px 'Rajdhani';letter-spacing:1.2px;cursor:pointer;background:{{ tabCamBg }};color:{{ tabCamColor }};">CAMERA HUD</div>
+    <!-- Onglets -->
+    <div class="tabs-row">
+      <div class="tabs">
+        <div class="tab" data-tab="3d">3D VIEWPORT</div>
+        <div class="tab" data-tab="cam">CAMERA HUD</div>
       </div>
-      <div style="font:600 11.4px 'JetBrains Mono';color:rgba(230,241,244,.42);letter-spacing:.4px;">{{ feedLabel }}</div>
+      <div class="feed-label" data-bind="feedLabel">&nbsp;</div>
     </div>
 
-    <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;">
-      <div style="position:relative;width:100%;aspect-ratio:4 / 3;max-height:100%;background:#03050a;border:1px solid rgba(255,255,255,.09);border-radius:4px;overflow:hidden;">
+    <!-- Ecran central -->
+    <div class="stagearea">
+      <div class="screen">
 
-      <sc-if value="{{ isCenter3d }}" hint-placeholder-val="{{ true }}">
-        <div style="position:absolute;inset:0;">
-          <x-import component-from-global-scope="flight-viewport-3d" from="./viewport3d.js?v=4" frac="{{ pathFrac }}" cam-mode="{{ camMode }}" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
+        <!-- Vue 3D -->
+        <div class="layer" data-bind="view3d">
+          <flight-viewport-3d data-bind="viewport3d" frac="0" cam-mode="chase"></flight-viewport-3d>
 
-          <div style="position:absolute;top:10px;right:10px;z-index:6;display:flex;gap:2px;background:rgba(5,8,10,.72);border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:3px;">
-            <div onClick="{{ setCamChase }}" style="padding:5px 10px;border-radius:2px;font:700 11.4px 'Rajdhani';letter-spacing:1px;cursor:pointer;background:{{ camChaseBg }};color:{{ camChaseColor }};">CHASE</div>
-            <div onClick="{{ setCamOrbit }}" style="padding:5px 10px;border-radius:2px;font:700 11.4px 'Rajdhani';letter-spacing:1px;cursor:pointer;background:{{ camOrbitBg }};color:{{ camOrbitColor }};">ORBIT</div>
-            <div onClick="{{ setCamTop }}" style="padding:5px 10px;border-radius:2px;font:700 11.4px 'Rajdhani';letter-spacing:1px;cursor:pointer;background:{{ camTopBg }};color:{{ camTopColor }};">TOP</div>
+          <div class="cam-modes">
+            <div class="cam-mode" data-cam="chase">CHASE</div>
+            <div class="cam-mode" data-cam="orbit">ORBIT</div>
+            <div class="cam-mode" data-cam="top">TOP</div>
           </div>
 
-          <div style="position:absolute;top:12px;left:12px;z-index:6;background:rgba(5,8,10,.72);border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:8px 12px;">
-            <div style="font:600 10.2px 'Rajdhani';letter-spacing:1.4px;color:rgba(230,241,244,.45);text-transform:uppercase;">Flight plan</div>
-            <div style="font:700 13.8px 'JetBrains Mono';color:#4fd8ea;margin-top:2px;">{{ planName }} &middot; LEG {{ legLabel }}</div>
-            <div style="font:500 12px 'JetBrains Mono';color:rgba(230,241,244,.55);margin-top:2px;">NEXT WP{{ nextWpIndex }} &middot; {{ nextWpDist }} m &middot; ETA {{ nextWpEta }}</div>
+          <div class="plan-card">
+            <div class="t-label-s">Flight plan</div>
+            <div class="plan-card__name" data-bind="planCardName">-- &middot; LEG --</div>
+            <div class="plan-card__next" data-bind="planCardNext">NEXT -- &middot; -- m &middot; ETA --</div>
           </div>
 
-          <div style="position:absolute;bottom:0;left:0;right:0;z-index:6;background:rgba(5,8,10,.78);border-top:1px solid rgba(255,255,255,.1);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <sc-for list="{{ ribbon }}" as="r" hint-placeholder-count="7">
-              <div>
-                <div style="font:600 10.2px 'Rajdhani';letter-spacing:1.4px;color:rgba(230,241,244,.4);text-transform:uppercase;white-space:nowrap;">{{ r.label }}</div>
-                <div style="font:700 20.4px 'JetBrains Mono';color:{{ r.color }};white-space:nowrap;">{{ r.value }} <span style="font-size:12px;color:rgba(230,241,244,.4);">{{ r.unit }}</span></div>
-              </div>
-            </sc-for>
-          </div>
+          <div class="ribbon" data-list="ribbon"></div>
         </div>
-      </sc-if>
 
-      <sc-if value="{{ isCenterCam }}" hint-placeholder-val="{{ false }}">
-        <div style="position:absolute;inset:0;overflow:hidden;">
-          <div style="position:absolute;inset:-50%;transform:rotate({{ camRoll }}deg);transform-origin:50% 50%;">
-            <div style="position:absolute;left:0;right:0;top:50%;margin-top:{{ horizonDy }}px;">
-              <div style="position:absolute;left:0;right:0;bottom:0;height:2400px;background:linear-gradient(180deg,#0b3350 0%,#1f5c86 62%,#4e88ac 100%);"></div>
-              <div style="position:absolute;left:0;right:0;top:0;height:2400px;background:linear-gradient(180deg,#31502c 0%,#1b2f1c 45%,#0c1710 100%);"></div>
-              <div style="position:absolute;left:0;right:0;top:-1px;height:2px;background:rgba(238,244,246,.85);"></div>
+        <!-- HUD camera -->
+        <div class="hud hidden" data-bind="viewCam">
+          <div class="hud__world" data-bind="hudWorld">
+            <div class="hud__horizon" data-bind="hudHorizon">
+              <div class="hud__sky"></div>
+              <div class="hud__ground"></div>
+              <div class="hud__horizon-line"></div>
             </div>
-            <sc-for list="{{ pitchLadder }}" as="p" hint-placeholder-count="6">
-              <div style="position:absolute;left:50%;top:50%;margin-top:{{ p.dy }}px;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;">
-                <span style="font:600 13.2px 'JetBrains Mono';color:rgba(238,244,246,.85);width:18px;text-align:right;">{{ p.lab }}</span>
-                <div style="width:{{ p.w }}px;height:1.5px;background:rgba(238,244,246,.75);"></div>
-                <div style="width:34px;"></div>
-                <div style="width:{{ p.w }}px;height:1.5px;background:rgba(238,244,246,.75);"></div>
-                <span style="font:600 13.2px 'JetBrains Mono';color:rgba(238,244,246,.85);width:18px;">{{ p.lab }}</span>
-              </div>
-            </sc-for>
+            <div data-list="pitchLadder"></div>
           </div>
-          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, transparent 45%, rgba(0,0,0,.4) 100%);pointer-events:none;"></div>
+          <div class="hud__vignette"></div>
 
-          <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;display:flex;border:1px solid rgba(255,255,255,.18);border-radius:3px;background:rgba(4,7,9,.68);overflow:hidden;">
-            <sc-for list="{{ fmaColumns }}" as="col" hint-placeholder-count="3">
-              <div style="width:184px;padding:6px 9px;border-right:1px solid rgba(255,255,255,.14);text-align:center;">
-                <div style="font:600 9.6px 'Rajdhani';letter-spacing:1.4px;color:rgba(230,241,244,.4);text-transform:uppercase;">{{ col.title }}</div>
-                <div style="font:700 15.6px 'JetBrains Mono';color:#35d67c;letter-spacing:.5px;margin-top:1px;">{{ col.engaged }}</div>
-                <div style="font:700 12.6px 'JetBrains Mono';color:#7fc8ff;letter-spacing:.5px;">{{ col.armed }}</div>
-              </div>
-            </sc-for>
-          </div>
+          <div class="fma" data-list="fmaColumns"></div>
 
-          <svg width="52" height="22" style="position:absolute;left:50%;top:50%;margin-left:-26px;margin-top:-11px;z-index:5;">
+          <svg width="52" height="22" class="hud__boresight">
             <path d="M2,11 L20,11 L26,18 L32,11 L50,11" stroke="#ffdd55" stroke-width="2.2" fill="none"/>
             <circle cx="26" cy="11" r="1.7" fill="#ffdd55"/>
           </svg>
 
-          <div style="position:absolute;left:22px;top:50%;transform:translateY(-50%);width:80px;height:252px;background:rgba(4,7,9,.55);border:1px solid rgba(255,255,255,.15);border-radius:2px;overflow:hidden;">
-            <sc-for list="{{ speedTicks }}" as="tk" hint-placeholder-count="9">
-              <div style="position:absolute;right:8px;top:{{ tk.top }}px;transform:translateY(-50%);font:600 12.6px 'JetBrains Mono';color:rgba(230,241,244,.6);">{{ tk.v }}</div>
-            </sc-for>
-            <div style="position:absolute;left:0;right:0;top:50%;height:30px;margin-top:-15px;background:#08131a;border-top:1px solid #4fd8ea;border-bottom:1px solid #4fd8ea;display:flex;align-items:center;justify-content:center;">
-              <div style="font:700 18px 'JetBrains Mono';color:#eef4f6;">{{ airspeedStr }}</div>
-            </div>
-            <div style="position:absolute;bottom:3px;left:0;right:0;text-align:center;font:600 9.6px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);">GS M/S</div>
+          <div class="tape tape--speed">
+            <div data-list="speedTicks"></div>
+            <div class="tape__window"><div class="tape__readout" data-bind="airspeedStr">--</div></div>
+            <div class="tape__unit">GS M/S</div>
           </div>
 
-          <div style="position:absolute;right:66px;top:50%;transform:translateY(-50%);width:92px;height:252px;background:rgba(4,7,9,.55);border:1px solid rgba(255,255,255,.15);border-radius:2px;overflow:hidden;">
-            <sc-for list="{{ altTicks }}" as="tk" hint-placeholder-count="9">
-              <div style="position:absolute;left:8px;top:{{ tk.top }}px;transform:translateY(-50%);font:600 12.6px 'JetBrains Mono';color:rgba(230,241,244,.6);">{{ tk.v }}</div>
-            </sc-for>
-            <div style="position:absolute;left:0;right:0;top:50%;height:30px;margin-top:-15px;background:#08131a;border-top:1px solid #4fd8ea;border-bottom:1px solid #4fd8ea;display:flex;align-items:center;justify-content:center;">
-              <div style="font:700 18px 'JetBrains Mono';color:#eef4f6;">{{ altitudeStr }}</div>
-            </div>
-            <div style="position:absolute;bottom:3px;left:0;right:0;text-align:center;font:600 9.6px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);">AGL M</div>
+          <div class="tape tape--alt">
+            <div data-list="altTicks"></div>
+            <div class="tape__window"><div class="tape__readout" data-bind="altitudeStr">--</div></div>
+            <div class="tape__unit">AGL M</div>
           </div>
 
-          <div style="position:absolute;right:22px;top:50%;transform:translateY(-50%);width:18px;height:170px;background:rgba(4,7,9,.55);border:1px solid rgba(255,255,255,.15);border-radius:2px;">
-            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,.25);"></div>
-            <div style="position:absolute;left:1px;right:1px;top:{{ vsMarkerTop }}%;height:2px;background:#4fd8ea;"></div>
-            <div style="position:absolute;left:50%;top:-20px;transform:translateX(-50%);padding:1px 4px;border-radius:2px;background:#08131a;font:600 11.4px 'JetBrains Mono';color:#4fd8ea;white-space:nowrap;">{{ vspeedStr }}</div>
-            <div style="position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);font:600 9.6px 'Rajdhani';letter-spacing:1px;color:rgba(230,241,244,.4);white-space:nowrap;">VS</div>
+          <div class="vsi">
+            <div class="vsi__zero"></div>
+            <div class="vsi__marker" data-bind="vsMarker"></div>
+            <div class="vsi__value"  data-bind="vspeedStr">+0.0</div>
+            <div class="vsi__unit">VS</div>
           </div>
 
-          <div style="position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:340px;height:46px;background:rgba(4,7,9,.55);border:1px solid rgba(255,255,255,.15);border-radius:2px;overflow:hidden;">
-            <sc-for list="{{ headingTicks }}" as="tk" hint-placeholder-count="11">
-              <div style="position:absolute;top:7px;left:{{ tk.left }}px;transform:translateX(-50%);font:600 12.6px 'JetBrains Mono';color:rgba(230,241,244,.6);">{{ tk.v }}</div>
-            </sc-for>
-            <div style="position:absolute;top:0;bottom:0;left:50%;width:38px;margin-left:-19px;background:#08131a;border-left:1px solid #4fd8ea;border-right:1px solid #4fd8ea;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;">
-              <div style="font:700 14.4px 'JetBrains Mono';color:#eef4f6;">{{ headingStr }}</div>
-            </div>
-            <div style="position:absolute;left:6px;bottom:3px;font:600 9.6px 'Rajdhani';letter-spacing:1.2px;color:rgba(230,241,244,.4);">HDG</div>
+          <div class="hsi">
+            <div data-list="headingTicks"></div>
+            <div class="hsi__window"><div class="hsi__readout" data-bind="headingStr">---</div></div>
+            <div class="hsi__unit">HDG</div>
           </div>
 
-          <div style="position:absolute;left:22px;bottom:12px;font:600 12px 'JetBrains Mono';color:rgba(230,241,244,.6);">CAM {{ camGimbal }} &middot; ZOOM {{ camZoom }}x</div>
-          <div style="position:absolute;right:22px;bottom:12px;text-align:right;">
-            <div style="font:600 12px 'JetBrains Mono';color:rgba(230,241,244,.6);">WP{{ nextWpIndex }} &middot; {{ nextWpDist }} m &middot; {{ nextWpEta }}</div>
-            <div style="font:600 12px 'JetBrains Mono';color:rgba(230,241,244,.45);">HOME {{ distHome }} m</div>
+          <div class="hud__cam" data-bind="camStatus">CAM -- &middot; ZOOM --x</div>
+          <div class="hud__nav">
+            <div class="hud__nav-wp"   data-bind="hudNavWp">WP-- &middot; -- m &middot; --</div>
+            <div class="hud__nav-home" data-bind="hudNavHome">HOME -- m</div>
           </div>
         </div>
-      </sc-if>
 
       </div>
     </div>
 
-    <div style="flex:none;background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:10px 14px;display:flex;align-items:stretch;gap:12px;">
-      <div style="flex:none;display:flex;flex-direction:column;justify-content:center;padding-right:12px;border-right:1px solid rgba(255,255,255,.08);">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">Radio</div>
-        <div style="font:700 11.4px 'JetBrains Mono';color:rgba(230,241,244,.5);">MAVLINK 2</div>
+    <!-- Radio -->
+    <div class="radio">
+      <div class="radio__legend">
+        <div class="t-title">Radio</div>
+        <div class="t-badge" data-bind="radioProto">MAVLINK 2</div>
       </div>
-      <sc-for list="{{ radioLinks }}" as="lk" hint-placeholder-count="2">
-        <div style="flex:1;min-width:0;border:1px solid rgba(255,255,255,.08);border-radius:3px;padding:8px 11px;background:rgba(255,255,255,.02);display:flex;align-items:center;gap:12px;overflow:hidden;">
-          <div style="flex:none;display:flex;align-items:center;gap:8px;width:172px;">
-            <div style="width:7px;height:7px;border-radius:50%;background:{{ lk.color }};flex:none;"></div>
-            <div>
-              <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.2px;color:#eef4f6;white-space:nowrap;">{{ lk.name }}</div>
-              <div style="font:700 10.8px 'JetBrains Mono';color:{{ lk.color }};">{{ lk.role }}</div>
-            </div>
-          </div>
-          <div style="flex:none;display:flex;align-items:flex-end;gap:2px;height:22px;width:46px;">
-            <sc-for list="{{ lk.bars }}" as="b" hint-placeholder-count="5">
-              <div style="width:100%;border-radius:1px;height:{{ b.h }}%;background:{{ b.c }};"></div>
-            </sc-for>
-          </div>
-          <div style="flex:1;min-width:0;display:grid;grid-template-columns:repeat(5,1fr);gap:7px;">
-            <div><div style="font:600 9.6px 'Rajdhani';letter-spacing:1px;color:rgba(230,241,244,.38);">RSSI</div><div style="font:600 13.2px 'JetBrains Mono';color:#eef4f6;">{{ lk.rssi }}</div></div>
-            <div><div style="font:600 9.6px 'Rajdhani';letter-spacing:1px;color:rgba(230,241,244,.38);">RTT</div><div style="font:600 13.2px 'JetBrains Mono';color:#eef4f6;">{{ lk.rtt }}</div></div>
-            <div><div style="font:600 9.6px 'Rajdhani';letter-spacing:1px;color:rgba(230,241,244,.38);">LOSS</div><div style="font:600 13.2px 'JetBrains Mono';color:{{ lk.lossColor }};">{{ lk.loss }}</div></div>
-            <div><div style="font:600 9.6px 'Rajdhani';letter-spacing:1px;color:rgba(230,241,244,.38);">DOWN</div><div style="font:600 13.2px 'JetBrains Mono';color:#eef4f6;">{{ lk.down }}</div></div>
-            <div><div style="font:600 9.6px 'Rajdhani';letter-spacing:1px;color:rgba(230,241,244,.38);">UP</div><div style="font:600 13.2px 'JetBrains Mono';color:#eef4f6;">{{ lk.up }}</div></div>
-          </div>
-          <div style="flex:none;font:600 10.2px 'JetBrains Mono';color:rgba(230,241,244,.4);white-space:nowrap;">{{ lk.band }}</div>
-        </div>
-      </sc-for>
-    </div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;gap:14px;min-height:0;overflow:hidden;">
-
-    <div style="background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:11px 13px;display:flex;align-items:center;gap:12px;flex:none;">
-      <div>
-        <div style="font:600 10.2px 'Rajdhani';letter-spacing:1.4px;color:rgba(230,241,244,.4);text-transform:uppercase;">CPU Temp</div>
-        <div style="font:700 24px 'JetBrains Mono';color:{{ cpuTempColor }};">{{ cpuTemp }}&deg;C</div>
-      </div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
-        <div style="position:relative;height:7px;border-radius:4px;background:linear-gradient(90deg,#35d67c 0%,#35d67c 52%,#ffb443 74%,#ff5c5c 100%);">
-          <div style="position:absolute;top:-3px;left:{{ cpuTempPct }}%;width:2px;height:13px;background:#eef4f6;"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font:500 11.4px 'JetBrains Mono';color:rgba(230,241,244,.45);">
-          <span>30</span><span>THERMAL LIMIT 85 &deg;C</span><span>90</span>
-        </div>
-      </div>
-    </div>
-
-    <div style="background:rgba(13,20,24,.85);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:12px 13px 10px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;">
-        <div style="font:700 12.6px 'Rajdhani';letter-spacing:1.8px;color:#4fd8ea;text-transform:uppercase;">Event Log</div>
-        <div style="font:700 10.8px 'JetBrains Mono';color:{{ pinnedHeaderColor }};">{{ pinnedHeaderLabel }}</div>
-      </div>
-
-      <sc-if value="{{ hasPinned }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <sc-for list="{{ pinnedEvents }}" as="e" hint-placeholder-count="1">
-            <div style="display:flex;gap:7px;padding:6px 8px;border-radius:2px;border:1px solid {{ e.border }};background:{{ e.bg }};animation:gcsPulse 2.4s ease-in-out infinite;">
-              <div style="font:700 10.8px 'JetBrains Mono';color:{{ e.color }};flex:none;">{{ e.sev }}</div>
-              <div style="flex:1;font:600 12px 'JetBrains Mono';color:#eef4f6;line-height:1.35;">{{ e.msg }}</div>
-            </div>
-          </sc-for>
-        </div>
-      </sc-if>
-
-      <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:2px;padding-right:2px;">
-        <sc-for list="{{ feedEvents }}" as="e" hint-placeholder-count="10">
-          <div style="display:flex;gap:7px;padding:3px 4px;border-left:2px solid {{ e.color }};">
-            <div style="font:500 10.8px 'JetBrains Mono';color:rgba(230,241,244,.32);flex:none;">{{ e.time }}</div>
-            <div style="font:700 10.2px 'JetBrains Mono';color:{{ e.color }};flex:none;width:44px;">{{ e.sev }}</div>
-            <div style="flex:1;font:500 11.4px 'JetBrains Mono';color:rgba(230,241,244,.72);line-height:1.4;">{{ e.msg }}</div>
-          </div>
-        </sc-for>
-      </div>
+      <div class="radio__link" data-bind="radio0"></div>
+      <div class="radio__link" data-bind="radio1"></div>
     </div>
 
   </div>
+
+  <!-- ══════════════ COLONNE DROITE ══════════════ -->
+  <div class="col col--right">
+
+    <!-- Thermique -->
+    <section class="panel" data-bind="panelSys">
+      <div class="therm">
+        <div>
+          <div class="t-label-s">CPU Temp</div>
+          <div class="t-num-lg" data-bind="cpuTemp">--°C</div>
+        </div>
+        <div class="therm__gauge-wrap">
+          <div class="therm__gauge"><div class="therm__cursor" data-bind="cpuCursor"></div></div>
+          <div class="therm__scale">
+            <span>30</span><span data-bind="thermLimit">THERMAL LIMIT 85 °C</span><span>90</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Journal -->
+    <section class="panel panel--grow">
+      <header class="panel__head">
+        <div class="t-title">Event Log</div>
+        <div class="t-badge" data-bind="pinnedHeader">NO ACTIVE FAULT</div>
+      </header>
+
+      <div class="log__pinned" data-list="pinnedEvents"></div>
+      <div class="log__feed"   data-list="feedEvents"></div>
+    </section>
+
+  </div>
+
 </div>
 </div>
 
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1920,&quot;height&quot;:1080},&quot;injectCriticalEvent&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;simSpeed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.25,&quot;max&quot;:3,&quot;step&quot;:0.25,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;}}">
-class Component extends DCLogic {
-  constructor(props) {
-    super(props);
-    this.state = { t: 0, tab: '3d', camMode: 'chase', armed: true, events: [], eventSeq: 0 };
-    this.mountTime = Date.now();
-    this.WP = [
-      { x: 0, z: 0, alt: 60 }, { x: -120, z: 140, alt: 80 }, { x: -260, z: 320, alt: 110 },
-      { x: -40, z: 460, alt: 120 }, { x: 220, z: 420, alt: 110 }, { x: 340, z: 180, alt: 95 },
-      { x: 180, z: -40, alt: 75 }, { x: 0, z: 0, alt: 60 }
-    ];
-    this.cum = [0];
-    for (let i = 1; i < this.WP.length; i++) {
-      const a = this.WP[i - 1], b = this.WP[i];
-      this.cum.push(this.cum[i - 1] + Math.hypot(b.x - a.x, b.z - a.z));
-    }
-    this.total = this.cum[this.cum.length - 1];
-    this.lidar = this.genLidar();
-    this.feedTemplates = [
-      ['INFO', 'MavlinkInterface: heartbeat stream stable, 20 Hz'],
-      ['NOTICE', 'SensorFusion: EKF3 attitude + velocity converged'],
-      ['INFO', 'SysMonitoring: thermal margin 34 \u00b0C, all rails nominal'],
-      ['NOTICE', 'Navigation: waypoint captured, sequencing next leg'],
-      ['INFO', 'MissionControl: plan checksum verified 0x7A31'],
-      ['INFO', 'GNSS: 16 SV tracked, RTK fixed, HDOP 0.7'],
-      ['NOTICE', 'RadioLink: primary 2.4 GHz preferred, secondary standby'],
-      ['INFO', 'Lidar: 1024 returns/scan, closest obstacle clear'],
-      ['INFO', 'BatteryMonitor: cell delta 0.02 V, balanced'],
-      ['NOTICE', 'SensorFusion: barometer / GNSS altitude agreement 0.4 m'],
-      ['CAUTION', 'RadioLink: secondary uplink margin reduced (recovered)'],
-      ['INFO', 'MissionControl: geofence check passed, 0 breaches']
-    ];
-  }
+<!-- three.js : dependance du viewport 3D uniquement.
+     En vol reel (pas d'internet), vendorise ce fichier en local. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.150.1/three.min.js"></script>
 
-  fitStage = () => {
-    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-    this.setState({
-      stageScale: s,
-      stageOx: (window.innerWidth - 1920 * s) / 2,
-      stageOy: (window.innerHeight - 1080 * s) / 2
-    });
-  };
-
-  componentDidMount() {
-    this.fitStage();
-    window.addEventListener('resize', this.fitStage);
-    this._tick = setInterval(() => this.setState(s => ({ t: s.t + 0.1 * (this.props.simSpeed ?? 1) })), 100);
-    this._evt = setInterval(() => this.pushEvent(), 2400);
-    for (let i = 0; i < 9; i++) this.pushEvent(true);
-  }
-  componentWillUnmount() {
-    clearInterval(this._tick); clearInterval(this._evt);
-    window.removeEventListener('resize', this.fitStage);
-  }
-
-  pushEvent() {
-    let idx = Math.floor(Math.random() * this.feedTemplates.length);
-    if (idx === this._lastIdx) idx = (idx + 3) % this.feedTemplates.length;
-    if (this.feedTemplates[idx][0] === 'CAUTION' && Math.random() < 0.72) idx = (idx + 5) % this.feedTemplates.length;
-    this._lastIdx = idx;
-    const tpl = this.feedTemplates[idx];
-    const d = new Date();
-    const time = d.toTimeString().substr(0, 8);
-    this.setState(s => ({
-      eventSeq: s.eventSeq + 1,
-      events: [{ id: s.eventSeq + 1, sev: tpl[0], msg: tpl[1], time }].concat(s.events).slice(0, 40)
-    }));
-  }
-
-  // Obstacle returns only, inside the forward 200 deg field of view (nose = up).
-  genLidar() {
-    const seed = i => { const s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); };
-    // clusters: [center bearing deg, spread deg, range m, depth m, count]
-    const clusters = [
-      [-74, 14, 34, 3, 12], [-38, 9, 26, 2, 9], [-6, 6, 41, 2.5, 7],
-      [22, 18, 19, 2.5, 14], [61, 12, 30, 3, 10], [88, 8, 38, 2, 6]
-    ];
-    const pts = [];
-    let k = 0;
-    clusters.forEach(([b0, spread, r0, depth, n]) => {
-      for (let j = 0; j < n; j++, k++) {
-        const brg = b0 + (seed(k) - 0.5) * spread * 2;
-        const dist = r0 + (seed(k + 300) - 0.5) * depth * 2;
-        if (Math.abs(brg) > 100) continue;
-        const rad = (dist / 45) * 45;
-        const a = brg * Math.PI / 180;
-        pts.push({
-          x: 50 + Math.sin(a) * rad,
-          y: 50 - Math.cos(a) * rad,
-          r: (2 + seed(k + 7) * 1.8).toFixed(1),
-          c: dist < 22 ? 'rgba(255,180,67,.9)' : 'rgba(79,216,234,' + (0.45 + seed(k + 11) * 0.45).toFixed(2) + ')',
-          d: dist
-        });
-      }
-    });
-    return pts;
-  }
-
-  interp(dist) {
-    let i = 0;
-    while (i < this.cum.length - 2 && this.cum[i + 1] < dist) i++;
-    const segLen = (this.cum[i + 1] - this.cum[i]) || 1;
-    const f = (dist - this.cum[i]) / segLen;
-    const a = this.WP[i], b = this.WP[i + 1];
-    let hdg = Math.atan2(b.x - a.x, b.z - a.z) * 180 / Math.PI;
-    hdg = (hdg + 360) % 360;
-    return {
-      x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f,
-      alt: a.alt + (b.alt - a.alt) * f, targetAlt: b.alt,
-      hdg, leg: i, remain: segLen * (1 - f)
-    };
-  }
-
-  tape(value, step, half, pxPerStep, wrap) {
-    const nearest = Math.round(value / step) * step;
-    const out = [];
-    for (let i = -half; i <= half; i++) {
-      let tv = nearest + i * step;
-      let delta = tv - value;
-      if (wrap) { delta = ((delta + 180) % 360 + 360) % 360 - 180; tv = ((tv % 360) + 360) % 360; }
-      const px = -delta * (pxPerStep / step);
-      let lab = String(Math.round(tv));
-      if (wrap) {
-        const card = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' }[Math.round(tv)];
-        lab = card || String(Math.round(tv / 10)).padStart(2, '0');
-      }
-      out.push({ v: lab, top: 113 + px, left: 150 + px });
-    }
-    return out;
-  }
-
-  bars(n, phase, t, base) {
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      const s = base + 0.35 * (0.5 + 0.5 * Math.sin(t * 0.4 + i * 1.7 + phase));
-      const h = Math.max(16, Math.min(100, s * 100));
-      out.push({ h: h.toFixed(0), c: h < 45 ? '#ffb443' : '#35d67c' });
-    }
-    return out;
-  }
-
-  renderVals() {
-    const t = this.state.t;
-    const speed = 16 + Math.sin(t * 0.15) * 2.4;
-    const traveled = (t * 16) % this.total;
-    const pos = this.interp(traveled);
-    const frac = traveled / this.total;
-
-    const pitch = Math.sin(t * 0.33) * 2.4 + Math.sin(t * 0.12) * 1.2;
-    const roll = Math.sin(t * 0.21) * 7 + Math.sin(t * 0.5) * 2;
-    const vspeed = (pos.targetAlt - pos.alt) * 0.03 + Math.cos(t * 0.4) * 0.25;
-    const battery = Math.max(46, 88 - (t * 0.018));
-    const cpuTemp = 46 + Math.sin(t * 0.2) * 3.5;
-    const distHome = Math.hypot(pos.x, pos.z);
-    const nextWpIndex = (pos.leg + 1) % (this.WP.length - 1);
-    const etaSec = pos.remain / Math.max(4, speed);
-    const battColor = battery > 40 ? '#35d67c' : battery > 22 ? '#ffb443' : '#ff5c5c';
-    const cpuColor = cpuTemp < 60 ? '#35d67c' : cpuTemp < 75 ? '#ffb443' : '#ff5c5c';
-    const pxDeg = 13;
-    const elapsed = Math.floor((Date.now() - this.mountTime) / 1000);
-    const hh = String(Math.floor(elapsed / 3600)).padStart(2, '0');
-    const mm = String(Math.floor(elapsed / 60) % 60).padStart(2, '0');
-    const ss = String(elapsed % 60).padStart(2, '0');
-
-    const vertEngaged = vspeed > 0.35 ? 'CLIMB' : vspeed < -0.35 ? 'DESCEND' : 'ALT HOLD';
-    const spdEngaged = pos.leg === this.WP.length - 2 ? 'APPROACH' : 'SPD CONST';
-
-    const critical = (this.props.injectCriticalEvent ?? false)
-      ? [{
-          sev: 'CRITICAL', msg: 'ComponentWatchdog: SensorFusion IMU#2 timeout \u2014 redundancy degraded',
-          color: '#ff5c5c', border: 'rgba(255,92,92,.5)', bg: 'rgba(255,92,92,.1)'
-        }]
-      : [];
-
-    const sevColor = s => s === 'CRITICAL' ? '#ff5c5c' : s === 'CAUTION' ? '#ffb443' : s === 'NOTICE' ? '#35d67c' : '#6fa9b8';
-
-    const lidarSorted = this.lidar.slice().sort((a, b) => a.d - b.d);
-
-    const sc = this.state.stageScale || 1;
-    return {
-      stageTransform: 'translate(' + (this.state.stageOx || 0).toFixed(1) + 'px,' + (this.state.stageOy || 0).toFixed(1) + 'px) scale(' + sc.toFixed(4) + ')',
-      pathFrac: frac.toFixed(4),
-      camMode: this.state.camMode,
-      feedLabel: this.state.tab === 'cam' ? 'EO/IR NOSE CAM \u00b7 640 \u00d7 480 \u00b7 30 FPS \u00b7 H.265' : 'MISSION RENDER \u00b7 LOCAL NED FRAME',
-
-      satCount: '16 / 24', hdop: '0.7', vdop: '1.0',
-      satBars: this.bars(14, 0, t, 0.6),
-      lat: '37.8199\u00b0N', lon: '122.4783\u00b0W', gpsAlt: (pos.alt + 12).toFixed(0),
-
-      lidarPoints: this.lidar,
-      lidarPointCount: this.lidar.length,
-      lidarMinDist: lidarSorted[0].d.toFixed(0),
-      lidarMinColor: lidarSorted[0].d < 12 ? '#ffb443' : '#35d67c',
-
-      batteryPct: battery.toFixed(0),
-      batteryColor: battColor,
-      batteryVoltage: (21.0 + (battery / 100) * 3.4).toFixed(1),
-      batteryCurrent: (8.4 + Math.sin(t * 0.6) * 1.5).toFixed(1),
-      batteryTemp: (32 + Math.sin(t * 0.15) * 2).toFixed(0),
-      batteryUsed: (2600 - battery * 10).toFixed(0) + ' mAh',
-      batteryTimeRemaining: Math.floor((battery - 22) * 0.62) + ' MIN',
-      rtlNeed: (11 + distHome / 90).toFixed(0),
-      cellBars: Array.from({ length: 6 }, (_, i) => ({
-        h: Math.max(10, Math.min(100, battery + Math.sin(t * 0.3 + i) * 2)).toFixed(0), c: battColor
-      })),
-
-      armed: this.state.armed,
-      armLabel: this.state.armed ? 'ARMED' : 'DISARMED',
-      armColor: this.state.armed ? '#35d67c' : 'rgba(230,241,244,.6)',
-      armBtnLabel: this.state.armed ? 'DISARM MOTORS' : 'ARM MOTORS',
-      armBtnBorder: this.state.armed ? 'rgba(53,214,124,.45)' : 'rgba(255,255,255,.18)',
-      armBtnBg: this.state.armed ? 'rgba(53,214,124,.1)' : 'rgba(255,255,255,.04)',
-      toggleArm: () => this.setState(s => ({ armed: !s.armed })),
-      loadPlan: () => this.pushEvent(),
-      startMission: () => this.pushEvent(),
-      pauseMission: () => this.pushEvent(),
-      rtl: () => this.pushEvent(),
-      planName: 'COASTAL-LOOP-07',
-      planWpCount: this.WP.length - 1,
-
-      isCenter3d: this.state.tab === '3d',
-      isCenterCam: this.state.tab === 'cam',
-      tab3dBg: this.state.tab === '3d' ? 'rgba(79,216,234,.18)' : 'transparent',
-      tab3dColor: this.state.tab === '3d' ? '#4fd8ea' : 'rgba(230,241,244,.5)',
-      tabCamBg: this.state.tab === 'cam' ? 'rgba(79,216,234,.18)' : 'transparent',
-      tabCamColor: this.state.tab === 'cam' ? '#4fd8ea' : 'rgba(230,241,244,.5)',
-      goCenter3d: () => this.setState({ tab: '3d' }),
-      goCenterCam: () => this.setState({ tab: 'cam' }),
-
-      camChaseBg: this.state.camMode === 'chase' ? 'rgba(79,216,234,.18)' : 'transparent',
-      camChaseColor: this.state.camMode === 'chase' ? '#4fd8ea' : 'rgba(230,241,244,.5)',
-      camOrbitBg: this.state.camMode === 'orbit' ? 'rgba(79,216,234,.18)' : 'transparent',
-      camOrbitColor: this.state.camMode === 'orbit' ? '#4fd8ea' : 'rgba(230,241,244,.5)',
-      camTopBg: this.state.camMode === 'top' ? 'rgba(79,216,234,.18)' : 'transparent',
-      camTopColor: this.state.camMode === 'top' ? '#4fd8ea' : 'rgba(230,241,244,.5)',
-      setCamChase: () => this.setState({ camMode: 'chase' }),
-      setCamOrbit: () => this.setState({ camMode: 'orbit' }),
-      setCamTop: () => this.setState({ camMode: 'top' }),
-
-      legLabel: (pos.leg + 1) + '/' + (this.WP.length - 1),
-      nextWpIndex,
-      nextWpDist: pos.remain.toFixed(0),
-      nextWpEta: Math.floor(etaSec / 60) + ':' + String(Math.floor(etaSec % 60)).padStart(2, '0'),
-      distHome: distHome.toFixed(0),
-
-      fmaColumns: [
-        { title: 'Lateral', engaged: 'NAV WPT' + nextWpIndex, armed: pos.remain < 90 ? 'CURVE ' + ((nextWpIndex + 1) % (this.WP.length - 1)) : 'TRACK HOLD' },
-        { title: 'Vertical', engaged: vertEngaged, armed: 'ALT ' + pos.targetAlt.toFixed(0) },
-        { title: 'Speed', engaged: spdEngaged, armed: pos.leg === this.WP.length - 2 ? 'LAND' : 'SPD 16' }
-      ],
-
-      horizonDy: (pitch * pxDeg).toFixed(1),
-      camRoll: (-roll).toFixed(2),
-      pitchLadder: [-20, -10, -5, 5, 10, 20].map(v => ({
-        lab: Math.abs(v),
-        dy: ((pitch - v) * pxDeg).toFixed(1),
-        w: Math.abs(v) >= 20 ? 44 : Math.abs(v) >= 10 ? 32 : 22
-      })),
-
-      speedTicks: this.tape(speed, 5, 4, 24, false),
-      altTicks: this.tape(pos.alt, 10, 4, 24, false),
-      headingTicks: this.tape(pos.hdg, 10, 5, 24, true),
-      airspeedStr: speed.toFixed(1),
-      altitudeStr: pos.alt.toFixed(0),
-      headingStr: String(Math.round(pos.hdg)).padStart(3, '0'),
-      vspeedStr: (vspeed >= 0 ? '+' : '') + vspeed.toFixed(1),
-      vsMarkerTop: (50 - Math.max(-42, Math.min(42, vspeed * 16))).toFixed(1),
-      vsLabelTop: (50 - Math.max(-42, Math.min(42, vspeed * 16))).toFixed(1),
-      camGimbal: '-24\u00b0 / 000\u00b0',
-      camZoom: (1 + Math.abs(Math.sin(t * 0.05)) * 1.4).toFixed(1),
-
-      ribbon: [
-        { label: 'Altitude AGL', value: pos.alt.toFixed(0), unit: 'M', color: '#4fd8ea' },
-        { label: 'Ground Speed', value: speed.toFixed(1), unit: 'M/S', color: '#eef4f6' },
-        { label: 'Heading', value: String(Math.round(pos.hdg)).padStart(3, '0'), unit: '\u00b0', color: '#eef4f6' },
-        { label: 'Vert Speed', value: (vspeed >= 0 ? '+' : '') + vspeed.toFixed(1), unit: 'M/S', color: '#eef4f6' },
-        { label: 'Dist Home', value: distHome.toFixed(0), unit: 'M', color: '#eef4f6' },
-        { label: 'Next WP', value: 'WP' + nextWpIndex, unit: pos.remain.toFixed(0) + ' M', color: '#eef4f6' },
-        { label: 'Mode', value: 'AUTO', unit: 'MISSION', color: '#35d67c' }
-      ],
-
-      radioLinks: [
-        {
-          name: 'PRIMARY \u00b7 2.4 GHz', role: 'ACTIVE', color: '#35d67c',
-          bars: this.bars(5, 1, t, 0.66),
-          rssi: (-57 + Math.sin(t * 0.4) * 4).toFixed(0), rtt: (32 + Math.sin(t * 0.6) * 5).toFixed(0) + 'ms',
-          loss: '0.0%', lossColor: '#35d67c',
-          down: (2.4 + Math.sin(t * 0.25) * 0.3).toFixed(1), up: (0.62 + Math.sin(t * 0.33) * 0.07).toFixed(2),
-          band: 'LTE BOND OFF'
-        },
-        {
-          name: 'SECONDARY \u00b7 900 MHz', role: 'STANDBY', color: '#ffb443',
-          bars: this.bars(5, 3.4, t, 0.45),
-          rssi: (-79 + Math.sin(t * 0.3) * 5).toFixed(0), rtt: (86 + Math.sin(t * 0.5) * 12).toFixed(0) + 'ms',
-          loss: (0.4 + Math.abs(Math.sin(t * 0.2)) * 0.6).toFixed(1) + '%', lossColor: '#ffb443',
-          down: (0.28 + Math.sin(t * 0.3) * 0.05).toFixed(2), up: (0.11 + Math.sin(t * 0.4) * 0.02).toFixed(2),
-          band: 'FAILOVER READY'
-        }
-      ],
-
-      cpuTemp: cpuTemp.toFixed(0),
-      cpuTempColor: cpuColor,
-      cpuTempPct: Math.max(0, Math.min(100, ((cpuTemp - 30) / 60) * 100)).toFixed(0),
-      cpuLoad: (37 + Math.sin(t * 0.25) * 7).toFixed(0),
-      ramUsed: (2.2 + Math.sin(t * 0.2) * 0.2).toFixed(1),
-      uptime: hh + ':' + mm + ':' + ss,
-
-      componentCells: [
-        { name: 'SYS MONITORING', hz: (50 + Math.sin(t * 0.5) * 1).toFixed(0) + ' Hz', note: 'watchdog fed \u00b7 0 resets', color: '#35d67c', span: 'auto' },
-        { name: 'MAVLINK IF', hz: (20 + Math.sin(t * 0.4)).toFixed(0) + ' Hz', note: 'hb ok \u00b7 seq 0 drop', color: '#35d67c', span: 'auto' },
-        { name: 'SENSOR FUSION', hz: (400 + Math.sin(t * 0.6) * 4).toFixed(0) + ' Hz', note: 'EKF3 \u00b7 innov 0.03', color: '#35d67c', span: 'auto' },
-        { name: 'NAVIGATION', hz: (50 + Math.sin(t * 0.3)).toFixed(0) + ' Hz', note: 'xtrack 0.4 m', color: '#35d67c', span: 'auto' },
-        { name: 'MISSION CONTROL', hz: (10 + Math.sin(t * 0.2)).toFixed(0) + ' Hz', note: 'leg ' + (pos.leg + 1) + ' of ' + (this.WP.length - 1) + ' \u00b7 plan valid', color: '#35d67c', span: 'span 2' }
-      ].map(c => Object.assign(c, {
-        border: 'rgba(255,255,255,.08)',
-        bg: c.color === '#35d67c' ? 'rgba(53,214,124,.05)' : 'rgba(255,180,67,.07)'
-      })),
-
-      hasPinned: critical.length > 0,
-      pinnedEvents: critical,
-      pinnedHeaderLabel: critical.length ? critical.length + ' ACTIVE CRITICAL' : 'NO ACTIVE FAULT',
-      pinnedHeaderColor: critical.length ? '#ff5c5c' : '#35d67c',
-      feedEvents: this.state.events.map(e => ({ id: e.id, time: e.time, sev: e.sev, msg: e.msg, color: sevColor(e.sev) }))
-    };
-  }
-}
-
-</script>
+<script src="./js/viewport3d.js"></script>
+<script src="./js/state.js"></script>
+<script src="./js/dom.js"></script>
+<script src="./js/render.js"></script>
+<script src="./js/alarm.js"></script>
+<script src="./js/link.js"></script>
+<script src="./js/sim.js"></script>
+<script src="./js/main.js"></script>
 </body>
 </html>

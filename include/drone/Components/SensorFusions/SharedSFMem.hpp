@@ -24,6 +24,15 @@ struct GpsMagSample {
   uint8_t fixType{0};
   uint8_t satellitesVisible{0};
 
+  // Détail par satellite (id/force du signal/qualité), cf. GPSData::sats —
+  // capé à 16 (largement suffisant, une constellation visible dépasse
+  // rarement ça) pour rester une struct POD taille fixe en shm. Seuls les
+  // `satellitesVisible` premiers slots (borné à 16) sont significatifs.
+  static constexpr std::size_t kMaxSatellites = 16;
+  std::array<uint8_t, kMaxSatellites> satId{};
+  std::array<uint8_t, kMaxSatellites> satStrength{};
+  std::array<uint8_t, kMaxSatellites> satQuality{};
+
   // Temps GPS (semaine + ms dans la semaine), calculé par le récepteur —
   // PAS `ts` (horloge interne, steady_clock, sans rapport avec le temps
   // GPS) : c'est ce que MavlinkInterface envoie tel quel dans
@@ -34,10 +43,15 @@ struct GpsMagSample {
 
 // Nuage de points LIDAR en NED, relatif au drone, projeté via l'attitude
 // courante. points[i].isZero() : aucune mesure à cet angle ce tour-ci.
+// rangeMm/intensity sont la mesure brute repère-corps (rangeMm[i] = portée
+// à l'angle i en degrés, AVANT projection NED) — conservée à côté de
+// `points` pour la télémétrie (LIDAR_SCAN) : reprojeter `points` en
+// repère-corps demanderait de désappliquer l'attitude, inutilement fragile.
 struct LidarMap {
   TYPES::TimePoint ts{};
   std::array<TYPES::Vec3, 360> points{};
   std::array<uint8_t, 360> intensity{};
+  std::array<uint16_t, 360> rangeMm{};
 };
 
 // État dynamique fusionné, repère NED — vérité terrain pour Nav/MC.

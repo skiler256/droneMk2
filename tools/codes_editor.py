@@ -101,7 +101,7 @@ def build_code_from_payload(payload, codes_for_dup_check):
         code = parse_row(
             code_str, payload.get("component"), payload.get("category"),
             payload.get("name"), payload.get("description"),
-            payload.get("severity"), seen=seen,
+            payload.get("severity"), payload.get("sound"), seen=seen,
         )
     except CodeValidationError as e:
         return None, str(e)

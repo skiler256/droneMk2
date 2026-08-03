@@ -43,6 +43,10 @@ enum class PacketID : uint8_t {
   CMD_RESUME = 20,
   CMD_ANSWER = 21,
   MC_QUERY = 22,
+  GPSPOS = 23,
+  SAT_INFO = 24,
+  LIDAR_SCAN = 25,
+  CPU_TEMP = 26,
 };
 
 struct PosPkt {
@@ -197,14 +201,16 @@ struct BatteryPkt {
 
 struct CodePkt {
   static constexpr PacketID kId = PacketID::CODE;
-  static constexpr size_t kSize = 8;
+  static constexpr size_t kSize = 9;
   uint32_t code{};
+  uint8_t active{};
   uint32_t ts_ms{};
 
   [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
     std::array<std::byte, kSize> buf{};
     std::memcpy(buf.data() + 0, &code, sizeof(code));
-    std::memcpy(buf.data() + 4, &ts_ms, sizeof(ts_ms));
+    std::memcpy(buf.data() + 4, &active, sizeof(active));
+    std::memcpy(buf.data() + 5, &ts_ms, sizeof(ts_ms));
     return buf;
   }
 
@@ -212,7 +218,8 @@ struct CodePkt {
     CodePkt out{};
     if (bytes.size() < kSize) return out;
     std::memcpy(&out.code, bytes.data() + 0, sizeof(out.code));
-    std::memcpy(&out.ts_ms, bytes.data() + 4, sizeof(out.ts_ms));
+    std::memcpy(&out.active, bytes.data() + 4, sizeof(out.active));
+    std::memcpy(&out.ts_ms, bytes.data() + 5, sizeof(out.ts_ms));
     return out;
   }
 };
@@ -533,6 +540,109 @@ struct McQueryPkt {
   }
 };
 
+struct GpsposPkt {
+  static constexpr PacketID kId = PacketID::GPSPOS;
+  static constexpr size_t kSize = 16;
+  float lat{};
+  float lon{};
+  float alt_msl{};
+  float vdop{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &lat, sizeof(lat));
+    std::memcpy(buf.data() + 4, &lon, sizeof(lon));
+    std::memcpy(buf.data() + 8, &alt_msl, sizeof(alt_msl));
+    std::memcpy(buf.data() + 12, &vdop, sizeof(vdop));
+    return buf;
+  }
+
+  [[nodiscard]] static GpsposPkt unpack(std::span<const std::byte> bytes) noexcept {
+    GpsposPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.lat, bytes.data() + 0, sizeof(out.lat));
+    std::memcpy(&out.lon, bytes.data() + 4, sizeof(out.lon));
+    std::memcpy(&out.alt_msl, bytes.data() + 8, sizeof(out.alt_msl));
+    std::memcpy(&out.vdop, bytes.data() + 12, sizeof(out.vdop));
+    return out;
+  }
+};
+
+struct SatInfoPkt {
+  static constexpr PacketID kId = PacketID::SAT_INFO;
+  static constexpr size_t kSize = 49;
+  uint8_t count{};
+  std::array<uint8_t, 16> id{};
+  std::array<uint8_t, 16> strength{};
+  std::array<uint8_t, 16> quality{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &count, sizeof(count));
+    std::memcpy(buf.data() + 1, &id, sizeof(id));
+    std::memcpy(buf.data() + 17, &strength, sizeof(strength));
+    std::memcpy(buf.data() + 33, &quality, sizeof(quality));
+    return buf;
+  }
+
+  [[nodiscard]] static SatInfoPkt unpack(std::span<const std::byte> bytes) noexcept {
+    SatInfoPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.count, bytes.data() + 0, sizeof(out.count));
+    std::memcpy(&out.id, bytes.data() + 1, sizeof(out.id));
+    std::memcpy(&out.strength, bytes.data() + 17, sizeof(out.strength));
+    std::memcpy(&out.quality, bytes.data() + 33, sizeof(out.quality));
+    return out;
+  }
+};
+
+struct LidarScanPkt {
+  static constexpr PacketID kId = PacketID::LIDAR_SCAN;
+  static constexpr size_t kSize = 1084;
+  uint16_t min_dist_mm{};
+  int16_t min_bearing_deg{};
+  std::array<uint16_t, 360> range_mm{};
+  std::array<uint8_t, 360> intensity{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &min_dist_mm, sizeof(min_dist_mm));
+    std::memcpy(buf.data() + 2, &min_bearing_deg, sizeof(min_bearing_deg));
+    std::memcpy(buf.data() + 4, &range_mm, sizeof(range_mm));
+    std::memcpy(buf.data() + 724, &intensity, sizeof(intensity));
+    return buf;
+  }
+
+  [[nodiscard]] static LidarScanPkt unpack(std::span<const std::byte> bytes) noexcept {
+    LidarScanPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.min_dist_mm, bytes.data() + 0, sizeof(out.min_dist_mm));
+    std::memcpy(&out.min_bearing_deg, bytes.data() + 2, sizeof(out.min_bearing_deg));
+    std::memcpy(&out.range_mm, bytes.data() + 4, sizeof(out.range_mm));
+    std::memcpy(&out.intensity, bytes.data() + 724, sizeof(out.intensity));
+    return out;
+  }
+};
+
+struct CpuTempPkt {
+  static constexpr PacketID kId = PacketID::CPU_TEMP;
+  static constexpr size_t kSize = 4;
+  float temp_c{};
+
+  [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
+    std::array<std::byte, kSize> buf{};
+    std::memcpy(buf.data() + 0, &temp_c, sizeof(temp_c));
+    return buf;
+  }
+
+  [[nodiscard]] static CpuTempPkt unpack(std::span<const std::byte> bytes) noexcept {
+    CpuTempPkt out{};
+    if (bytes.size() < kSize) return out;
+    std::memcpy(&out.temp_c, bytes.data() + 0, sizeof(out.temp_c));
+    return out;
+  }
+};
+
 // Une entrée par paquet : priorité/taux/taille, utilisée par le scheduler
 // d'émission (choix du prochain paquet dû) sans dupliquer ces constantes.
 struct Meta {
@@ -542,18 +652,18 @@ struct Meta {
   uint16_t rateHz;       // 0 = événementiel
   uint16_t redundancyHz; // pour événementiel : renvoi périodique même sans changement
   uint8_t linkMask;      // combinaison de Link (Main | Sec)
-  uint8_t size;
+  uint16_t size;         // u16 : un paquet à tableau (ex: LIDAR_SCAN) dépasse 255 octets
   const char *name;
 };
 
-inline constexpr std::array<Meta, 23> kTable{{
+inline constexpr std::array<Meta, 27> kTable{{
     Meta{PacketID::POS, Direction::Down, Priority::Routine, 10, 0, static_cast<uint8_t>(Link::Main), 12, "POS"},
     Meta{PacketID::VELNED, Direction::Down, Priority::Routine, 10, 0, static_cast<uint8_t>(Link::Main), 12, "VELNED"},
     Meta{PacketID::ATTITUDE, Direction::Down, Priority::Routine, 10, 0, static_cast<uint8_t>(Link::Main), 16, "ATTITUDE"},
-    Meta{PacketID::HEALTH, Direction::Down, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 2, "HEALTH"},
+    Meta{PacketID::HEALTH, Direction::Down, Priority::Routine, 5, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 2, "HEALTH"},
     Meta{PacketID::GPSFIX, Direction::Down, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main), 6, "GPSFIX"},
     Meta{PacketID::BATTERY, Direction::Down, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 9, "BATTERY"},
-    Meta{PacketID::CODE, Direction::Down, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 8, "CODE"},
+    Meta{PacketID::CODE, Direction::Down, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 9, "CODE"},
     Meta{PacketID::ARM_STATE, Direction::Down, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 2, "ARM_STATE"},
     Meta{PacketID::MISSION_STATE, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 1, "MISSION_STATE"},
     Meta{PacketID::AUTOPILOT_MODE, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main), 24, "AUTOPILOT_MODE"},
@@ -570,6 +680,10 @@ inline constexpr std::array<Meta, 23> kTable{{
     Meta{PacketID::CMD_RESUME, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 0, "CMD_RESUME"},
     Meta{PacketID::CMD_ANSWER, Direction::Up, Priority::Critical, 0, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 5, "CMD_ANSWER"},
     Meta{PacketID::MC_QUERY, Direction::Down, Priority::Critical, 0, 1, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 5, "MC_QUERY"},
+    Meta{PacketID::GPSPOS, Direction::Down, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main), 16, "GPSPOS"},
+    Meta{PacketID::SAT_INFO, Direction::Down, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main), 49, "SAT_INFO"},
+    Meta{PacketID::LIDAR_SCAN, Direction::Down, Priority::Routine, 2, 0, static_cast<uint8_t>(Link::Main), 1084, "LIDAR_SCAN"},
+    Meta{PacketID::CPU_TEMP, Direction::Down, Priority::Routine, 1, 0, static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec), 4, "CPU_TEMP"},
 }};
 
 [[nodiscard]] constexpr const Meta *find(PacketID id) noexcept {

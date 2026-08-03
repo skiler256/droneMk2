@@ -16,9 +16,13 @@ namespace UTILITIES {
 template <typename Predicate>
 bool waitUntil(Predicate &&pred, TYPES::Us timeout, bool invert = false,
                TYPES::Us period = TYPES::Us(10)) {
-  TYPES::TimePoint deadline = std::chrono::steady_clock::now() + timeout;
+  // TYPES::Clock, pas std::chrono::steady_clock en dur : ce timeout tourne
+  // dans le chemin chaud de SharedMemory::lockedAccess (verrou CAS), doit
+  // rester cohérent avec la politique d'horloge du reste du process (cf.
+  // DRONE_USE_SIM_CLOCK, types.hpp).
+  TYPES::TimePoint deadline = TYPES::Clock::now() + timeout;
 
-  while (std::chrono::steady_clock::now() < deadline) {
+  while (TYPES::Clock::now() < deadline) {
     if (std::forward<Predicate>(pred)() != invert)
       return true;
 

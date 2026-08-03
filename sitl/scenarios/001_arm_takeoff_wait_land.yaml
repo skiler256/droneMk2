@@ -1,0 +1,17 @@
+id: 001_arm_takeoff_wait_land
+description: >
+  Scenario trivial "SITL nu" (roadmap etape 2) : armer, decoller, tenir 5s,
+  atterrir. Verifie que le plombage bout-en-bout fonctionne (procman,
+  mission_driver, shm_observer, verdict) -- pas la trajectoire elle-meme
+  (ca, c'est l'etape 3, "Nav valide sur SITL nu").
+
+mission:
+  - {type: arm}
+  - {type: takeoff, alt: 10}
+  - {type: wait, duration: 5}
+  - {type: land}
+
+criteres:
+  - {metrique: mission_state_sequence, attendu: [Armed, Mission, Landing]}
+  - {metrique: aucun_code_emergency, attendu: true}
+  - {metrique: processus_vivants_a_la_fin, attendu: [drone, udp_bridge]}

@@ -12,6 +12,7 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o: /home/jule
   /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
   /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
   /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
+  /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp \
   /home/jules/droneMk2/include/drone/generated/codes.hpp \
   /home/jules/droneMk2/include/drone/shm.hpp \
   /home/jules/droneMk2/include/drone/types.hpp \
@@ -652,17 +653,12 @@ test_global_watchdog: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o \
   libdrone_lib.a
 
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so:
 
@@ -1034,6 +1030,12 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/typesizes.h:
 
+/usr/include/asm-generic/int-ll64.h:
+
+/usr/include/c++/14/ios:
+
+/usr/include/eigen3/Eigen/src/Core/NestByValue.h:
+
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/StaticAssert.h:
@@ -1062,19 +1064,9 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/c++/14/bits/exception_defines.h:
 
-/usr/include/asm-generic/int-ll64.h:
-
-/usr/include/c++/14/ios:
-
-/usr/include/eigen3/Eigen/src/Core/NestByValue.h:
-
 /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h:
 
 /usr/include/aarch64-linux-gnu/bits/mman_ext.h:
-
-/usr/include/c++/14/bits/shared_ptr_atomic.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/sigevent_t.h:
 
 /usr/include/c++/14/bits/basic_string.tcc:
 
@@ -1097,6 +1089,10 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/c++/14/clocale:
 
 /home/jules/droneMk2/include/drone/types.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
+
+/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
 
 /usr/include/c++/14/bits/cpp_type_traits.h:
 
@@ -1121,10 +1117,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/long-double.h:
 
 /usr/include/aarch64-linux-gnu/bits/posix1_lim.h:
-
-/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
 
 /usr/include/c++/14/bits/max_size_type.h:
 
@@ -1182,9 +1174,9 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /home/jules/droneMk2/include/drone/Components/SharedCompMem.hpp:
 
-/usr/include/c++/14/bits/ranges_uninitialized.h:
-
 /usr/include/eigen3/Eigen/src/LU/PartialPivLU.h:
+
+/usr/include/c++/14/bits/ranges_uninitialized.h:
 
 /usr/include/eigen3/Eigen/src/Jacobi/Jacobi.h:
 
@@ -1222,6 +1214,8 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/types/sig_atomic_t.h:
 
+/home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp:
+
 /usr/include/aarch64-linux-gnu/bits/stat.h:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
@@ -1231,8 +1225,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp:
 
 /usr/include/c++/14/bits/node_handle.h:
-
-/home/jules/droneMk2/include/drone/Components/MavlinkInterface/SharedFCStatus.hpp:
 
 /usr/include/eigen3/Eigen/src/Core/functors/AssignmentFunctors.h:
 
@@ -1335,6 +1327,8 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/signum-arch.h:
 
 /usr/include/c++/14/bits/stl_construct.h:
+
+/usr/include/eigen3/Eigen/src/Core/util/Memory.h:
 
 /usr/include/aarch64-linux-gnu/bits/signum-generic.h:
 
@@ -1500,8 +1494,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
-
 /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h:
 
 /usr/include/eigen3/Eigen/src/Core/Replicate.h:
@@ -1540,6 +1532,10 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 
 /usr/include/eigen3/Eigen/src/Core/Map.h:
 
+/usr/include/aarch64-linux-gnu/bits/types/sigevent_t.h:
+
+/usr/include/c++/14/bits/shared_ptr_atomic.h:
+
 /usr/include/c++/14/tr1/beta_function.tcc:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so:
@@ -1553,8 +1549,6 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/gtest/gtest-message.h:
 
 /usr/include/c++/14/bits/std_thread.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
 
 /usr/include/c++/14/bits/stl_algobase.h:
 
@@ -1599,6 +1593,8 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o:
 /usr/include/c++/14/bits/charconv.h:
 
 /usr/include/eigen3/Eigen/QR:
+
+/home/jules/droneMk2/include/drone/core/WatchdogControl.hpp:
 
 /usr/include/c++/14/bits/unordered_map.h:
 
@@ -1943,8 +1939,6 @@ libdrone_lib.a:
 /usr/include/eigen3/Eigen/src/Core/util/IntegralConstant.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/Macros.h:
-
-/usr/include/eigen3/Eigen/src/Core/util/Memory.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/ReshapedHelper.h:
 

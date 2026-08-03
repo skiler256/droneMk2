@@ -643,17 +643,12 @@ test_navigation: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.o \
   libdrone_lib.a
 
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so:
 
@@ -1441,8 +1436,6 @@ CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
-
 /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h:
 
 /usr/include/eigen3/Eigen/src/Core/Replicate.h:
@@ -1504,8 +1497,6 @@ CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/uio_lim.h:
 
 /usr/include/c++/14/climits:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
 
 /usr/include/c++/14/bits/stl_algobase.h:
 

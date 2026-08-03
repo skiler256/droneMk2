@@ -2,8 +2,6 @@ test_missioncontrol: \
   /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
   CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o \
   libdrone_lib.a \
   /usr/lib/aarch64-linux-gnu/libgtest_main.a \
@@ -14,7 +12,6 @@ test_missioncontrol: \
   /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/libm.so \
   /lib/aarch64-linux-gnu/libm.so.6 \
   /lib/aarch64-linux-gnu/libmvec.so.1 \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
@@ -42,10 +39,6 @@ test_missioncontrol: \
 
 /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
-
 CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o:
 
 libdrone_lib.a:
@@ -65,8 +58,6 @@ libdrone_lib.a:
 /lib/aarch64-linux-gnu/libm.so.6:
 
 /lib/aarch64-linux-gnu/libmvec.so.1:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so:
 

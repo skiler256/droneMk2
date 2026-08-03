@@ -34,13 +34,20 @@
 //   return 0;
 // };
 
+#ifdef DRONE_USE_SITL_DRIVERS
+#include "drone/Components/Drivers/UdpGpsDriver.hpp"
+#include "drone/Components/Drivers/UdpLidarDriver.hpp"
+#include "drone/Components/MavlinkInterface/Driver/UdpMavlinkLink.hpp"
+#else
 #include "drone/Components/Drivers/LD06.hpp"
 #include "drone/Components/Drivers/NEO-M8N.hpp"
 #include "drone/Components/MavlinkInterface/Driver/UartMavlinkLink.hpp"
+#endif
 #include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"
 #include "drone/Components/MissionControl/MissionControl.hpp"
 #include "drone/Components/Navigation/Navigation.hpp"
 #include "drone/Components/SensorFusions/SensorsFusion.hpp"
+#include "drone/Components/System Monitoring/Driver/LinuxThermalZoneDriver.hpp"
 #include "drone/Components/System Monitoring/Driver/UdpTelemetryDriver.hpp"
 #include "drone/Components/System Monitoring/Driver/UdpVideoDriver.hpp"
 #include "drone/Components/System Monitoring/SysMonitoring.hpp"
@@ -64,9 +71,19 @@ constexpr uint16_t kUdpTelSecLocalPort = 5611;
 constexpr uint16_t kUdpTelSecPeerPort = 5612;
 constexpr uint16_t kUdpVideoLocalPort = 5621;
 
+#ifndef DRONE_USE_SITL_DRIVERS
 // Port UART réel vers le FC — placeholder, cohérent avec les autres
 // drivers UART du projet (GPS sur ttyAMA1, LD06 sur ttyAMA2).
 constexpr const char *kFcUartPort = "/dev/ttyAMA0";
+#else
+// Ports UDP loopback des drivers factices SITL — GPS/lidar alimentés par
+// le SITL_MASTER (cf. INTEGRATION_TEST.md, sitl/gps_bridge.py), MAVLink par
+// ArduPilot SITL. 14550 = port MAVLink/GCS conventionnel (même valeur que
+// src/IntegrationTests/MV_SITL.cpp::kSitlUdpLocalPort).
+constexpr uint16_t kSitlMavlinkUdpPort = 14550;
+constexpr uint16_t kSitlGpsUdpPort = 15100;
+constexpr uint16_t kSitlLidarUdpPort = 15101;
+#endif
 
 int runNavigation() {
   auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
@@ -108,8 +125,13 @@ int runSensorFusion() {
                                       Us(2000));
   SharedFCStatusHandler fcHandler(ComponentID::SensorFusion, Us(2000), *fc->ptr);
 
+#ifdef DRONE_USE_SITL_DRIVERS
+  UdpGpsDriver gps(kSitlGpsUdpPort);
+  UdpLidarDriver lidar(kSitlLidarUdpPort);
+#else
   NEO_M8N gps;
   LD06 lidar;
+#endif
   if (auto err = gps.init()) {
     std::cerr << "SensorFusion: echec init GPS\n";
     return 1;
@@ -157,10 +179,14 @@ int runSysMonitoring() {
   UdpTelemetryDriver mainLink(kUdpTelMainLocalPort, kUdpTelMainPeerPort);
   UdpTelemetryDriver secLink(kUdpTelSecLocalPort, kUdpTelSecPeerPort);
   UdpVideoDriver videoSource(kUdpVideoLocalPort);
+  // Pas de variante factice : /sys/class/thermal existe sur toute machine
+  // Linux avec capteur (dev x86 compris), cf. LinuxThermalZoneDriver.hpp.
+  LinuxThermalZoneDriver tempSource;
 
   ComponenConfig config{.id = ComponentID::SysMonitoring, .CompCore = 3};
   SysMonitoring composant(config, sysHandler, comHandler, navHandler, sfHandler,
-                          fcHandler, cmdHandler, mainLink, secLink, videoSource);
+                          fcHandler, cmdHandler, mainLink, secLink, videoSource,
+                          tempSource);
 
   while (true)
     sleep(2);
@@ -188,7 +214,11 @@ int runMavlinkInterface() {
   SharedCmdMemHandler cmdHandler(ComponentID::MavlinkInterface, Us(2000), *cmd->ptr);
   SharedComMemHandler comHandler(ComponentID::MavlinkInterface, Us(2000), *com->ptr);
 
+#ifdef DRONE_USE_SITL_DRIVERS
+  UdpMavlinkLink link(kSitlMavlinkUdpPort);
+#else
   UartMavlinkLink link(kFcUartPort);
+#endif
 
   ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 2};
   MavlinkInterface composant(config, sysHandler, fcHandler, navHandler, sfHandler,

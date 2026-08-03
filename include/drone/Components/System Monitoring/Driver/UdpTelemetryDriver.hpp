@@ -24,5 +24,9 @@ public:
 private:
   int fd_{-1};
   uint16_t peerPort_;
-  std::array<std::byte, 512> rxBuf_{}; // large marge : le plus gros paquet TELEM fait 20 octets
+  // Doit couvrir le plus gros paquet TELEM + 1 (header PacketID) — LIDAR_SCAN
+  // (360 points range+intensité) est le plus volumineux à ~1085 octets,
+  // marge prise jusqu'au MTU Ethernet standard pour rester tranquille si un
+  // paquet grossit encore.
+  std::array<std::byte, 1536> rxBuf_{};
 };

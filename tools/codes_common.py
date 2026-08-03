@@ -40,17 +40,22 @@ MAJOR_SEVERITIES = {"Critical", "Emergency"}
 
 CODE_RE = re.compile(r"^([A-Z]{2})([A-Z])(\d{3})$")
 
-CSV_FIELDS = ["Code", "Component", "Category", "Name", "Description", "Criticity"]
+CSV_FIELDS = ["Code", "Component", "Category", "Name", "Description", "Criticity", "Sound"]
 
 
 class DiagCode:
-    def __init__(self, code, component_label, category_label, name, description, severity):
+    # sound="" : pas de son dédié — le GCS retombe sur le bip générique
+    # Master Warning/Master Caution (cf. severity), le détail restant de
+    # toute façon affiché en clair sur la page (event log).
+    def __init__(self, code, component_label, category_label, name, description, severity,
+                sound=""):
         self.code = code
         self.component_label = component_label
         self.category_label = category_label
         self.name = name
         self.description = description
         self.severity = severity
+        self.sound = sound
 
     @property
     def component_id(self):
@@ -76,6 +81,7 @@ class DiagCode:
             "Name": self.name,
             "Description": self.description,
             "Criticity": self.severity,
+            "Sound": self.sound,
         }
 
 
@@ -91,7 +97,7 @@ def _label_from_full_name(table, full_name):
 
 
 def parse_row(code_raw, component_raw, category_raw, name, description, severity_raw,
-              *, seen=None, where=""):
+              sound_raw=None, *, seen=None, where=""):
     """Valide une ligne brute (types str) et renvoie un DiagCode. Lève
     CodeValidationError avec un message clair sinon — utilisé à la fois par
     le parsing CSV (gen_codes.py) et par l'API web (codes_editor.py)."""
@@ -141,6 +147,7 @@ def parse_row(code_raw, component_raw, category_raw, name, description, severity
         name=(name or "").strip(),
         description=(description or "").strip(),
         severity=SEVERITIES[severity_key],
+        sound=(sound_raw or "").strip(),
     )
 
 
@@ -170,6 +177,7 @@ def read_csv(path: Path):
             codes.append(parse_row(
                 code_raw, row.get("Component"), row.get("Category"),
                 row.get("Name"), row.get("Description"), row.get("Criticity"),
+                row.get("Sound"),
                 seen=seen, where=f"{path}:{lineno}: ",
             ))
         except CodeValidationError as e:

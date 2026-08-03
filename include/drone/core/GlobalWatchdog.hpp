@@ -5,6 +5,7 @@
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/Components/System Monitoring/SharedComMem.hpp"
 #include "drone/core/SharedSysStateMem.hpp"
+#include "drone/core/WatchdogControl.hpp"
 #include "drone/shm.hpp"
 #include "drone/types.hpp"
 
@@ -58,6 +59,7 @@ private:
   ShmPublisher<SharedComMem> comShm_;
   ShmPublisher<SharedFCStatus> fcShm_;
   ShmPublisher<SharedCmdMem> cmdShm_;
+  ShmPublisher<SharedWatchdogControl> watchdogControlShm_;
 
   std::optional<SharedNavMemHandler> navHandler_;
   std::optional<SharedSFMemHandler> sfHandler_;
@@ -111,6 +113,10 @@ private:
     auto cmd = publishSharedMemory<SharedCmdMem>(kCmdShmPath);
     if (!cmd) return false;
     cmdShm_ = cmd.value();
+
+    auto wdc = publishSharedMemory<SharedWatchdogControl>(kWatchdogControlShmPath);
+    if (!wdc) return false;
+    watchdogControlShm_ = wdc.value();
 
     // GlobalWatchdog s'enregistre lui meme comme "writer" ID pour ces
     // handlers : il ne fait qu'appeler resetWriterFlag() dessus, jamais
@@ -166,6 +172,16 @@ private:
             // Ctrl+C envoie le signal à tout le groupe, donc à cet enfant
             // aussi : ne pas le respawn, juste noter qu'il est déjà mort.
             child.pid = -1;
+          } else if (respawnSuppressed(child.id)) {
+            // Panne système délibérée (cf. INTEGRATION_TEST.md §7.2) : un
+            // outil de test a positionné le flag AVANT de tuer ce composant
+            // pour observer la réaction du reste du système à une absence
+            // prolongée — ne pas revenir tout de suite lui couperait l'herbe
+            // sous le pied.
+            std::cerr << "GlobalWatchdog: " << child.role
+                      << " est mort, respawn suspendu (SharedWatchdogControl)\n";
+            resetAll(child.id);
+            child.pid = -1;
           } else {
             std::cerr << "GlobalWatchdog: " << child.role
                       << " est mort, reset writer flags + respawn\n";
@@ -176,6 +192,12 @@ private:
         }
       }
     }
+  }
+
+  [[nodiscard]] bool respawnSuppressed(TYPES::ComponentID id) const {
+    return watchdogControlShm_.ptr
+               ->suppressRespawn[static_cast<std::size_t>(id)]
+               .load(std::memory_order_acquire);
   }
 
   void resetAll(TYPES::ComponentID id) {
@@ -204,5 +226,6 @@ private:
     destroySharedMemory(kComShmPath, comShm_);
     destroySharedMemory(kFCShmPath, fcShm_);
     destroySharedMemory(kCmdShmPath, cmdShm_);
+    destroySharedMemory(kWatchdogControlShmPath, watchdogControlShm_);
   }
 };

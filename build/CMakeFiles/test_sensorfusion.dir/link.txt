@@ -1,1 +1,1 @@
-/usr/bin/c++ -g -fsanitize=address,undefined -Wl,--dependency-file=CMakeFiles/test_sensorfusion.dir/link.d CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.o -o test_sensorfusion  libdrone_lib.a /usr/lib/aarch64-linux-gnu/libgtest_main.a /usr/lib/aarch64-linux-gnu/libgtest.a
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/test_sensorfusion.dir/link.d CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.o -o test_sensorfusion  libdrone_lib.a /usr/lib/aarch64-linux-gnu/libgtest_main.a /usr/lib/aarch64-linux-gnu/libgtest.a

@@ -3,6 +3,7 @@
 #include "drone/generated/codes.hpp"
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
+#include <algorithm>
 
 using namespace TYPES;
 
@@ -10,6 +11,73 @@ namespace {
 // HEARTBEAT_GCS part à 1Hz (cf. TELEMETRY.csv) — seuil avec marge, même
 // esprit que kFcLinkTimeout côté MavlinkInterface (3x la période nominale).
 constexpr Ms kGcsHeartbeatTimeout{3000};
+
+// HEALTH ne porte qu'un (component, health) par envoi — pas de quoi montrer
+// les 5 composants pertinents pour le GCS en un seul paquet (GlobalWatchdog
+// exclu, cf. panneau "Components" du dashboard). On les fait défiler un par
+// envoi plutôt que d'élargir le format du paquet pour si peu de champs.
+constexpr std::array<ComponentID, kMonitoredComponentCount> kMonitoredComponents{
+    ComponentID::MavlinkInterface, ComponentID::SensorFusion, ComponentID::Navigation,
+    ComponentID::MissionControl, ComponentID::SysMonitoring};
+
+TELEM::HealthPkt buildHealthPkt(SysMonitoring &comp, size_t &cycleIndex) {
+  ComponentID target = kMonitoredComponents[cycleIndex % kMonitoredComponents.size()];
+  cycleIndex++;
+  TELEM::HealthPkt pkt{};
+  pkt.component = static_cast<uint8_t>(target);
+  if (auto h = comp.sysState_.getHealth(target))
+    pkt.health = static_cast<uint8_t>(*h);
+  return pkt;
+}
+
+// Polling+diff sur les codes MAJEURS (Critical/Emergency) des 5 composants
+// surveillés — CODE est Priority=Critical dans TELEMETRY.csv, on ne relaie
+// donc que les majeurs (le ring mineur est plus bruyant et n'a pas de
+// notion de "clear" à observer). Appelé à chaque TelMainTask/TelSecTask::
+// loop(), indépendamment de si CODE est "dû" — la détection et la
+// planification sont deux choses séparées (cf. markDirty ci-dessous).
+void scanCodeChanges(SysMonitoring &comp, PacketScheduler &sched,
+                     std::array<std::array<uint32_t, kMajorCodeSlots>,
+                                kMonitoredComponentCount> &lastMajor,
+                     bool &primed, std::array<PendingCodeEvent, kPendingCodeCap> &queue,
+                     size_t &queueCount) {
+  for (size_t i = 0; i < kMonitoredComponents.size(); ++i) {
+    auto current = comp.sysState_.getMajorCodes(kMonitoredComponents[i]);
+    if (!current)
+      continue;
+
+    for (const auto &entry : *current) {
+      if (entry.code == 0)
+        continue;
+      bool wasActive = std::find(lastMajor[i].begin(), lastMajor[i].end(), entry.code) !=
+                       lastMajor[i].end();
+      if (!wasActive && primed && queueCount < queue.size())
+        queue[queueCount++] = PendingCodeEvent{entry.code, true, entry.ts};
+    }
+    for (uint32_t prevCode : lastMajor[i]) {
+      if (prevCode == 0)
+        continue;
+      bool stillActive = false;
+      for (const auto &entry : *current)
+        if (entry.code == prevCode) {
+          stillActive = true;
+          break;
+        }
+      if (!stillActive && primed && queueCount < queue.size())
+        queue[queueCount++] = PendingCodeEvent{prevCode, false, Clock::now()};
+    }
+
+    for (size_t s = 0; s < kMajorCodeSlots; ++s)
+      lastMajor[i][s] = (*current)[s].code;
+  }
+  // Premier scan : capture juste l'état déjà présent, n'émet rien (sinon un
+  // redémarrage de SysMonitoring "découvrirait" tous les codes déjà actifs
+  // comme des évènements fraîchement levés).
+  primed = true;
+
+  if (queueCount > 0)
+    sched.markDirty(TELEM::PacketID::CODE);
+}
 } // namespace
 
 SysMonitoring::SysMonitoring(ComponenConfig config,
@@ -17,10 +85,11 @@ SysMonitoring::SysMonitoring(ComponenConfig config,
                              SharedComMemHandler &com, SharedNavMemHandler &nav,
                              SharedSFMemHandler &sf, SharedFCStatusHandler &fc,
                              SharedCmdMemHandler &cmd, ITelemetryLink &mainLink,
-                             ITelemetryLink &secLink, IVideoSource &videoSource)
+                             ITelemetryLink &secLink, IVideoSource &videoSource,
+                             ISystemTempSource &tempSource)
     : ComponentBase<4>(config, com, sysState), com_(com), sysState_(sysState),
       nav_(nav), sf_(sf), fc_(fc), cmd_(cmd), mainLink_(mainLink), secLink_(secLink),
-      videoSource_(videoSource), TTelMain(*this,
+      videoSource_(videoSource), tempSource_(tempSource), TTelMain(*this,
                                           {.id = 0,
                                            .RTpriority = 70,
                                            .core = config.CompCore,
@@ -65,6 +134,11 @@ SysMonitoring::SysMonitoring(ComponenConfig config,
 // SYSMONITORING.md §9.
 
 void TelMainTask::loop() {
+  // Détection indépendante du scheduling : doit tourner à chaque cycle, pas
+  // seulement quand CODE se trouve être "dû" (cf. scanCodeChanges).
+  scanCodeChanges(comp, comp.mainSched_, lastMajorCodes_, codePrimed_, pendingCodes_,
+                  pendingCodeCount_);
+
   auto now = Clock::now();
   const auto *due = comp.mainSched_.nextDue(now);
   if (!due)
@@ -109,7 +183,7 @@ void TelMainTask::loop() {
     break;
   }
   case TELEM::PacketID::HEALTH: {
-    auto frame = TELEM::encode(TELEM::HealthPkt{});
+    auto frame = TELEM::encode(buildHealthPkt(comp, healthCycleIndex_));
     if (!comp.mainLink_.send(frame))
       comp.mainSched_.markSent(due->id, now);
     break;
@@ -139,9 +213,24 @@ void TelMainTask::loop() {
     break;
   }
   case TELEM::PacketID::CODE: {
-    auto frame = TELEM::encode(TELEM::CodePkt{});
-    if (!comp.mainLink_.send(frame))
+    TELEM::CodePkt pkt{};
+    if (pendingCodeCount_ > 0) {
+      PendingCodeEvent ev = pendingCodes_[0];
+      for (size_t i = 1; i < pendingCodeCount_; ++i)
+        pendingCodes_[i - 1] = pendingCodes_[i];
+      pendingCodeCount_--;
+      pkt.code = ev.code;
+      pkt.active = ev.active ? 1 : 0;
+      pkt.ts_ms = static_cast<uint32_t>(
+          std::chrono::duration_cast<std::chrono::milliseconds>(ev.ts.time_since_epoch())
+              .count());
+    }
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame)) {
       comp.mainSched_.markSent(due->id, now);
+      if (pendingCodeCount_ > 0) // il en reste : re-planifie sans attendre un nouveau changement
+        comp.mainSched_.markDirty(TELEM::PacketID::CODE);
+    }
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
@@ -192,12 +281,74 @@ void TelMainTask::loop() {
       comp.mainSched_.markSent(due->id, now);
     break;
   }
+  case TELEM::PacketID::GPSPOS: {
+    TELEM::GpsposPkt pkt{};
+    if (auto gps = comp.sf_.getGpsMag()) {
+      pkt.lat = static_cast<float>(gps->latitude);
+      pkt.lon = static_cast<float>(gps->longitude);
+      pkt.alt_msl = gps->altMsl;
+      pkt.vdop = gps->vdop;
+    }
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame))
+      comp.mainSched_.markSent(due->id, now);
+    break;
+  }
+  case TELEM::PacketID::SAT_INFO: {
+    TELEM::SatInfoPkt pkt{};
+    if (auto gps = comp.sf_.getGpsMag()) {
+      pkt.count = std::min(gps->satellitesVisible,
+                           static_cast<uint8_t>(GpsMagSample::kMaxSatellites));
+      pkt.id = gps->satId;
+      pkt.strength = gps->satStrength;
+      pkt.quality = gps->satQuality;
+    }
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame))
+      comp.mainSched_.markSent(due->id, now);
+    break;
+  }
+  case TELEM::PacketID::LIDAR_SCAN: {
+    TELEM::LidarScanPkt pkt{};
+    if (auto lidar = comp.sf_.getLidarMap()) {
+      pkt.range_mm = lidar->rangeMm;
+      pkt.intensity = lidar->intensity;
+      uint16_t minDist = 0;
+      int16_t minBearing = 0;
+      for (std::size_t i = 0; i < lidar->rangeMm.size(); ++i) {
+        if (lidar->rangeMm[i] == 0)
+          continue; // pas de mesure à cet angle ce tour-ci
+        if (minDist == 0 || lidar->rangeMm[i] < minDist) {
+          minDist = lidar->rangeMm[i];
+          minBearing = static_cast<int16_t>(i);
+        }
+      }
+      pkt.min_dist_mm = minDist;
+      pkt.min_bearing_deg = minBearing;
+    }
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame))
+      comp.mainSched_.markSent(due->id, now);
+    break;
+  }
+  case TELEM::PacketID::CPU_TEMP: {
+    TELEM::CpuTempPkt pkt{};
+    if (auto temp = comp.tempSource_.readCelsius())
+      pkt.temp_c = *temp;
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame))
+      comp.mainSched_.markSent(due->id, now);
+    break;
+  }
   default:
     break; // paquets montants : pas schedulés ici (cf. GCSRxTask)
   }
 }
 
 void TelSecTask::loop() {
+  scanCodeChanges(comp, comp.secSched_, lastMajorCodes_, codePrimed_, pendingCodes_,
+                  pendingCodeCount_);
+
   auto now = Clock::now();
   const auto *due = comp.secSched_.nextDue(now);
   if (!due)
@@ -205,7 +356,7 @@ void TelSecTask::loop() {
 
   switch (due->id) {
   case TELEM::PacketID::HEALTH: {
-    auto frame = TELEM::encode(TELEM::HealthPkt{});
+    auto frame = TELEM::encode(buildHealthPkt(comp, healthCycleIndex_));
     if (!comp.secLink_.send(frame))
       comp.secSched_.markSent(due->id, now);
     break;
@@ -223,9 +374,24 @@ void TelSecTask::loop() {
     break;
   }
   case TELEM::PacketID::CODE: {
-    auto frame = TELEM::encode(TELEM::CodePkt{});
-    if (!comp.secLink_.send(frame))
+    TELEM::CodePkt pkt{};
+    if (pendingCodeCount_ > 0) {
+      PendingCodeEvent ev = pendingCodes_[0];
+      for (size_t i = 1; i < pendingCodeCount_; ++i)
+        pendingCodes_[i - 1] = pendingCodes_[i];
+      pendingCodeCount_--;
+      pkt.code = ev.code;
+      pkt.active = ev.active ? 1 : 0;
+      pkt.ts_ms = static_cast<uint32_t>(
+          std::chrono::duration_cast<std::chrono::milliseconds>(ev.ts.time_since_epoch())
+              .count());
+    }
+    auto frame = TELEM::encode(pkt);
+    if (!comp.secLink_.send(frame)) {
       comp.secSched_.markSent(due->id, now);
+      if (pendingCodeCount_ > 0)
+        comp.secSched_.markDirty(TELEM::PacketID::CODE);
+    }
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
@@ -250,6 +416,15 @@ void TelSecTask::loop() {
       pkt.seq = q->seq;
       pkt.query_type = static_cast<uint8_t>(q->type);
     }
+    auto frame = TELEM::encode(pkt);
+    if (!comp.secLink_.send(frame))
+      comp.secSched_.markSent(due->id, now);
+    break;
+  }
+  case TELEM::PacketID::CPU_TEMP: {
+    TELEM::CpuTempPkt pkt{};
+    if (auto temp = comp.tempSource_.readCelsius())
+      pkt.temp_c = *temp;
     auto frame = TELEM::encode(pkt);
     if (!comp.secLink_.send(frame))
       comp.secSched_.markSent(due->id, now);

@@ -69,3 +69,19 @@ protected:
 private:
   TYPES::DriverHealth health_{TYPES::DriverHealth::Unconnected};
 };
+
+// Température CPU (paquet CPU_TEMP) — une seule méthode, pas de connexion
+// à maintenir (lecture fichier ponctuelle), donc pas de getHealth() ici :
+// un échec de lecture est juste DriverError, pas un état de lien à suivre.
+class ISystemTempSource {
+public:
+  ISystemTempSource() = default;
+  virtual ~ISystemTempSource() = default;
+
+  ISystemTempSource(const ISystemTempSource &) = delete;
+  ISystemTempSource &operator=(const ISystemTempSource &) = delete;
+  ISystemTempSource(ISystemTempSource &&) = delete;
+  ISystemTempSource &operator=(ISystemTempSource &&) = delete;
+
+  [[nodiscard]] virtual std::expected<float, TYPES::DriverError> readCelsius() = 0;
+};

@@ -195,6 +195,9 @@ def make_handler(state, packets_by_name, bridge_state):
             if self.path == "/mc/sitl":
                 self._send_html("mc_sitl.html")
                 return
+            if self.path == "/sitl/prod":
+                self._send_html("sitl_prod.html")
+                return
 
             # ─── API SysMonitoring ──────────────────────────────────────
             if self.path == "/api/sysmonitoring/telemetry":
@@ -260,7 +263,7 @@ def make_handler(state, packets_by_name, bridge_state):
                 ns = payload.get("ns")
                 cmd = payload.get("cmd")
                 fields = payload.get("fields", {})
-                if ns not in ("SITL", "HIL", "NAV_SITL", "MC_SITL"):
+                if ns not in ("SITL", "HIL", "NAV_SITL", "MC_SITL", "PROD"):
                     self._send_json(400, {"error": f"namespace '{ns}' inconnu"})
                     return
                 if cmd not in ("NAV", "GPSMAG", "MCCMD", "SEGMENT", "GCSCMD", "CODE",
@@ -269,7 +272,7 @@ def make_handler(state, packets_by_name, bridge_state):
                     return
 
                 # Même protocole texte que UDP_bridge.cpp attend :
-                # "CMD=<NOM>\nNS=<SITL|HIL|NAV_SITL|MC_SITL>\ncle=valeur\n..." — cf. handleCommand().
+                # "CMD=<NOM>\nNS=<SITL|HIL|NAV_SITL|MC_SITL|PROD>\ncle=valeur\n..." — cf. handleCommand().
                 # CMD=GPSMAG+NS=HIL est rejeté côté pont (SensorFusion réel
                 # est déjà writer de gpsMag) — pas de garde ici, un seul
                 # endroit pour cette règle plutôt que la dupliquer.

@@ -21,6 +21,8 @@
 // zéro, contournant le problème sans y toucher.
 
 #include "drone/core/GlobalWatchdog.hpp"
+#include "drone/core/WatchdogControl.hpp"
+#include "drone/shm.hpp"
 #include <algorithm>
 #include <chrono>
 #include <csignal>
@@ -152,6 +154,74 @@ TEST(GlobalWatchdogTest, RespawnsChildrenThatDie) {
   // Plus d'une occurrence de chaque rôle = preuve de respawn après mort.
   EXPECT_GT(navCount, 1);
   EXPECT_GT(sfCount, 1);
+}
+
+// (pid, role) par ligne de log — readLogRoles() ne garde que le role, on a
+// besoin du pid ici pour cibler un kill() précis (pas de course avec le
+// comportement d'auto-sortie du stub, contrairement à exit_after_short_delay).
+std::vector<std::pair<pid_t, std::string>> readLogEntries(const std::string &logPath) {
+  std::vector<std::pair<pid_t, std::string>> entries;
+  std::ifstream log(logPath);
+  std::string line;
+  while (std::getline(log, line)) {
+    auto spacePos = line.find(' ');
+    if (spacePos != std::string::npos)
+      entries.emplace_back(std::stoi(line.substr(0, spacePos)),
+                           line.substr(spacePos + 1));
+  }
+  return entries;
+}
+
+TEST(GlobalWatchdogTest, RespawnSuppressedWhenFlagSet) {
+  // Simule une panne système délibérée (INTEGRATION_TEST.md §7.2/§10.1) :
+  // un outil de test positionne suppressRespawn[Navigation], puis tue le
+  // process Navigation directement (même geste qu'un futur SITL_MASTER) ->
+  // doit rester mort. SensorFusion, tué sans le flag posé, doit continuer à
+  // respawn normalement (témoin différentiel).
+  auto logPath = uniqueLogPath("suppress");
+  std::remove(logPath.c_str());
+
+  pid_t gwPid = spawnGlobalWatchdog("stay_alive", logPath);
+
+  // Laisse publishAll() + fork des enfants se terminer.
+  std::this_thread::sleep_for(std::chrono::milliseconds(150));
+
+  auto wdc = attachSharedMemory<SharedWatchdogControl>(kWatchdogControlShmPath);
+  ASSERT_TRUE(wdc.has_value());
+  wdc->ptr->suppressRespawn[static_cast<std::size_t>(TYPES::ComponentID::Navigation)]
+      .store(true, std::memory_order_release);
+  detachSharedMemory(*wdc);
+
+  auto entriesBefore = readLogEntries(logPath);
+  auto findPid = [&](std::string_view role) -> pid_t {
+    for (auto &[pid, r] : entriesBefore)
+      if (r == role)
+        return pid;
+    return -1;
+  };
+  pid_t navPid = findPid("navigation");
+  pid_t sfPid = findPid("sensorfusion");
+  ASSERT_GT(navPid, 0);
+  ASSERT_GT(sfPid, 0);
+
+  kill(navPid, SIGKILL); // suppression active : ne doit jamais revenir
+  kill(sfPid, SIGKILL);  // pas de suppression : doit respawn normalement
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+  kill(gwPid, SIGTERM);
+  waitForExitWithTimeout(gwPid, std::chrono::milliseconds(2000));
+
+  auto roles = readLogRoles(logPath);
+  std::remove(logPath.c_str());
+
+  int navCount = static_cast<int>(
+      std::count(roles.begin(), roles.end(), "navigation"));
+  int sfCount = static_cast<int>(
+      std::count(roles.begin(), roles.end(), "sensorfusion"));
+
+  EXPECT_EQ(navCount, 1);  // tué une fois, jamais respawné
+  EXPECT_EQ(sfCount, 2);   // spawn initial + un respawn après le kill
 }
 
 TEST(GlobalWatchdogTest, GroupWideSigtermDoesNotResurrectChildren) {

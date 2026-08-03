@@ -609,17 +609,12 @@ mc_sitl: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o \
   libdrone_lib.a
 
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so:
 
@@ -1391,8 +1386,6 @@ CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
-
 /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h:
 
 /usr/include/eigen3/Eigen/src/Core/Replicate.h:
@@ -1422,8 +1415,6 @@ CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o:
 /usr/include/c++/14/bits/std_mutex.h:
 
 /usr/include/c++/14/bits/std_thread.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
 
 /usr/include/c++/14/bits/stl_algobase.h:
 

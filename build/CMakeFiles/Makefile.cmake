@@ -87,4 +87,5 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/nav_sitl.dir/DependInfo.cmake"
   "CMakeFiles/mc_sitl.dir/DependInfo.cmake"
   "CMakeFiles/udp_bridge.dir/DependInfo.cmake"
+  "CMakeFiles/sysmon_sitl.dir/DependInfo.cmake"
   )

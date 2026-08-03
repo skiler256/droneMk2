@@ -86,6 +86,9 @@ def generate(codes, csv_path: Path) -> str:
     lines.append("  Severity severity;")
     lines.append("  const char *name;")
     lines.append("  const char *description;")
+    lines.append("  // Identifiant de son dédié pour l'alarme GCS (\"\" = pas de son dédié, retombe")
+    lines.append("  // sur le bip générique Master Warning/Caution — cf. GCS/public/js/link.js).")
+    lines.append("  const char *sound;")
     lines.append("};")
     lines.append("")
     for c in codes:
@@ -95,7 +98,8 @@ def generate(codes, csv_path: Path) -> str:
     lines.append(f"inline constexpr std::array<Entry, {len(codes)}> kTable{{{{")
     for c in codes:
         lines.append(f'    Entry{{{c.code}, Severity::{c.severity}, '
-                     f'"{cpp_escape(c.name)}", "{cpp_escape(c.description)}"}},')
+                     f'"{cpp_escape(c.name)}", "{cpp_escape(c.description)}", '
+                     f'"{cpp_escape(c.sound)}"}},')
     lines.append("}};")
     lines.append("")
     lines.append("// Recherche linéaire : table petite, appelée hors boucle chaude uniquement")

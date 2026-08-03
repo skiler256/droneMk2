@@ -1,10 +1,10 @@
-Start testing: Aug 01 22:09 CEST
+Start testing: Aug 03 13:15 CEST
 ----------------------------------------------------------
 1/10 Testing: test_types
 1/10 Test: test_types
 Command: "/home/jules/droneMk2/build/test_types"
 Directory: /home/jules/droneMk2/build
-"test_types" start time: Aug 01 22:09 CEST
+"test_types" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -72,10 +72,10 @@ Running main() from ./googletest/src/gtest_main.cc
 [==========] 26 tests from 2 test suites ran. (1 ms total)
 [  PASSED  ] 26 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_types" end time: Aug 01 22:09 CEST
+"test_types" end time: Aug 03 13:15 CEST
 "test_types" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -83,7 +83,7 @@ Test Passed.
 2/10 Test: test_shared_state
 Command: "/home/jules/droneMk2/build/test_shared_state"
 Directory: /home/jules/droneMk2/build
-"test_shared_state" start time: Aug 01 22:09 CEST
+"test_shared_state" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -100,10 +100,10 @@ Running main() from ./googletest/src/gtest_main.cc
 
 [----------] 2 tests from SharedMemoryConcurrencyTest
 [ RUN      ] SharedMemoryConcurrencyTest.ConcurrentSetHealthDoesNotLoseUpdates
-[       OK ] SharedMemoryConcurrencyTest.ConcurrentSetHealthDoesNotLoseUpdates (3 ms)
+[       OK ] SharedMemoryConcurrencyTest.ConcurrentSetHealthDoesNotLoseUpdates (0 ms)
 [ RUN      ] SharedMemoryConcurrencyTest.ConcurrentReadersNeverSeeCorruption
-[       OK ] SharedMemoryConcurrencyTest.ConcurrentReadersNeverSeeCorruption (51 ms)
-[----------] 2 tests from SharedMemoryConcurrencyTest (54 ms total)
+[       OK ] SharedMemoryConcurrencyTest.ConcurrentReadersNeverSeeCorruption (50 ms)
+[----------] 2 tests from SharedMemoryConcurrencyTest (51 ms total)
 
 [----------] 2 tests from SharedCompMemHistoryTest
 [ RUN      ] SharedCompMemHistoryTest.CorruptedRestartHistoryIsDetected
@@ -132,13 +132,13 @@ Running main() from ./googletest/src/gtest_main.cc
 [----------] 8 tests from DiagCodeTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 15 tests from 4 test suites ran. (57 ms total)
+[==========] 15 tests from 4 test suites ran. (53 ms total)
 [  PASSED  ] 15 tests.
 <end of output>
-Test time =   0.07 sec
+Test time =   0.06 sec
 ----------------------------------------------------------
 Test Passed.
-"test_shared_state" end time: Aug 01 22:09 CEST
+"test_shared_state" end time: Aug 03 13:15 CEST
 "test_shared_state" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -146,7 +146,7 @@ Test Passed.
 3/10 Test: test_watchdog
 Command: "/home/jules/droneMk2/build/test_watchdog"
 Directory: /home/jules/droneMk2/build
-"test_watchdog" start time: Aug 01 22:09 CEST
+"test_watchdog" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -154,13 +154,13 @@ Running main() from ./googletest/src/gtest_main.cc
 [----------] Global test environment set-up.
 [----------] 1 test from ComponentWatchdogDeathTest
 [ RUN      ] ComponentWatchdogDeathTest.EscalatesToExitAfterTooManyRestarts
-[       OK ] ComponentWatchdogDeathTest.EscalatesToExitAfterTooManyRestarts (9 ms)
-[----------] 1 test from ComponentWatchdogDeathTest (9 ms total)
+[       OK ] ComponentWatchdogDeathTest.EscalatesToExitAfterTooManyRestarts (6 ms)
+[----------] 1 test from ComponentWatchdogDeathTest (6 ms total)
 
 [----------] 1 test from TaskDeathTest
 [ RUN      ] TaskDeathTest.ConstructorWiresRestartThresholdCorrectly
-[       OK ] TaskDeathTest.ConstructorWiresRestartThresholdCorrectly (7 ms)
-[----------] 1 test from TaskDeathTest (7 ms total)
+[       OK ] TaskDeathTest.ConstructorWiresRestartThresholdCorrectly (4 ms)
+[----------] 1 test from TaskDeathTest (4 ms total)
 
 [----------] 4 tests from ComponentWatchdogTest
 [ RUN      ] ComponentWatchdogTest.RestartsBelowThresholdDoNotEscalate
@@ -171,7 +171,7 @@ Running main() from ./googletest/src/gtest_main.cc
 [       OK ] ComponentWatchdogTest.HeartbeatPreventsRestart (0 ms)
 [ RUN      ] ComponentWatchdogTest.PicksUpShmErrorsFromRegisteredSources
 [       OK ] ComponentWatchdogTest.PicksUpShmErrorsFromRegisteredSources (0 ms)
-[----------] 4 tests from ComponentWatchdogTest (155 ms total)
+[----------] 4 tests from ComponentWatchdogTest (154 ms total)
 
 [----------] 1 test from TaskTest
 [ RUN      ] TaskTest.ConstructorWiresRestartConfigIntoWatchdog
@@ -204,13 +204,13 @@ Running main() from ./googletest/src/gtest_main.cc
 [----------] 2 tests from ComponentWatchdogRealThreadTest (320 ms total)
 
 [----------] Global test environment tear-down
-[==========] 15 tests from 7 test suites ran. (1056 ms total)
+[==========] 15 tests from 7 test suites ran. (1048 ms total)
 [  PASSED  ] 15 tests.
 <end of output>
-Test time =   1.07 sec
+Test time =   1.05 sec
 ----------------------------------------------------------
 Test Passed.
-"test_watchdog" end time: Aug 01 22:09 CEST
+"test_watchdog" end time: Aug 03 13:15 CEST
 "test_watchdog" time elapsed: 00:00:01
 ----------------------------------------------------------
 
@@ -218,7 +218,7 @@ Test Passed.
 4/10 Test: test_telemetry
 Command: "/home/jules/droneMk2/build/test_telemetry"
 Directory: /home/jules/droneMk2/build
-"test_telemetry" start time: Aug 01 22:09 CEST
+"test_telemetry" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -265,10 +265,10 @@ Running main() from ./googletest/src/gtest_main.cc
 [==========] 14 tests from 3 test suites ran. (0 ms total)
 [  PASSED  ] 14 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_telemetry" end time: Aug 01 22:09 CEST
+"test_telemetry" end time: Aug 03 13:15 CEST
 "test_telemetry" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -276,7 +276,7 @@ Test Passed.
 5/10 Test: test_navigation
 Command: "/home/jules/droneMk2/build/test_navigation"
 Directory: /home/jules/droneMk2/build
-"test_navigation" start time: Aug 01 22:09 CEST
+"test_navigation" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -358,10 +358,10 @@ Running main() from ./googletest/src/gtest_main.cc
 [==========] 27 tests from 6 test suites ran. (0 ms total)
 [  PASSED  ] 27 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_navigation" end time: Aug 01 22:09 CEST
+"test_navigation" end time: Aug 03 13:15 CEST
 "test_navigation" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -369,7 +369,7 @@ Test Passed.
 6/10 Test: test_missionplan
 Command: "/home/jules/droneMk2/build/test_missionplan"
 Directory: /home/jules/droneMk2/build
-"test_missionplan" start time: Aug 01 22:09 CEST
+"test_missionplan" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -398,10 +398,10 @@ Running main() from ./googletest/src/gtest_main.cc
 [==========] 8 tests from 1 test suite ran. (0 ms total)
 [  PASSED  ] 8 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_missionplan" end time: Aug 01 22:09 CEST
+"test_missionplan" end time: Aug 03 13:15 CEST
 "test_missionplan" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -409,7 +409,7 @@ Test Passed.
 7/10 Test: test_missioncontrol
 Command: "/home/jules/droneMk2/build/test_missioncontrol"
 Directory: /home/jules/droneMk2/build
-"test_missioncontrol" start time: Aug 01 22:09 CEST
+"test_missioncontrol" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -482,10 +482,10 @@ Running main() from ./googletest/src/gtest_main.cc
 [==========] 30 tests from 1 test suite ran. (0 ms total)
 [  PASSED  ] 30 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_missioncontrol" end time: Aug 01 22:09 CEST
+"test_missioncontrol" end time: Aug 03 13:15 CEST
 "test_missioncontrol" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -493,7 +493,7 @@ Test Passed.
 8/10 Test: test_mavlink
 Command: "/home/jules/droneMk2/build/test_mavlink"
 Directory: /home/jules/droneMk2/build
-"test_mavlink" start time: Aug 01 22:09 CEST
+"test_mavlink" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -592,13 +592,13 @@ Running main() from ./googletest/src/gtest_main.cc
 [----------] 4 tests from MavlinkParseTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 34 tests from 8 test suites ran. (1 ms total)
+[==========] 34 tests from 8 test suites ran. (0 ms total)
 [  PASSED  ] 34 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_mavlink" end time: Aug 01 22:09 CEST
+"test_mavlink" end time: Aug 03 13:15 CEST
 "test_mavlink" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -606,7 +606,7 @@ Test Passed.
 9/10 Test: test_sensorfusion
 Command: "/home/jules/droneMk2/build/test_sensorfusion"
 Directory: /home/jules/droneMk2/build
-"test_sensorfusion" start time: Aug 01 22:09 CEST
+"test_sensorfusion" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
@@ -660,10 +660,10 @@ Running main() from ./googletest/src/gtest_main.cc
 [==========] 13 tests from 6 test suites ran. (0 ms total)
 [  PASSED  ] 13 tests.
 <end of output>
-Test time =   0.01 sec
+Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"test_sensorfusion" end time: Aug 01 22:09 CEST
+"test_sensorfusion" end time: Aug 03 13:15 CEST
 "test_sensorfusion" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -671,13 +671,13 @@ Test Passed.
 10/10 Test: test_global_watchdog
 Command: "/home/jules/droneMk2/build/test_global_watchdog"
 Directory: /home/jules/droneMk2/build
-"test_global_watchdog" start time: Aug 01 22:09 CEST
+"test_global_watchdog" start time: Aug 03 13:15 CEST
 Output:
 ----------------------------------------------------------
 Running main() from ./googletest/src/gtest_main.cc
-[==========] Running 3 tests from 1 test suite.
+[==========] Running 4 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 3 tests from GlobalWatchdogTest
+[----------] 4 tests from GlobalWatchdogTest
 [ RUN      ] GlobalWatchdogTest.SpawnsChildrenWithCorrectRolesAndCleansUpShm
 [       OK ] GlobalWatchdogTest.SpawnsChildrenWithCorrectRolesAndCleansUpShm (161 ms)
 [ RUN      ] GlobalWatchdogTest.RespawnsChildrenThatDie
@@ -688,45 +688,62 @@ GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
-GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
-GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
 GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
-GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
-GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
 GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
-GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
 GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
 GlobalWatchdog: navigation est mort, reset writer flags + respawn
-[       OK ] GlobalWatchdogTest.RespawnsChildrenThatDie (311 ms)
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
+GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
+GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+GlobalWatchdog: mavlinkinterface est mort, reset writer flags + respawn
+GlobalWatchdog: navigation est mort, reset writer flags + respawn
+GlobalWatchdog: sysmonitoring est mort, reset writer flags + respawn
+GlobalWatchdog: missioncontrol est mort, reset writer flags + respawn
+[       OK ] GlobalWatchdogTest.RespawnsChildrenThatDie (310 ms)
+[ RUN      ] GlobalWatchdogTest.RespawnSuppressedWhenFlagSet
+GlobalWatchdog: navigation est mort, respawn suspendu (SharedWatchdogControl)
+GlobalWatchdog: sensorfusion est mort, reset writer flags + respawn
+[       OK ] GlobalWatchdogTest.RespawnSuppressedWhenFlagSet (460 ms)
 [ RUN      ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren
-[       OK ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren (161 ms)
-[----------] 3 tests from GlobalWatchdogTest (634 ms total)
+[       OK ] GlobalWatchdogTest.GroupWideSigtermDoesNotResurrectChildren (160 ms)
+[----------] 4 tests from GlobalWatchdogTest (1092 ms total)
 
 [----------] Global test environment tear-down
-[==========] 3 tests from 1 test suite ran. (634 ms total)
-[  PASSED  ] 3 tests.
+[==========] 4 tests from 1 test suite ran. (1092 ms total)
+[  PASSED  ] 4 tests.
 <end of output>
-Test time =   0.64 sec
+Test time =   1.09 sec
 ----------------------------------------------------------
 Test Passed.
-"test_global_watchdog" end time: Aug 01 22:09 CEST
-"test_global_watchdog" time elapsed: 00:00:00
+"test_global_watchdog" end time: Aug 03 13:15 CEST
+"test_global_watchdog" time elapsed: 00:00:01
 ----------------------------------------------------------
 
-End testing: Aug 01 22:09 CEST
+End testing: Aug 03 13:15 CEST

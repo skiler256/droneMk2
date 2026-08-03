@@ -2,20 +2,27 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Pont shm <-> UDP unique pour les tests d'intégration : s'attache, de façon
 // opportuniste et indépendante, aux segments SITL::/HIL::/NAV_SITL::k*ShmPath
-// (publiés respectivement par mv_sitl, hil_sf_mv, nav_sitl) — les trois
-// peuvent être actifs en même temps ou pas du tout, réessayé périodiquement
-// si un binaire démarre après le pont. Réutilise les VRAIS handlers (aucune
-// réimplémentation du verrou CAS).
+// (publiés respectivement par mv_sitl, hil_sf_mv, nav_sitl), ainsi qu'aux
+// VRAIS chemins de prod (namespace PROD, kNavShmPath etc. de
+// GlobalWatchdog.hpp — publiés par le vrai binaire `drone`, typiquement
+// lancé par le SITL_MASTER avec -DDRONE_USE_SITL_DRIVERS). Tous peuvent être
+// actifs en même temps ou pas du tout, réessayé périodiquement si un binaire
+// démarre après le pont. Réutilise les VRAIS handlers (aucune réimplémentation
+// du verrou CAS).
 //
 // Protocole texte, un datagramme = un segment, ligne 1 "SEGMENT=<NS>_<NOM>"
-// (NS = SITL, HIL ou NAV_SITL) puis une ligne "cle=valeur" par champ — pas de
-// lib JSON, débogable à la main avec `nc -ul <port>`. Deux ports localhost
-// (le pont et le serveur web tournent tous les deux sur le Pi, seul le
-// navigateur est distant) :
+// (NS = SITL, HIL, NAV_SITL, MC_SITL ou PROD) puis une ligne "cle=valeur" par
+// champ — pas de lib JSON, débogable à la main avec `nc -ul <port>`. Deux
+// ports localhost (le pont et le serveur web tournent tous les deux sur le
+// Pi, seul le navigateur est distant) :
 //   - kStatusPort  : le pont ENVOIE ici, ~10Hz, un datagramme par segment actif
 //                    — tools/dashboard/dashboard_server.py écoute.
 //   - kCommandPort : le pont ÉCOUTE ici les injections de test, "CMD=<NOM>\n
-//                    NS=<SITL|HIL|NAV_SITL>\ncle=valeur...".
+//                    NS=<SITL|HIL|NAV_SITL|MC_SITL|PROD>\ncle=valeur...".
+//
+// PROD est en lecture seule côté dashboard (pas d'injection GPS/segment :
+// les vrais writers — Navigation/SensorFusion/MissionControl réels — sont
+// déjà en place, cf. allowGpsMagInject=false).
 //
 // IMPORTANT : CMD=GPSMAG n'est routable QUE vers SITL. Côté HIL, le vrai
 // SensorFusion tourne et est l'unique writer légitime de gpsMag (principe
@@ -32,7 +39,9 @@
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/Components/System Monitoring/SharedComMem.hpp"
 #include "drone/IntegrationTests/ShmPaths.hpp"
+#include "drone/core/GlobalWatchdog.hpp" // chemins shm de PROD (kNavShmPath etc.), pas la classe elle-meme
 #include "drone/core/SharedSysStateMem.hpp"
+#include "drone/core/WatchdogControl.hpp"
 #include "drone/generated/codes.hpp"
 #include "drone/shm.hpp"
 #include "drone/types.hpp"
@@ -350,6 +359,26 @@ std::string serializeCom(std::string_view ns, SharedComMemHandler &h) {
   return os.str();
 }
 
+// SharedWatchdogControl n'a pas de handler (pas de verrou CAS/checksum, cf.
+// WatchdogControl.hpp) : lecture directe du ptr shm, atomics individuels.
+std::string serializeWatchdogControl(std::string_view ns, SharedWatchdogControl &wdc) {
+  std::ostringstream os;
+  os << "SEGMENT=" << ns << "_WDC\n";
+
+  auto dump = [&](std::string_view label, ComponentID id) {
+    bool suppressed = wdc.suppressRespawn[static_cast<std::size_t>(id)].load(
+        std::memory_order_acquire);
+    os << label << ".suppressed=" << (suppressed ? 1 : 0) << "\n";
+  };
+  dump("mavlink", ComponentID::MavlinkInterface);
+  dump("sensorfusion", ComponentID::SensorFusion);
+  dump("navigation", ComponentID::Navigation);
+  dump("sysmonitoring", ComponentID::SysMonitoring);
+  dump("missioncontrol", ComponentID::MissionControl);
+
+  return os.str();
+}
+
 // Parse un datagramme "cle=valeur\n..." en map — utilisé pour les commandes
 // entrantes (CMD=NAV/CMD=GPSMAG/CMD=MCCMD).
 std::unordered_map<std::string, std::string> parseLines(std::string_view text) {
@@ -400,6 +429,9 @@ struct TestNamespace {
   bool allowGpsMagInject; // faux pour HIL : SensorFusion réel est déjà writer
 
   std::string_view navPath, sfPath, sysPath, fcPath, cmdPath, comPath;
+  // Absent (vide) partout sauf PROD — seul GlobalWatchdog publie ce segment,
+  // cf. WatchdogControl.hpp / GlobalWatchdog.hpp.
+  std::string_view wdcPath;
 
   std::optional<ShmPublisher<SharedNavMem>> navShm;
   std::optional<ShmPublisher<SharedSFMem>> sfShm;
@@ -407,6 +439,7 @@ struct TestNamespace {
   std::optional<ShmPublisher<SharedFCStatus>> fcShm;
   std::optional<ShmPublisher<SharedCmdMem>> cmdShm;
   std::optional<ShmPublisher<SharedComMem>> comShm;
+  std::optional<ShmPublisher<SharedWatchdogControl>> wdcShm;
 
   std::optional<SharedNavMemHandler> nav;
   std::optional<SharedSFMemHandler> sf;
@@ -416,6 +449,8 @@ struct TestNamespace {
   // Absent (comPath vide) pour SITL/HIL/NAV_SITL — seul MC_SITL en a besoin
   // (injection de commandes GCS, cf. CMD=GCSCMD).
   std::optional<SharedComMemHandler> com;
+  // Pas de handler dédié : SharedWatchdogControl n'a pas de verrou CAS/
+  // checksum (cf. WatchdogControl.hpp), lu directement via wdcShm->ptr.
 
   // Rafraîchissement périodique de la dernière commande injectée — un
   // NavCommand/GpsMagSample écrit une seule fois expire côté ArduPilot
@@ -475,6 +510,10 @@ struct TestNamespace {
         com.emplace(ComponentID::GlobalWatchdog, Us(2000), *comShm->ptr);
       }
     }
+    if (!wdcShm && !wdcPath.empty()) {
+      if (auto r = attachSharedMemory<SharedWatchdogControl>(wdcPath))
+        wdcShm = *r;
+    }
   }
 
   void pushStatus(int statusFd) {
@@ -494,6 +533,8 @@ struct TestNamespace {
     }
     if (com)
       sendSegment(statusFd, serializeCom(label, *com));
+    if (wdcShm)
+      sendSegment(statusFd, serializeWatchdogControl(label, *wdcShm->ptr));
   }
 
   void refreshInjectedCommands(TYPES::TimePoint now) {
@@ -567,7 +608,8 @@ struct TestNamespace {
 // echo -e "CMD=GCSCMD\nNS=MC_SITL\ntype=Arm" | nc -u -w0 127.0.0.1 15000
 // echo -e "CMD=CODE\nNS=MC_SITL\ncomponent=SensorFusion\ncode=SFS002\naction=raise" | nc -u -w0 127.0.0.1 15000
 void handleCommand(std::string_view text, TestNamespace &sitlNs, TestNamespace &hilNs,
-                   TestNamespace &navSitlNs, TestNamespace &mcSitlNs) {
+                   TestNamespace &navSitlNs, TestNamespace &mcSitlNs,
+                   TestNamespace &prodNs) {
   auto fields = parseLines(text);
   auto cmdIt = fields.find("CMD");
   auto nsIt = fields.find("NS");
@@ -577,6 +619,7 @@ void handleCommand(std::string_view text, TestNamespace &sitlNs, TestNamespace &
   TestNamespace &ns = (nsIt->second == "HIL")        ? hilNs
                       : (nsIt->second == "NAV_SITL")  ? navSitlNs
                       : (nsIt->second == "MC_SITL")   ? mcSitlNs
+                      : (nsIt->second == "PROD")      ? prodNs
                                                       : sitlNs;
 
   if (cmdIt->second == "MCCMD") {
@@ -764,10 +807,27 @@ int main() {
   mcSitlNs.cmdPath = MC_SITL::kCmdShmPath;
   mcSitlNs.comPath = MC_SITL::kComShmPath;
 
+  // PROD : le vrai binaire `drone`/GlobalWatchdog, lancé par SITL_MASTER
+  // (option DRONE_USE_SITL_DRIVERS) — attache les VRAIS chemins de prod
+  // (cf. GlobalWatchdog.hpp), pas un namespace de test dédié. Dashboard
+  // uniquement : pas d'injection GPS/segment (writers réels déjà en place,
+  // même raison que allowGpsMagInject=false sur HIL).
+  TestNamespace prodNs{};
+  prodNs.label = "PROD";
+  prodNs.allowGpsMagInject = false;
+  prodNs.navPath = kNavShmPath;
+  prodNs.sfPath = kSFShmPath;
+  prodNs.sysPath = kSysShmPath;
+  prodNs.fcPath = kFCShmPath;
+  prodNs.cmdPath = kCmdShmPath;
+  prodNs.comPath = kComShmPath;
+  prodNs.wdcPath = kWatchdogControlShmPath;
+
   sitlNs.tryAttachMissing();
   hilNs.tryAttachMissing();
   navSitlNs.tryAttachMissing();
   mcSitlNs.tryAttachMissing();
+  prodNs.tryAttachMissing();
 
   int statusFd = openStatusSocket();
   int commandFd = openCommandSocket();
@@ -780,7 +840,8 @@ int main() {
            << kCommandPort << " — SITL " << (sitlNs.fc ? "actif" : "absent") << ", HIL "
            << (hilNs.fc ? "actif" : "absent") << ", NAV_SITL "
            << (navSitlNs.fc ? "actif" : "absent") << ", MC_SITL "
-           << (mcSitlNs.fc ? "actif" : "absent") << "\n";
+           << (mcSitlNs.fc ? "actif" : "absent") << ", PROD "
+           << (prodNs.fc ? "actif" : "absent") << "\n";
 
   auto nextPush = Clock::now();
   auto nextRefresh = Clock::now();
@@ -795,10 +856,12 @@ int main() {
       hilNs.pollReports();
       navSitlNs.pollReports();
       mcSitlNs.pollReports();
+      prodNs.pollReports();
       sitlNs.pushStatus(statusFd);
       hilNs.pushStatus(statusFd);
       navSitlNs.pushStatus(statusFd);
       mcSitlNs.pushStatus(statusFd);
+      prodNs.pushStatus(statusFd);
       nextPush = now + kPushPeriod;
     }
 
@@ -815,6 +878,7 @@ int main() {
       hilNs.tryAttachMissing();
       navSitlNs.tryAttachMissing();
       mcSitlNs.tryAttachMissing();
+      prodNs.tryAttachMissing();
       nextAttachRetry = now + kAttachRetryPeriod;
     }
 
@@ -822,7 +886,7 @@ int main() {
     if (n > 0) {
       handleCommand(std::string_view(reinterpret_cast<const char *>(cmdBuf.data()),
                                      static_cast<size_t>(n)),
-                    sitlNs, hilNs, navSitlNs, mcSitlNs);
+                    sitlNs, hilNs, navSitlNs, mcSitlNs, prodNs);
     } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
       std::cerr << "UDP_bridge: erreur lecture commande\n";
     }

@@ -473,6 +473,7 @@ CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o: \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SharedSFMem.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
+ /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp \
  /home/jules/droneMk2/include/drone/shm.hpp /usr/include/c++/14/csignal \
  /usr/include/signal.h \
  /usr/include/aarch64-linux-gnu/bits/signum-generic.h \

@@ -11,8 +11,10 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o
  /home/jules/droneMk2/include/drone/Components/System Monitoring/SharedComMem.hpp
  /home/jules/droneMk2/include/drone/IntegrationTests/ShmPaths.hpp
  /home/jules/droneMk2/include/drone/core/CommandFifo.hpp
+ /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp
  /home/jules/droneMk2/include/drone/core/SharedMemory.hpp
  /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp
+ /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp
  /home/jules/droneMk2/include/drone/generated/codes.hpp
  /home/jules/droneMk2/include/drone/shm.hpp
  /home/jules/droneMk2/include/drone/types.hpp
@@ -111,6 +113,7 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o
  /usr/include/aarch64-linux-gnu/bits/types/clockid_t.h
  /usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h
  /usr/include/aarch64-linux-gnu/bits/types/error_t.h
+ /usr/include/aarch64-linux-gnu/bits/types/idtype_t.h
  /usr/include/aarch64-linux-gnu/bits/types/locale_t.h
  /usr/include/aarch64-linux-gnu/bits/types/mbstate_t.h
  /usr/include/aarch64-linux-gnu/bits/types/sig_atomic_t.h
@@ -171,6 +174,7 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o
  /usr/include/aarch64-linux-gnu/sys/types.h
  /usr/include/aarch64-linux-gnu/sys/ucontext.h
  /usr/include/aarch64-linux-gnu/sys/user.h
+ /usr/include/aarch64-linux-gnu/sys/wait.h
  /usr/include/alloca.h
  /usr/include/arpa/inet.h
  /usr/include/asm-generic/bitsperlong.h
@@ -609,12 +613,9 @@ udp_bridge
  /usr/lib/aarch64-linux-gnu/libm.so
  /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o
  /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o
- /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so
- /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o
  /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a
  /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so
  /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so
- /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so
  /home/jules/droneMk2/build/CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o
  /home/jules/droneMk2/build/libdrone_lib.a
 

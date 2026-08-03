@@ -319,16 +319,11 @@ test_stub_child: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.o
 
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a:
 
@@ -337,8 +332,6 @@ test_stub_child: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/lib/aarch64-linux-gnu/libgcc_s.so.1:
 
 /usr/lib/aarch64-linux-gnu/libc.so:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
 
 /usr/lib/aarch64-linux-gnu/crtn.o:
 
@@ -923,8 +916,6 @@ CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.o:
 /usr/include/c++/14/concepts:
 
 /usr/include/c++/14/cstddef:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
 

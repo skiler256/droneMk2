@@ -399,6 +399,19 @@ udp_bridge/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/udp_bridge.dir/build.make CMakeFiles/udp_bridge.dir/build
 .PHONY : udp_bridge/fast
 
+#=============================================================================
+# Target rules for targets named sysmon_sitl
+
+# Build rule for target.
+sysmon_sitl: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sysmon_sitl
+.PHONY : sysmon_sitl
+
+# fast build rule for target.
+sysmon_sitl/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sysmon_sitl.dir/build.make CMakeFiles/sysmon_sitl.dir/build
+.PHONY : sysmon_sitl/fast
+
 src/Drivers/LD06.o: src/Drivers/LD06.cpp.o
 .PHONY : src/Drivers/LD06.o
 
@@ -470,6 +483,54 @@ src/Drivers/NEO-M8N.s: src/Drivers/NEO-M8N.cpp.s
 src/Drivers/NEO-M8N.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.s
 .PHONY : src/Drivers/NEO-M8N.cpp.s
+
+src/Drivers/UdpGpsDriver.o: src/Drivers/UdpGpsDriver.cpp.o
+.PHONY : src/Drivers/UdpGpsDriver.o
+
+# target to build an object file
+src/Drivers/UdpGpsDriver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/UdpGpsDriver.cpp.o
+.PHONY : src/Drivers/UdpGpsDriver.cpp.o
+
+src/Drivers/UdpGpsDriver.i: src/Drivers/UdpGpsDriver.cpp.i
+.PHONY : src/Drivers/UdpGpsDriver.i
+
+# target to preprocess a source file
+src/Drivers/UdpGpsDriver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/UdpGpsDriver.cpp.i
+.PHONY : src/Drivers/UdpGpsDriver.cpp.i
+
+src/Drivers/UdpGpsDriver.s: src/Drivers/UdpGpsDriver.cpp.s
+.PHONY : src/Drivers/UdpGpsDriver.s
+
+# target to generate assembly for a file
+src/Drivers/UdpGpsDriver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/UdpGpsDriver.cpp.s
+.PHONY : src/Drivers/UdpGpsDriver.cpp.s
+
+src/Drivers/UdpLidarDriver.o: src/Drivers/UdpLidarDriver.cpp.o
+.PHONY : src/Drivers/UdpLidarDriver.o
+
+# target to build an object file
+src/Drivers/UdpLidarDriver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/UdpLidarDriver.cpp.o
+.PHONY : src/Drivers/UdpLidarDriver.cpp.o
+
+src/Drivers/UdpLidarDriver.i: src/Drivers/UdpLidarDriver.cpp.i
+.PHONY : src/Drivers/UdpLidarDriver.i
+
+# target to preprocess a source file
+src/Drivers/UdpLidarDriver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/UdpLidarDriver.cpp.i
+.PHONY : src/Drivers/UdpLidarDriver.cpp.i
+
+src/Drivers/UdpLidarDriver.s: src/Drivers/UdpLidarDriver.cpp.s
+.PHONY : src/Drivers/UdpLidarDriver.s
+
+# target to generate assembly for a file
+src/Drivers/UdpLidarDriver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/Drivers/UdpLidarDriver.cpp.s
+.PHONY : src/Drivers/UdpLidarDriver.cpp.s
 
 src/IntegrationTests/HIL_SF_MV.o: src/IntegrationTests/HIL_SF_MV.cpp.o
 .PHONY : src/IntegrationTests/HIL_SF_MV.o
@@ -566,6 +627,30 @@ src/IntegrationTests/NAV_SITL.s: src/IntegrationTests/NAV_SITL.cpp.s
 src/IntegrationTests/NAV_SITL.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/nav_sitl.dir/build.make CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.s
 .PHONY : src/IntegrationTests/NAV_SITL.cpp.s
+
+src/IntegrationTests/SYSMON_SITL.o: src/IntegrationTests/SYSMON_SITL.cpp.o
+.PHONY : src/IntegrationTests/SYSMON_SITL.o
+
+# target to build an object file
+src/IntegrationTests/SYSMON_SITL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sysmon_sitl.dir/build.make CMakeFiles/sysmon_sitl.dir/src/IntegrationTests/SYSMON_SITL.cpp.o
+.PHONY : src/IntegrationTests/SYSMON_SITL.cpp.o
+
+src/IntegrationTests/SYSMON_SITL.i: src/IntegrationTests/SYSMON_SITL.cpp.i
+.PHONY : src/IntegrationTests/SYSMON_SITL.i
+
+# target to preprocess a source file
+src/IntegrationTests/SYSMON_SITL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sysmon_sitl.dir/build.make CMakeFiles/sysmon_sitl.dir/src/IntegrationTests/SYSMON_SITL.cpp.i
+.PHONY : src/IntegrationTests/SYSMON_SITL.cpp.i
+
+src/IntegrationTests/SYSMON_SITL.s: src/IntegrationTests/SYSMON_SITL.cpp.s
+.PHONY : src/IntegrationTests/SYSMON_SITL.s
+
+# target to generate assembly for a file
+src/IntegrationTests/SYSMON_SITL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sysmon_sitl.dir/build.make CMakeFiles/sysmon_sitl.dir/src/IntegrationTests/SYSMON_SITL.cpp.s
+.PHONY : src/IntegrationTests/SYSMON_SITL.cpp.s
 
 src/IntegrationTests/UDP_bridge.o: src/IntegrationTests/UDP_bridge.cpp.o
 .PHONY : src/IntegrationTests/UDP_bridge.o
@@ -758,6 +843,30 @@ src/SensorsFusion/SensorFusion.s: src/SensorsFusion/SensorFusion.cpp.s
 src/SensorsFusion/SensorFusion.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.s
 .PHONY : src/SensorsFusion/SensorFusion.cpp.s
+
+src/SystemMonitoring/LinuxThermalZoneDriver.o: src/SystemMonitoring/LinuxThermalZoneDriver.cpp.o
+.PHONY : src/SystemMonitoring/LinuxThermalZoneDriver.o
+
+# target to build an object file
+src/SystemMonitoring/LinuxThermalZoneDriver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/LinuxThermalZoneDriver.cpp.o
+.PHONY : src/SystemMonitoring/LinuxThermalZoneDriver.cpp.o
+
+src/SystemMonitoring/LinuxThermalZoneDriver.i: src/SystemMonitoring/LinuxThermalZoneDriver.cpp.i
+.PHONY : src/SystemMonitoring/LinuxThermalZoneDriver.i
+
+# target to preprocess a source file
+src/SystemMonitoring/LinuxThermalZoneDriver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/LinuxThermalZoneDriver.cpp.i
+.PHONY : src/SystemMonitoring/LinuxThermalZoneDriver.cpp.i
+
+src/SystemMonitoring/LinuxThermalZoneDriver.s: src/SystemMonitoring/LinuxThermalZoneDriver.cpp.s
+.PHONY : src/SystemMonitoring/LinuxThermalZoneDriver.s
+
+# target to generate assembly for a file
+src/SystemMonitoring/LinuxThermalZoneDriver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/drone_lib.dir/build.make CMakeFiles/drone_lib.dir/src/SystemMonitoring/LinuxThermalZoneDriver.cpp.s
+.PHONY : src/SystemMonitoring/LinuxThermalZoneDriver.cpp.s
 
 src/SystemMonitoring/SystemMonitoring.o: src/SystemMonitoring/SystemMonitoring.cpp.o
 .PHONY : src/SystemMonitoring/SystemMonitoring.o
@@ -1137,6 +1246,7 @@ help:
 	@echo "... mc_sitl"
 	@echo "... mv_sitl"
 	@echo "... nav_sitl"
+	@echo "... sysmon_sitl"
 	@echo "... test_global_watchdog"
 	@echo "... test_mavlink"
 	@echo "... test_missioncontrol"
@@ -1158,6 +1268,12 @@ help:
 	@echo "... src/Drivers/NEO-M8N.o"
 	@echo "... src/Drivers/NEO-M8N.i"
 	@echo "... src/Drivers/NEO-M8N.s"
+	@echo "... src/Drivers/UdpGpsDriver.o"
+	@echo "... src/Drivers/UdpGpsDriver.i"
+	@echo "... src/Drivers/UdpGpsDriver.s"
+	@echo "... src/Drivers/UdpLidarDriver.o"
+	@echo "... src/Drivers/UdpLidarDriver.i"
+	@echo "... src/Drivers/UdpLidarDriver.s"
 	@echo "... src/IntegrationTests/HIL_SF_MV.o"
 	@echo "... src/IntegrationTests/HIL_SF_MV.i"
 	@echo "... src/IntegrationTests/HIL_SF_MV.s"
@@ -1170,6 +1286,9 @@ help:
 	@echo "... src/IntegrationTests/NAV_SITL.o"
 	@echo "... src/IntegrationTests/NAV_SITL.i"
 	@echo "... src/IntegrationTests/NAV_SITL.s"
+	@echo "... src/IntegrationTests/SYSMON_SITL.o"
+	@echo "... src/IntegrationTests/SYSMON_SITL.i"
+	@echo "... src/IntegrationTests/SYSMON_SITL.s"
 	@echo "... src/IntegrationTests/UDP_bridge.o"
 	@echo "... src/IntegrationTests/UDP_bridge.i"
 	@echo "... src/IntegrationTests/UDP_bridge.s"
@@ -1194,6 +1313,9 @@ help:
 	@echo "... src/SensorsFusion/SensorFusion.o"
 	@echo "... src/SensorsFusion/SensorFusion.i"
 	@echo "... src/SensorsFusion/SensorFusion.s"
+	@echo "... src/SystemMonitoring/LinuxThermalZoneDriver.o"
+	@echo "... src/SystemMonitoring/LinuxThermalZoneDriver.i"
+	@echo "... src/SystemMonitoring/LinuxThermalZoneDriver.s"
 	@echo "... src/SystemMonitoring/SystemMonitoring.o"
 	@echo "... src/SystemMonitoring/SystemMonitoring.i"
 	@echo "... src/SystemMonitoring/SystemMonitoring.s"

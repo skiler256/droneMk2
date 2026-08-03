@@ -10,8 +10,10 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: /home/jules/dro
   /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp \
   /home/jules/droneMk2/include/drone/IntegrationTests/ShmPaths.hpp \
   /home/jules/droneMk2/include/drone/core/CommandFifo.hpp \
+  /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
   /home/jules/droneMk2/include/drone/core/SharedMemory.hpp \
   /home/jules/droneMk2/include/drone/core/SharedSysStateMem.hpp \
+  /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp \
   /home/jules/droneMk2/include/drone/generated/codes.hpp \
   /home/jules/droneMk2/include/drone/shm.hpp \
   /home/jules/droneMk2/include/drone/types.hpp \
@@ -110,6 +112,7 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: /home/jules/dro
   /usr/include/aarch64-linux-gnu/bits/types/clockid_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/error_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/idtype_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/locale_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/mbstate_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/sig_atomic_t.h \
@@ -170,6 +173,7 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o: /home/jules/dro
   /usr/include/aarch64-linux-gnu/sys/types.h \
   /usr/include/aarch64-linux-gnu/sys/ucontext.h \
   /usr/include/aarch64-linux-gnu/sys/user.h \
+  /usr/include/aarch64-linux-gnu/sys/wait.h \
   /usr/include/alloca.h \
   /usr/include/arpa/inet.h \
   /usr/include/asm-generic/bitsperlong.h \
@@ -607,17 +611,12 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
   /usr/lib/aarch64-linux-gnu/libm.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so \
-  /usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so \
   CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o \
   libdrone_lib.a
 
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libubsan.so:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libstdc++.so:
 
@@ -687,8 +686,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/signal.h:
 
-/usr/include/semaphore.h:
-
 /usr/include/pthread.h:
 
 /usr/include/netinet/in.h:
@@ -717,11 +714,13 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/fcntl.h:
 
-/usr/include/c++/14/bits/semaphore_base.h:
+/usr/include/errno.h:
 
-/usr/include/c++/14/bit:
+/usr/include/endian.h:
 
-/usr/include/aarch64-linux-gnu/bits/stdint-least.h:
+/usr/include/eigen3/Eigen/src/plugins/ReshapedMethods.h:
+
+/usr/include/eigen3/Eigen/src/plugins/MatrixCwiseUnaryOps.h:
 
 /usr/include/c++/14/bits/ranges_cmp.h:
 
@@ -754,10 +753,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/c++/14/bits/locale_facets_nonio.h:
 
 /usr/include/aarch64-linux-gnu/sys/types.h:
-
-/usr/include/c++/14/bits/chrono.h:
-
-/usr/include/c++/14/bits/locale_facets.tcc:
 
 /usr/include/c++/14/bits/basic_string.h:
 
@@ -804,6 +799,16 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/c++/14/bits/allocator.h:
 
 /usr/include/c++/14/bits/allocated_ptr.h:
+
+/usr/include/c++/14/bit:
+
+/usr/include/c++/14/bits/locale_facets.tcc:
+
+/usr/include/c++/14/bits/chrono.h:
+
+/usr/include/aarch64-linux-gnu/bits/stdint-least.h:
+
+/usr/include/c++/14/bits/semaphore_base.h:
 
 /usr/include/c++/14/atomic:
 
@@ -903,8 +908,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/Core/util/ReenableStupidWarnings.h:
 
-/usr/include/aarch64-linux-gnu/bits/waitflags.h:
-
 /usr/include/aarch64-linux-gnu/c++/14/bits/time_members.h:
 
 /usr/include/c++/14/cstdint:
@@ -929,21 +932,9 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/Core/Map.h:
 
-/usr/include/c++/14/bits/specfun.h:
+/usr/include/c++/14/bits/cxxabi_init_exception.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/__sigval_t.h:
-
-/usr/include/eigen3/Eigen/Jacobi:
-
-/usr/include/aarch64-linux-gnu/bits/pthreadtypes.h:
-
-/usr/include/eigen3/Eigen/src/Core/util/StaticAssert.h:
-
-/usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h:
-
-/usr/include/c++/14/debug/assertions.h:
-
-/usr/include/c++/14/tr1/beta_function.tcc:
+/usr/include/aarch64-linux-gnu/bits/types/struct_statx.h:
 
 /usr/include/features-time64.h:
 
@@ -963,6 +954,8 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/c++/14/bits/exception_defines.h:
 
+/usr/include/c++/14/bits/stl_function.h:
+
 /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h:
 
 /usr/include/aarch64-linux-gnu/bits/mman_ext.h:
@@ -972,6 +965,10 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/c++/14/bits/basic_string.tcc:
 
 /usr/include/aarch64-linux-gnu/bits/mman-linux.h:
+
+/usr/include/semaphore.h:
+
+/home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp:
 
 /usr/include/c++/14/backward/binders.h:
 
@@ -986,6 +983,10 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/c++/14/clocale:
 
 /home/jules/droneMk2/include/drone/types.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
+
+/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
 
 /usr/include/c++/14/bits/cpp_type_traits.h:
 
@@ -1004,10 +1005,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/aarch64-linux-gnu/bits/long-double.h:
 
 /usr/include/aarch64-linux-gnu/bits/posix1_lim.h:
-
-/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
 
 /usr/include/c++/14/bits/max_size_type.h:
 
@@ -1101,6 +1098,12 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/aarch64-linux-gnu/bits/local_lim.h:
 
+/usr/include/aarch64-linux-gnu/bits/thread-shared-types.h:
+
+/usr/include/aarch64-linux-gnu/bits/endianness.h:
+
+/home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp:
+
 /usr/include/aarch64-linux-gnu/bits/stat.h:
 
 /usr/include/aarch64-linux-gnu/c++/14/bits/error_constants.h:
@@ -1110,8 +1113,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SharedComMem.hpp:
 
 /usr/include/c++/14/bits/node_handle.h:
-
-/home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp:
 
 /usr/include/eigen3/Eigen/src/Core/functors/AssignmentFunctors.h:
 
@@ -1173,11 +1174,21 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/Core/Matrix.h:
 
-/usr/include/eigen3/Eigen/src/plugins/ReshapedMethods.h:
-
 /usr/include/aarch64-linux-gnu/bits/fcntl.h:
 
 /usr/include/c++/14/bits/uniform_int_dist.h:
+
+/usr/include/aarch64-linux-gnu/bits/mathcalls.h:
+
+/usr/include/aarch64-linux-gnu/bits/floatn.h:
+
+/usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h:
+
+/usr/include/c++/14/debug/assertions.h:
+
+/usr/include/aarch64-linux-gnu/bits/pthreadtypes.h:
+
+/usr/include/eigen3/Eigen/src/Core/util/StaticAssert.h:
 
 /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
@@ -1188,6 +1199,12 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/aarch64-linux-gnu/bits/sigcontext.h:
 
 /usr/include/eigen3/Eigen/src/Geometry/Quaternion.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/__sigval_t.h:
+
+/usr/include/c++/14/bits/specfun.h:
+
+/usr/include/eigen3/Eigen/Jacobi:
 
 /usr/include/aarch64-linux-gnu/bits/siginfo-arch.h:
 
@@ -1202,6 +1219,8 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 /usr/include/aarch64-linux-gnu/bits/signum-arch.h:
 
 /usr/include/c++/14/bits/stl_construct.h:
+
+/usr/include/eigen3/Eigen/src/Core/util/Memory.h:
 
 /usr/include/aarch64-linux-gnu/bits/signum-generic.h:
 
@@ -1231,10 +1250,6 @@ udp_bridge: /lib/aarch64-linux-gnu/libc.so.6 \
 
 /usr/include/eigen3/Eigen/src/Cholesky/LDLT.h:
 
-/usr/include/aarch64-linux-gnu/bits/endianness.h:
-
-/usr/include/aarch64-linux-gnu/bits/thread-shared-types.h:
-
 /usr/include/aarch64-linux-gnu/bits/sigstksz.h:
 
 /usr/include/eigen3/Eigen/Householder:
@@ -1258,6 +1273,14 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 /usr/include/aarch64-linux-gnu/bits/stdio_lim.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_timespec.h:
+
+/usr/include/c++/14/bits/alloc_traits.h:
+
+/usr/include/eigen3/Eigen/src/Core/Transpose.h:
+
+/usr/include/aarch64-linux-gnu/sys/wait.h:
 
 /usr/include/aarch64-linux-gnu/bits/struct_stat.h:
 
@@ -1341,6 +1364,16 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/types/error_t.h:
 
+/usr/include/aarch64-linux-gnu/bits/waitflags.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/idtype_t.h:
+
+/usr/include/c++/14/ext/alloc_traits.h:
+
+/usr/include/eigen3/Eigen/Core:
+
+/usr/include/eigen3/Eigen/src/Core/ReturnByValue.h:
+
 /usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h:
 
 /usr/include/c++/14/bits/ios_base.h:
@@ -1379,27 +1412,11 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h:
 
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan.so:
-
 /usr/include/aarch64-linux-gnu/bits/fcntl-linux.h:
 
 /usr/include/eigen3/Eigen/src/Core/Replicate.h:
 
-/usr/include/c++/14/bits/cxxabi_init_exception.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_statx.h:
-
-/usr/include/aarch64-linux-gnu/bits/floatn.h:
-
-/usr/include/aarch64-linux-gnu/bits/mathcalls.h:
-
-/usr/include/c++/14/bits/stl_function.h:
-
-/usr/include/c++/14/bits/alloc_traits.h:
-
-/usr/include/eigen3/Eigen/src/Core/Transpose.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_timespec.h:
+/usr/include/c++/14/tr1/beta_function.tcc:
 
 /usr/lib/gcc/aarch64-linux-gnu/14/libgcc_s.so:
 
@@ -1410,8 +1427,6 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 /usr/include/c++/14/bits/std_mutex.h:
 
 /usr/include/c++/14/bits/std_thread.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/14/libasan_preinit.o:
 
 /usr/include/c++/14/bits/stl_algobase.h:
 
@@ -1432,6 +1447,8 @@ CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o:
 /usr/include/c++/14/bits/unicode-data.h:
 
 /usr/include/c++/14/bits/unicode.h:
+
+/home/jules/droneMk2/include/drone/core/WatchdogControl.hpp:
 
 /usr/include/c++/14/bits/unordered_map.h:
 
@@ -1502,14 +1519,6 @@ libdrone_lib.a:
 /usr/include/c++/14/debug/debug.h:
 
 /usr/include/c++/14/expected:
-
-/usr/include/eigen3/Eigen/src/plugins/MatrixCwiseUnaryOps.h:
-
-/usr/include/c++/14/ext/alloc_traits.h:
-
-/usr/include/eigen3/Eigen/Core:
-
-/usr/include/eigen3/Eigen/src/Core/ReturnByValue.h:
 
 /usr/include/c++/14/ext/atomicity.h:
 
@@ -1743,11 +1752,11 @@ libdrone_lib.a:
 
 /usr/include/eigen3/Eigen/src/Core/functors/StlFunctors.h:
 
-/usr/include/eigen3/Eigen/src/LU/InverseImpl.h:
-
 /usr/include/c++/14/bits/sstream.tcc:
 
 /usr/include/aarch64-linux-gnu/bits/mman-map-flags-generic.h:
+
+/usr/include/eigen3/Eigen/src/LU/InverseImpl.h:
 
 /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h:
 
@@ -1774,8 +1783,6 @@ libdrone_lib.a:
 /usr/include/eigen3/Eigen/src/Core/util/IntegralConstant.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/Macros.h:
-
-/usr/include/eigen3/Eigen/src/Core/util/Memory.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/Meta.h:
 
@@ -1838,7 +1845,3 @@ libdrone_lib.a:
 /usr/include/aarch64-linux-gnu/bits/types/sig_atomic_t.h:
 
 /usr/include/eigen3/Eigen/src/plugins/MatrixCwiseBinaryOps.h:
-
-/usr/include/endian.h:
-
-/usr/include/errno.h:

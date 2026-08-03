@@ -852,13 +852,15 @@ CMakeFiles/drone.dir/src/main.cpp.o: /home/jules/droneMk2/src/main.cpp \
  /home/jules/droneMk2/include/drone/generated/missionplan.hpp \
  /home/jules/droneMk2/include/drone/Components/Navigation/Navigation.hpp \
  /home/jules/droneMk2/include/drone/Components/SensorFusions/SensorsFusion.hpp \
- /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpTelemetryDriver.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/LinuxThermalZoneDriver.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver.hpp \
+ /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpTelemetryDriver.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/Driver/UdpVideoDriver.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/SysMonitoring.hpp \
  /home/jules/droneMk2/include/drone/Components/System\ Monitoring/PacketScheduler.hpp \
  /home/jules/droneMk2/include/drone/generated/telemetry.hpp \
  /home/jules/droneMk2/include/drone/core/GlobalWatchdog.hpp \
+ /home/jules/droneMk2/include/drone/core/WatchdogControl.hpp \
  /home/jules/droneMk2/include/drone/shm.hpp /usr/include/c++/14/csignal \
  /usr/include/signal.h \
  /usr/include/aarch64-linux-gnu/bits/signum-generic.h \

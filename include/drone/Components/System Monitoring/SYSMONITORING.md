@@ -176,17 +176,23 @@ inter-véhicules : seule l'implémentation concrète change.
 - **Relai vidéo** : `VideoTask::loop()` poll bien `videoSource_.pollFrame()`
   mais ne relaie nulle part (`TODO` explicite) — pas de consommateur
   défini (dashboard, export réseau...).
-- **Consommation côté MissionControl** : `GCSRxTask` pousse maintenant les
-  commandes GCS dans `SharedComMem::gcsCmds` (FIFO) et l'E-stop via
-  `CODES::SMO001` (cf. §10 ci-dessous) — mais `MissionControl::TGCSCmdRouter`
-  et `TSafetyMonitor` n'ont pas encore de logique (`loop()` en stub) pour
-  les dépiler/réagir. Le plombage est prêt, pas le métier.
 - **`WFB_NG_Driver`/`CC1101_Driver`** : non implémentés (cf. §7) — pas de
   RSSI/qualité de lien matérielle réelle, seul le timestamp du dernier
   `HEARTBEAT_GCS` par lien est dispo (`SharedComMem::lastHeartbeatMain/Sec`).
+  Le RSSI descendant (vu par le récepteur du GCS) n'est de toute façon pas
+  une donnée que le drone transmet — c'est une mesure locale du futur
+  matériel radio du GCS (H562), pas un paquet `TELEM::*`.
 - **`SharedComMem`** : n'a plus grand chose de "quasiment vide" (cf. §10)
   mais SysMonitoring n'a toujours pas d'état métier propre à restaurer au
   hot-restart (composant de canalisation/parsing).
+- **Tracé du plan de vol côté GCS** : le plan (`MISSIONPLAN_CONV`) est un
+  fichier binaire chargé localement par MissionControl, jamais transmis au
+  GCS — un mécanisme de upload/streaming du plan est un choix d'archi à
+  part, pas juste un paquet `TELEM::*` de plus (contenu de taille variable).
+
+*(Section historique : "consommation côté MissionControl" a été résolue —
+`TGCSCmdRouter`/`TSafetyMonitor` ont maintenant toute leur logique, cf.
+MISSIONCONTROL.md.)*
 
 ## 10. `SharedComMem` — commandes GCS et heartbeat
 
@@ -203,3 +209,36 @@ inter-véhicules : seule l'implémentation concrète change.
 - **`lastHeartbeatMain`/`lastHeartbeatSec`** : horodatage du dernier
   `HEARTBEAT_GCS` reçu par lien, mis à jour par `GCSRxTask`. Sert de proxy
   de fraîcheur/qualité de lien en l'absence de RSSI matériel (cf. §9).
+
+## 11. Champs tableau — `type[N]` dans `TELEMETRY.csv`
+
+Un champ peut être un tableau taille fixe (`u16[360]`, `u8[16]`, ...) en
+plus des types scalaires — même principe que le `bytesN` de
+`MISSIONPLAN.csv`, mais typé élément par élément (pas un blob opaque).
+`gen_telemetry.py` n'a rien eu à changer pour le générer : `pack()`/
+`unpack()` font déjà un `memcpy` générique par champ, qui fonctionne tel
+quel sur un `std::array`. Côté Python (`telemetry_codec.py`), le format
+`struct` utilise le préfixe de répétition natif (`"360H"`), et
+`decode()`/`encode()` regroupent/aplatissent les éléments par champ.
+
+Utilisé par `SAT_INFO` (détail par satellite, capé à 16) et `LIDAR_SCAN`
+(nuage de points body-frame, 360° à 1°/index).
+
+**Attention taille** : `LIDAR_SCAN` fait ~1085 octets sur le fil (le plus
+gros paquet `TELEM::*` de loin) — `UdpTelemetryDriver::rxBuf_` a dû passer
+de 512 à 1536 octets (sinon troncature silencieuse par `recv()`), et
+`Meta::size` de `uint8_t` à `uint16_t` (255 octets ne suffisait plus). Si
+un futur paquet tableau dépasse ~1536 octets sur un vrai lien radio bas
+débit (pas juste le loopback LAN de dev), il faudra le découper en
+plusieurs paquets — pas fait ici, non nécessaire tant que TelMain/TelSec
+restent émulés en LAN.
+
+## 12. `CPU_TEMP` — `ISystemTempSource`
+
+Comme `ITelemetryLink`/`IVideoSource`, une interface injectée au
+constructeur (`Driver.hpp`) — mais une seule implémentation concrète
+(`LinuxThermalZoneDriver`, lit `/sys/class/thermal/thermal_zone0/temp`),
+pas de variante factice dev/prod séparée : cette API kernel existe sur
+toute machine Linux avec capteur thermique, y compris une machine de dev
+x86 (contrairement aux liens radio WFB-NG/CC1101 qui nécessitent le
+hardware).
