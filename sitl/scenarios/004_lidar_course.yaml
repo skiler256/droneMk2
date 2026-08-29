@@ -1,0 +1,34 @@
+id: 004_lidar_course
+description: >
+  Scenario "garni" pour tester la boucle complete en conditions (roadmap
+  etape 4) : un vrai parcours rectangulaire (4 Waypoint, un virage a chaque
+  coin -- 20m x 15m autour du point de decollage), avec 3 obstacles reels
+  repartis le long du trajet (2 "immeubles" + 1 "poteau/arbre", cf.
+  worlds/course.json, degagement 5.5-6.5m verifie a la main). Assez long
+  pour observer confortablement au viewer (modele 3D, cycle des 3 cameras
+  touche C, LD06 qui detecte les obstacles a differents caps).
+
+plan: 004_lidar_course.plan.yaml
+monde: world_engine/worlds/course.json
+
+mission:
+  # EKF3 a besoin de ~30-50s pour converger a froid.
+  - {type: wait, duration: 50}
+  - {type: arm}
+  - {type: wait, duration: 5}
+  - {type: takeoff, alt: 10}
+  # Genereux : 70m de trajet a 3m/s (~23s theorique) + acceleration/
+  # deceleration sur 4 virages + le Hold final de 5s du plan -- large marge
+  # pour la premiere execution reelle de ce parcours.
+  - {type: wait, duration: 160}
+  - {type: land}
+
+criteres:
+  - {metrique: mission_state_sequence, attendu: [Armed, Mission, Landing]}
+  - {metrique: aucun_code_emergency, attendu: true}
+  - {metrique: processus_vivants_a_la_fin, attendu: [drone, udp_bridge]}
+  # Au moins un point lidar observe entre 5 et 7m -- les 3 obstacles du
+  # parcours sont tous a un degagement de 5.5-6.5m du trajet (verifie a la
+  # main, cf. description) : preuve que le LD06 les detecte reellement
+  # pendant le vol, pas juste a l'arret.
+  - {metrique: lidar_hit_range_m, attendu: [5.0, 7.0]}

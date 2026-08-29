@@ -1,0 +1,39 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://World.gd" type="Script" id=1]
+
+[sub_resource type="Environment" id=3]
+background_mode = 1
+background_color = Color( 0.5, 0.65, 0.8, 1 )
+ambient_light_color = Color( 0.55, 0.6, 0.7, 1 )
+ambient_light_energy = 0.5
+ssao_enabled = true
+ssao_radius = 2.0
+ssao_intensity = 1.5
+
+[sub_resource type="SpatialMaterial" id=2]
+albedo_color = Color( 0.35, 0.4, 0.35, 1 )
+
+[sub_resource type="PlaneMesh" id=1]
+size = Vector2( 60, 60 )
+
+[node name="WorldViewer" type="Spatial"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource( 3 )
+
+[node name="World" type="Spatial" parent="."]
+script = ExtResource( 1 )
+auto_load_json = "res://worlds/trivial.json"
+
+[node name="Ground" type="MeshInstance" parent="."]
+material_override = SubResource( 2 )
+mesh = SubResource( 1 )
+
+[node name="DirectionalLight" type="DirectionalLight" parent="."]
+transform = Transform( 0.8, -0.35, 0.48, 0, 0.8, 0.6, -0.6, -0.48, 0.64, 0, 12, 0 )
+shadow_enabled = true
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 0.83205, 0, 0.5547, 0.293665, 0.848365, -0.440497, -0.470588, 0.529412, 0.705882, -8, 9, 12 )
+current = true

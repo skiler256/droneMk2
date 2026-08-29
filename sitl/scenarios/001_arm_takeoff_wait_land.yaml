@@ -5,10 +5,17 @@ description: >
   mission_driver, shm_observer, verdict) -- pas la trajectoire elle-meme
   (ca, c'est l'etape 3, "Nav valide sur SITL nu").
 
+plan: 001_arm_takeoff_wait_land.plan.yaml
+monde: world_engine/worlds/empty.json
+
 mission:
+  # EKF3 a besoin de ~30s pour converger a froid (attitude/position) avant
+  # d'accepter l'arm -- mesure en session reelle sur ce projet.
+  - {type: wait, duration: 50}
   - {type: arm}
-  - {type: takeoff, alt: 10}
   - {type: wait, duration: 5}
+  - {type: takeoff, alt: 10}
+  - {type: wait, duration: 60}
   - {type: land}
 
 criteres:

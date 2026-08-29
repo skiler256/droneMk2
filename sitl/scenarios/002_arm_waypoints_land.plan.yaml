@@ -1,0 +1,36 @@
+# sitl/scenarios/002_arm_waypoints_land.plan.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Roadmap etape 3 ("Nav valide sur SITL nu") : premier plan avec de vrais
+# segments Waypoint -- TMiSequencer doit armer chaque waypoint aupres de Nav
+# (comp.cmd_.setArmedSegment), attendre SegmentProgress::Atteint avant de
+# passer au suivant. Seuls Waypoint et Hold sont geres par TMiSequencer --
+# Corridor/Curve/Landing/PayloadAction sont skippes (MCA001), cf.
+# MissionControl.cpp::MiSequencerTask::loop().
+#
+# Aller-retour simple (pas de virage/coin, volontaire pour ce premier test) :
+# 15m au nord puis retour au point de depart, altitude 10m (NED : alt
+# negatif = vers le haut), vitesse/rayon d'acceptation = defauts du schema.
+
+header:
+  battWarningV: 14.0
+  battCriticalV: 12.5
+  rtbTransitAlt: 30.0
+  gcsLossAction: 0
+  navVolumeRadius: 200.0
+  navVolumeCeiling: 100.0
+
+segments:
+  - type: Waypoint
+    north: 15.0
+    east: 0.0
+    alt: -10.0
+    speed: 2.0
+    acceptRadius: 2.0
+  - type: Waypoint
+    north: 0.0
+    east: 0.0
+    alt: -10.0
+    speed: 2.0
+    acceptRadius: 2.0
+  - type: Hold
+    duration: 5.0

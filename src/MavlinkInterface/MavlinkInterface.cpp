@@ -3,6 +3,7 @@
 #include "drone/generated/codes.hpp"
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -40,18 +41,44 @@ constexpr TYPES::Ms kFcLinkTimeout{3000};
 // mort ou à l'arrêt malgré l'armement, panne mécanique/électrique probable.
 constexpr float kMinArmedRpm = 1000.0f;
 
+// Idem, borne haute — voyant GCS (MVP002), pas une panne bloquante en soi
+// (contrairement au RPM bas) : moteur qui s'emballe, à surveiller mais pas
+// forcément un motif d'atterrissage immédiat.
+constexpr float kMaxArmedRpm = 10000.0f;
+
 // Pas de nouvelle ESC_STATUS depuis ce délai = donnée absente (capteur/
 // télémétrie en panne), traité comme une anomalie au même titre qu'un RPM
 // trop bas — cf. FSTask::loop().
 constexpr TYPES::Ms kEscStaleThreshold{500};
+
+// Surchargeable par variable d'environnement, meme pattern que
+// DRONE_MISSION_PLAN_PATH (MissionControl.cpp) -- pour le SITL uniquement :
+// le modele de frame ArduPilot SITL simule un pack 3S generique (maxVoltage
+// code en dur a 12.6V dans SIM_Frame.h, pas overridable par --defaults),
+// incompatible avec des seuils calibres sur un vrai pack 4S. Comportement
+// de prod inchange si les variables ne sont pas definies.
+[[nodiscard]] float envFloatOrDefault(const char *envVar, float defaultV) {
+  if (const char *v = std::getenv(envVar))
+    return std::strtof(v, nullptr);
+  return defaultV;
+}
+
+// SITL n'a pas de telemetrie ESC/DShot simulee (ESC_TELEMETRY_1_TO_4
+// rejete par ArduPilot SITL standard, cf. MVC002/command_rejected) --
+// ESC_STATUS n'arrive donc jamais, la staleness (cf. FSTask::loop()) se
+// declenchait immediatement a l'arm et desarmait le drone sans aucune
+// demande GCS. Surchargeable en SITL uniquement (env var, meme pattern que
+// DRONE_BATT_LOW_V) -- comportement de vol reel inchange (le check RPM
+// reste une protection legitime en vol).
+const bool kSkipRpmCheck = std::getenv("DRONE_SKIP_RPM_CHECK") != nullptr;
 
 // Seuils de départ arbitraires, mêmes valeurs que les défauts du header
 // MISSIONPLAN.csv (battWarningV/battCriticalV) pour la cohérence — à
 // calibrer sur le vrai pack/ESC. kBattCriticalVoltage doit rester
 // confortablement au-dessus du seuil de coupure moteur de l'ESC (constaté :
 // l'ESC coupe les moteurs sous un certain seuil, gravissime en vol).
-constexpr float kBattLowVoltage = 14.0f;
-constexpr float kBattCriticalVoltage = 12.5f;
+const float kBattLowVoltage = envFloatOrDefault("DRONE_BATT_LOW_V", 14.0f);
+const float kBattCriticalVoltage = envFloatOrDefault("DRONE_BATT_CRITICAL_V", 12.5f);
 
 // TStateMachine publie à 20Hz (50ms/cycle) — largement au-dessus si MC est
 // bloqué/mort plutôt qu'en simple lag. MissionControl ne fait jamais de
@@ -179,9 +206,15 @@ struct StreamRequest {
 // sur lien filaire/UART réel. ATTITUDE/ESC_TELEMETRY_1_TO_4 (pas les
 // variantes QUATERNION/STATUS) : seuls messages qu'ArduPilot SITL émet
 // réellement, cf. eulerToQuat() dans TRxTask::loop().
+//
+// ATTITUDE/LOCAL_POSITION_NED a 20Hz (pas 10Hz) : kAgeThrEKF (SensorFusion,
+// 200ms) ne laissait qu'un facteur 2 de marge a 10Hz -- le moindre jitter
+// faisait clignoter EKF_dead (constate en session SITL, cf. runPreflightChecks()
+// qui ne re-teste qu'une fois par tentative d'arm, pas de retry si le
+// clignotement tombe pile a ce moment-la).
 constexpr std::array<StreamRequest, 8> kInitStreams{{
-    {MAVLINK_MSG_ID_ATTITUDE, 100000},             // 10Hz
-    {MAVLINK_MSG_ID_LOCAL_POSITION_NED, 100000},   // 10Hz
+    {MAVLINK_MSG_ID_ATTITUDE, 50000},              // 20Hz
+    {MAVLINK_MSG_ID_LOCAL_POSITION_NED, 50000},    // 20Hz
     {MAVLINK_MSG_ID_BATTERY_STATUS, 1000000},      // 1Hz
     {MAVLINK_MSG_ID_ESC_TELEMETRY_1_TO_4, 500000}, // 2Hz
     {MAVLINK_MSG_ID_SCALED_PRESSURE, 500000},      // 2Hz
@@ -232,21 +265,25 @@ void FSTask::loop() {
     linkLostActive_ = false;
   }
 
-  // RPM bas ou ESC_STATUS absente/aberrante pendant que le FC est armé —
-  // pour le tableau de voyants GCS (façon hélico), pas seulement pour
-  // MissionControl. Pas de vérif si désarmé : RPM=0 y est normal.
+  // RPM bas/haut ou ESC_STATUS absente/aberrante pendant que le FC est armé
+  // — pour le tableau de voyants GCS (façon hélico), pas seulement pour
+  // MissionControl. Pas de vérif si désarmé : RPM=0 y est normal. RPM haut
+  // (MVP002) n'est PAS déclenché par une donnée absente (staleness = "pas
+  // de donnée", pas "RPM eleve") — seulement une vraie valeur au-dessus du
+  // seuil.
   bool rpmFault = false;
-  if (comp.fc_.getArmed().value_or(false)) {
+  bool rpmHigh = false;
+  if (!kSkipRpmCheck && comp.fc_.getArmed().value_or(false)) {
     auto escTs = comp.fc_.getEscStatusTs();
     bool escStale = !escTs || UTILITIES::msBetween(*escTs, Clock::now()) > kEscStaleThreshold;
     if (escStale) {
       rpmFault = true;
     } else if (auto esc = comp.fc_.getEscStatus()) {
       for (float rpm : esc->rpmValue) {
-        if (!(rpm >= 0.0f) || rpm < kMinArmedRpm) { // !(>=0) attrape aussi NaN
+        if (!(rpm >= 0.0f) || rpm < kMinArmedRpm) // !(>=0) attrape aussi NaN
           rpmFault = true;
-          break;
-        }
+        if (rpm > kMaxArmedRpm)
+          rpmHigh = true;
       }
     }
   }
@@ -257,6 +294,14 @@ void FSTask::loop() {
   } else if (!rpmFault && rpmLowActive_) {
     comp.sysState_.clearCode(CODES::MVP001);
     rpmLowActive_ = false;
+  }
+
+  if (rpmHigh && !rpmHighActive_) {
+    comp.sysState_.raiseCode(CODES::MVP002);
+    rpmHighActive_ = true;
+  } else if (!rpmHigh && rpmHighActive_) {
+    comp.sysState_.clearCode(CODES::MVP002);
+    rpmHighActive_ = false;
   }
 
   // Tension batterie — pas conditionné à l'armement (contrairement au RPM,
@@ -509,10 +554,17 @@ void TTxAckTask::loop() {
         continue; // pas final (ex: takeoff) : on continue d'attendre le vrai résultat
 
       if (ack.result != MAV_RESULT_ACCEPTED) {
-        // Échec réel : abandonne la séquence plutôt que d'enchaîner la
-        // commande suivante (ex: guided refusé -> arm -> takeoff quand même).
+        // Échec réel : n'abandonne la séquence que si c'était un ordre
+        // MissionControl (ex: guided refusé -> arm -> takeoff quand même).
+        // Une commande interne (requestInitStreams) qui échoue ne doit PAS
+        // faire disparaître silencieusement un ordre de vol déjà en file
+        // derrière elle (ex: ESC_TELEMETRY_1_TO_4 rejeté par un SITL
+        // standard sans télémétrie ESC simulée -- videait toute la queue,
+        // arm compris, sans jamais le signaler à MissionControl).
+        bool wasFromMC = comp.pendingAck_.fromMissionControl;
         resolvePending(false);
-        comp.ackQueue_.clear();
+        if (wasFromMC)
+          comp.ackQueue_.clear();
         continue;
       }
     }
@@ -527,9 +579,12 @@ void TTxAckTask::loop() {
 
     if (comp.pendingAck_.retries >= 3) {
       // Échec définitif : même traitement qu'un résultat négatif explicite
-      // (cf. plus haut) — abandonne la séquence, pas juste le slot.
+      // (cf. plus haut) — n'abandonne la séquence que si c'était un ordre
+      // MissionControl.
+      bool wasFromMC = comp.pendingAck_.fromMissionControl;
       resolvePending(false);
-      comp.ackQueue_.clear();
+      if (wasFromMC)
+        comp.ackQueue_.clear();
       return;
     }
 

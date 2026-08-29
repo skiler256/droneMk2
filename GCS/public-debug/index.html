@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>GCS — Injecteur de pannes (debug)</title>
+<style>
+  :root { color-scheme: dark; --bg:#0f1115; --panel:#171a21; --border:#2a2f3a; --text:#e6e8eb; --muted:#8b92a1; --accent:#4f8cff; --crit:#ff5c5c; --ok:#3ecf8e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-monospace, "SF Mono", Consolas, monospace; background:var(--bg); color:var(--text); padding:2rem; }
+  h1 { font-size:1.1rem; margin:0 0 .25rem; }
+  .subtitle { color:var(--muted); font-size:.85rem; margin-bottom:1.5rem; }
+  .warn { border:1px solid var(--crit); color:var(--crit); border-radius:8px; padding:.6rem .8rem; font-size:.8rem; margin-bottom:1.5rem; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:1rem; }
+  .card h2 { font-size:.85rem; margin:0 0 .3rem; }
+  .card .desc { color:var(--muted); font-size:.75rem; margin-bottom:.8rem; }
+  .badge { display:inline-block; padding:.1rem .4rem; border-radius:4px; font-size:.7rem; font-weight:700; margin-left:.4rem; }
+  .badge.on { background:rgba(255,92,92,.15); color:var(--crit); }
+  .badge.off { background:rgba(62,207,142,.15); color:var(--ok); }
+  button { padding:.5rem .8rem; border-radius:6px; border:none; background:var(--accent); color:#fff; font-weight:600; font-family:inherit; cursor:pointer; font-size:.82rem; margin-right:.4rem; }
+  button.danger { background:var(--crit); }
+  button.secondary { background:transparent; border:1px solid var(--border); color:var(--text); }
+  button:hover { opacity:.9; }
+  .seq-btn { width:100%; margin-top:.5rem; }
+  #log { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:.8rem 1rem; font-size:.75rem; color:var(--muted); max-height:240px; overflow-y:auto; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+  <h1>Injecteur de pannes — debug GCS</h1>
+  <div class="subtitle">Envoie de vrais paquets CODE en UDP sur le port TELMAIN, exactement comme le ferait le drone. Teste le chemin complet : voyants ESP32 + alarme sonore.</div>
+  <div class="warn">Outil de debug uniquement — process séparé du dashboard réel (port différent), à ne jamais exposer hors localhost.</div>
+
+  <div class="grid" id="cards"></div>
+
+  <div class="card" style="margin-bottom:1.5rem">
+    <h2>Démo priorité</h2>
+    <div class="desc">Enchaîne : obstacle (Critical) à t=0, perte GPS (Emergency) à t=2s qui doit préempter le son, effacement de l'obstacle à t=6s, effacement GPS à t=10s.</div>
+    <button class="seq-btn" id="runSeq">Lancer la séquence</button>
+  </div>
+
+  <div class="card">
+    <h2>Journal</h2>
+    <div id="log"></div>
+  </div>
+
+<script>
+  // Même table que GCS/codes-table.js (Node) et GCS/public/js/link.js
+  // (navigateur) -- dupliquée volontairement, c'est une table minuscule et
+  // figée (cf. tools/codes_common.py, "ne pas réordonner").
+  var COMPONENTS = { FC: 1, SF: 2, NV: 3, MC: 4, SM: 5, MV: 6, GW: 7 };
+  var CATEGORIES = { P: 1, S: 2, A: 3, C: 4, O: 5 };
+  function packCode(code) {
+    var m = code.match(/^([A-Z]{2})([A-Z])(\d{3})$/);
+    return ((COMPONENTS[m[1]] << 24) | (CATEGORIES[m[2]] << 16) | parseInt(m[3], 10)) >>> 0;
+  }
+
+  var SCENARIOS = [
+    { code: 'FCP002', label: 'Panne moteur', desc: 'Eng_failure, Emergency -> ENG, MW, MC' },
+    { code: 'NVA004', label: 'Obstacle', desc: 'hold_obstacle, Critical -> OBS, MW, MC' },
+    { code: 'SFS002', label: 'Perte GPS', desc: 'GPS_lost, Emergency -> GPS, EKF, EMG, MW, MC' }
+  ];
+
+  var active = {}; // code -> bool, état local (pas de lecture serveur, ce sont NOS injections)
+
+  function log(msg) {
+    var el = document.getElementById('log');
+    var d = new Date();
+    el.textContent = '[' + d.toTimeString().slice(0, 8) + '] ' + msg + '\n' + el.textContent;
+  }
+
+  function sendCode(code, isActive) {
+    return fetch('/api/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: packCode(code), active: isActive })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      active[code] = isActive;
+      log(code + (isActive ? ' -> ACTIF' : ' -> effacé'));
+      render();
+    }).catch(function (e) { log(code + ': erreur (' + e.message + ')'); });
+  }
+
+  function render() {
+    var cards = document.getElementById('cards');
+    cards.innerHTML = SCENARIOS.map(function (s) {
+      var isOn = !!active[s.code];
+      return '<div class="card">' +
+        '<h2>' + s.label + ' <span class="badge ' + (isOn ? 'on' : 'off') + '">' + (isOn ? 'ACTIF' : 'inactif') + '</span></h2>' +
+        '<div class="desc">' + s.code + ' — ' + s.desc + '</div>' +
+        '<button data-code="' + s.code + '" data-active="1">Déclencher</button>' +
+        '<button class="secondary" data-code="' + s.code + '" data-active="0">Effacer</button>' +
+        '</div>';
+    }).join('');
+    cards.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        sendCode(btn.dataset.code, btn.dataset.active === '1');
+      });
+    });
+  }
+
+  document.getElementById('runSeq').addEventListener('click', function () {
+    log('--- séquence démo priorité ---');
+    sendCode('NVA004', true);
+    setTimeout(function () { sendCode('SFS002', true); }, 2000);
+    setTimeout(function () { sendCode('NVA004', false); }, 6000);
+    setTimeout(function () { sendCode('SFS002', false); }, 10000);
+  });
+
+  render();
+</script>
+</body>
+</html>

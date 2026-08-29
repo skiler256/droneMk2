@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/udp_bridge.dir/link.d CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o -o udp_bridge  libdrone_lib.a

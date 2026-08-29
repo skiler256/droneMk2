@@ -159,6 +159,25 @@ TEST(TravelDirectionTest, FallsBackToTargetBearingBelowThreshold) {
   EXPECT_NEAR(dir.y, 1.0f, 1e-4f);
 }
 
+TEST(TravelDirectionTest, VerticalClimbDoesNotFalselyPassHorizontalThreshold) {
+  // Bug reel trouve en SITL (session) : state.velNed.norm() est la norme 3D
+  // complete -- en montee quasi verticale (vz domine), cette norme depasse
+  // le seuil alors que vx/vy sont sous le seuil, et l'ancien code prenait
+  // la branche "vitesse" en renvoyant un vecteur horizontal ECRASE (pas
+  // unitaire) -- obstacleInBox() projetait alors des obstacles reels
+  // lointains comme s'ils etaient tout pres (fausse alerte hold_obstacle
+  // en pleine montee, sans aucun obstacle a proximite).
+  auto segment = makeWaypoint(Position{Vec3{0.0f, 10.0f, 0.0f}}, // Est
+                              MetersPerSec{5.0f}, Meters{-10.0f});
+  auto state = makeState(Position{Vec3{0.0f, 0.0f, 0.0f}});
+  state.velNed = Velocity{Vec3{0.1f, 0.05f, -3.0f}}; // horizontale << seuil, vz = 3 m/s
+
+  auto dir = travelDirection(segment, state);
+  // Doit retomber sur le cap vers la cible (est) -- pas un vecteur ecrase.
+  EXPECT_NEAR(dir.x, 0.0f, 1e-4f);
+  EXPECT_NEAR(dir.y, 1.0f, 1e-4f);
+}
+
 TEST(TravelDirectionTest, DegenerateCaseOnTargetWithNoVelocityHasNoNaN) {
   auto segment = makeWaypoint(Position{Vec3{5.0f, 5.0f, 0.0f}},
                               MetersPerSec{5.0f}, Meters{-10.0f});

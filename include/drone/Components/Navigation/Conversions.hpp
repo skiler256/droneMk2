@@ -67,7 +67,17 @@ constexpr float kObstacleBoxLateralM = 1.0f; // ±1m de part et d'autre
 // confiance à aucun calcul déjà fait par TAP).
 [[nodiscard]] inline TYPES::Vec3
 travelDirection(const NavSegment &segment, const DynamicState &state) noexcept {
-  float speed = state.velNed.norm().v;
+  // Vitesse HORIZONTALE seulement -- pas state.velNed.norm() (norme 3D
+  // complète, cf. Vec3::norm()) : en montée/descente quasi verticale, cette
+  // norme est dominée par vz, "speed" passe le seuil alors que vx/vy sont
+  // quasi nuls, et le vecteur retourné (vx/speed, vy/speed, 0) n'est alors
+  // plus unitaire (norme << 1). obstacleInBox() suppose `forward` unitaire
+  // pour projeter les points LIDAR -- avec un vecteur ecrase, un obstacle
+  // reel a plusieurs metres se projette a quelques centimetres et tombe
+  // faussement dans la boite de securite (bug constate en SITL : hold_obstacle
+  // se declenchait en pleine montee sans aucun obstacle reel a proximite).
+  float speed = std::sqrt(state.velNed.ned.x * state.velNed.ned.x +
+                          state.velNed.ned.y * state.velNed.ned.y);
   if (speed > kVelocityDirectionThreshold) {
     return TYPES::Vec3{state.velNed.ned.x / speed, state.velNed.ned.y / speed, 0.0f};
   }

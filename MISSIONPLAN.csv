@@ -1,5 +1,5 @@
 Kind;Name;Fields
-HEADER;;battWarningV:f32=14.0,battCriticalV:f32=12.5,rtbTransitAlt:f32=30.0,gcsLossAction:u8=0,navVolumeRadius:f32=200.0,navVolumeCeiling:f32=100.0
+HEADER;;battWarningV:f32=14.0,battCriticalV:f32=12.5,rtbTransitAlt:f32=30.0,gcsLossAction:u8=0,navVolumeRadius:f32=200.0,navVolumeCeiling:f32=100.0,takeoffAlt:f32=10.0
 SEGMENT;WAYPOINT;north:f32=0.0,east:f32=0.0,alt:f32=-10.0,speed:f32=2.0,acceptRadius:f32=2.0
 SEGMENT;CORRIDOR;northStart:f32=0.0,eastStart:f32=0.0,northEnd:f32=0.0,eastEnd:f32=0.0,alt:f32=-10.0,speed:f32=2.0,width:f32=5.0
 SEGMENT;CURVE;centerNorth:f32=0.0,centerEast:f32=0.0,radius:f32=10.0,alt:f32=-10.0,speed:f32=2.0,startAngle:f32=0.0,endAngle:f32=1.5708

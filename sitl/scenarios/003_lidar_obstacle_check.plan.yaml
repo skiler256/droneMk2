@@ -1,0 +1,21 @@
+# sitl/scenarios/003_lidar_obstacle_check.plan.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan de mission execute par MissionControl pour le scenario
+# 003_lidar_obstacle_check.yaml -- un seul segment Hold, meme raisonnement
+# que 001 (assez long pour que ce soit le LAND du scenario qui termine la
+# mission, pas TMiSequencer tout seul). Le drone reste pres du point de
+# takeoff (home, north=0/east=0 dans le repere fixe de sensor_bridge.py) --
+# c'est cette hypothese qui permet de placer un obstacle a une distance
+# connue (cf. worlds/obstacle_north.json, box a north=15m).
+
+header:
+  battWarningV: 14.0
+  battCriticalV: 12.5
+  rtbTransitAlt: 30.0
+  gcsLossAction: 0
+  navVolumeRadius: 200.0
+  navVolumeCeiling: 100.0
+
+segments:
+  - type: Hold
+    duration: 30.0

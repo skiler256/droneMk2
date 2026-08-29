@@ -44,10 +44,12 @@
     return packed ? '0x' + (packed >>> 0).toString(16) : '--';
   }
 
-  // Table CODES:: (packed uint32 -> {code, name, severity}), chargee de
-  // /codes.csv (alias de INDEX.csv, servi par GCS/server.js) — meme source
-  // de verite que tools/gen_codes.py. Chargement async : tant qu'elle n'est
-  // pas prete, on retombe sur l'hex plutot que de bloquer le rendu.
+  // Table CODES:: (packed uint32 -> {code, name, severity, alarm, panel}),
+  // chargee de /codes.csv (alias de INDEX.csv, servi par GCS/server.js) —
+  // meme source de verite que tools/gen_codes.py. Chargement async : tant
+  // qu'elle n'est pas prete, on retombe sur l'hex plutot que de bloquer le
+  // rendu. alarm/panel utilises par alarm.js pour resoudre l'alarme sonore
+  // (cf. GCS.alarm.notifyCode).
   var CODES_TABLE = new Map();
   (function loadCodesTable() {
     var COMPONENTS = { FC: 1, SF: 2, NV: 3, MC: 4, SM: 5, MV: 6, GW: 7 };
@@ -57,12 +59,15 @@
       for (var i = 1; i < lines.length; i++) {
         var cols = lines[i].split(';');
         var code = cols[0], name = cols[3], severity = (cols[5] || '').trim();
-        var sound = (cols[6] || '').trim(); // colonne Sound, cf. codes_common.py
+        var alarm = (cols[6] || '').trim().toLowerCase(); // colonne Alarm, cf. codes_common.py
+        var panel = (cols[7] || '').trim().split(',').map(function (p) { return p.trim(); })
+          .filter(Boolean);
         var m = code && code.match(/^([A-Z]{2})([A-Z])(\d{3})$/);
         if (!m) continue;
         var packed = ((COMPONENTS[m[1]] || 0) << 24) | ((CATEGORIES[m[2]] || 0) << 16) |
                      parseInt(m[3], 10);
-        CODES_TABLE.set(packed >>> 0, { code: code, name: name, severity: severity, sound: sound });
+        CODES_TABLE.set(packed >>> 0,
+          { code: code, name: name, severity: severity, alarm: alarm, panel: panel });
       }
     }).catch(function () { /* pas grave : affichage en hex en repli */ });
   })();
@@ -181,10 +186,18 @@
         break;
       }
 
-      case 'MISSION_STATE':
-        state.mission.state = MISSION_STATE_NAMES[p.state] || 'IDLE';
+      case 'MISSION_STATE': {
+        var newMissionState = MISSION_STATE_NAMES[p.state] || 'IDLE';
+        // Alarme de transition (cf. MISSION_ALARMS.csv, ex: HOLD -> hold_entered)
+        // -- seulement sur un VRAI changement, pas a chaque paquet (redondance
+        // 1 Hz, cf. TELEMETRY.csv) qui redeclencherait l'alarme en boucle.
+        if (newMissionState !== state.mission.state && GCS.alarm) {
+          GCS.alarm.notifyMissionState(newMissionState);
+        }
+        state.mission.state = newMissionState;
         GCS.touch(state, 'mission');
         break;
+      }
 
       case 'AUTOPILOT_MODE':
         state.mission.lateralMode.engaged  = codeHex(p.lateral_engaged);
@@ -249,9 +262,10 @@
           state.pinned = state.pinned.filter(function (e) { return e.code !== p.code; });
         }
 
-        // Alarme sonore (cf. alarm.js) : notifiee sur levee ET effacement --
-        // un effacement doit pouvoir arreter une alarme en boucle en cours.
-        if (GCS.alarm) GCS.alarm.notify(p.code, info, !!p.active);
+        // Alarme sonore specifique (cf. ALARMS.csv, INDEX.csv::Alarm) --
+        // notifiee sur levee ET effacement, un effacement doit pouvoir
+        // arreter une alarme en boucle en cours (cf. alarm.js::notifyCode).
+        if (GCS.alarm) GCS.alarm.notifyCode(p.code, info, !!p.active);
         break;
       }
 
@@ -296,6 +310,19 @@
           var msg;
           try { msg = JSON.parse(ev.data); }
           catch (e) { return; }
+          if (msg.type === 'esp_button') {
+            // Bouton physique du boîtier ESP32 (cf. serial-bridge.js) --
+            // MW_ACK/MC_ACK acquittent le SON cote navigateur (cf.
+            // alarm.js::ack) ; l'ack des VOYANTS est gere independamment
+            // cote server.js (deux etats d'ack separes, cf. alarm.js en-tete).
+            GCS.pushEvent(state, 'NOTICE', 'Boitier: ' + msg.label + ' presse');
+            if (GCS.alarm && msg.label === 'MW_ACK') GCS.alarm.ack('MW');
+            if (GCS.alarm && msg.label === 'MC_ACK') GCS.alarm.ack('MC');
+            return;
+          }
+          if (msg.type === 'panel_state') {
+            return; // etat des voyants ESP32 -- rien a faire cote son, cf. alarm.js en-tete.
+          }
           if (msg.type !== 'telemetry') return;
           GCS.applyPacket(state, { id: msg.name, payload: msg.fields });
         };

@@ -168,11 +168,22 @@ public:
   SharedComMemHandler &com_;
   MissionState state_{MissionState::Idle};
 
-  // Plan de mission chargé — rien ne le peuple encore (pipeline upload
-  // GCS -> disque -> parse pas construit, cf. discussion). TMiSequencer
-  // le consomme tel quel dès qu'il est non vide.
+  // Plan de mission chargé (readFile(DRONE_MISSION_PLAN_PATH) au PRE_FLIGHT,
+  // cf. runPreflightChecks() -- pipeline d'upload GCS pas encore construit,
+  // mais tools/mission_compiler.py compile deja un plan YAML vers ce binaire
+  // pour le SITL). TMiSequencer le consomme tel quel dès qu'il est non vide.
   MISSIONPLAN_CONV::MissionPlan plan_{};
   bool missionComplete_{false}; // écrit par TMiSequencer, lu par TStateMachine
+
+  // Montée post-arm en cours -- écrit par TStateMachine (réinitialisé à
+  // chaque entrée en Armed->Mission, cible = plan_.header.takeoffAlt),
+  // observé/mis à jour par TMiSequencer (seule à lire DynamicState pour
+  // détecter la fin de montée -- déjà fait pour l'armement des Waypoint).
+  // Le premier segment du plan n'est armé qu'une fois vrai, pour ne pas
+  // faire collision entre le NAV_TAKEOFF d'ArduPilot et les commandes
+  // velNED de Nav envoyées trop tôt (constaté en session SITL).
+  bool takeoffComplete_{false};
+  float takeoffTargetAlt_{0.0f}; // mètres, positif = vers le haut (cf. plan_.header.takeoffAlt)
 
   // Relais TGCSCmdRouter -> TStateMachine — cf. StateMachineOrderQueue.
   StateMachineOrderQueue gcsOrders_{};

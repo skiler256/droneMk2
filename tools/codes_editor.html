@@ -113,6 +113,7 @@
   <div class="tabs">
     <button type="button" class="tab-btn active" data-tab="codes">Codes</button>
     <button type="button" class="tab-btn" data-tab="packets">Paquets télémétrie</button>
+    <button type="button" class="tab-btn" data-tab="alarms">Alarmes</button>
   </div>
 
   <div id="tab-codes" class="tab-panel active">
@@ -129,7 +130,7 @@
         <thead>
           <tr>
             <th>Code</th><th>Composant</th><th>Catégorie</th><th>Nom</th>
-            <th>Description</th><th>Sévérité</th><th></th>
+            <th>Description</th><th>Sévérité</th><th>Alarme</th><th>Voyants</th><th></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -169,6 +170,14 @@
         <div>
           <label for="severity">Sévérité</label>
           <select id="severity" required></select>
+        </div>
+        <div>
+          <label for="alarm">Alarme dédiée (vide = générique MW/MC, cf. onglet Alarmes)</label>
+          <select id="alarm"><option value="">— générique MW/MC —</option></select>
+        </div>
+        <div>
+          <label for="panel">Voyants ESP32 (labels mapingESP.csv, séparés par virgule)</label>
+          <input id="panel" type="text" placeholder="GPS,EKF,MW,MC">
         </div>
         <div class="error" id="error"></div>
         <div class="btn-row">
@@ -248,6 +257,98 @@
   </div>
   </div>
 
+  <div id="tab-alarms" class="tab-panel">
+  <div class="layout">
+    <div class="panel">
+      <div class="result-count" id="almResultCount"></div>
+      <table id="almTable">
+        <thead>
+          <tr>
+            <th>AlarmId</th><th>Libellé</th><th>Fichier son</th><th>Type</th>
+            <th>Priorité</th><th>Période (ms)</th><th>Classe</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="almTbody"></tbody>
+      </table>
+      <div id="almEmpty" class="empty" style="display:none">Aucune alarme.</div>
+
+      <div class="form-title" style="margin-top:1.5rem">Alarmes déclenchées par un changement d'état mission</div>
+      <div class="warning">
+        Un état ne peut avoir qu'une seule alarme (déclenchée une fois à
+        l'entrée dans l'état). Ex: HOLD -&gt; hold_entered.
+      </div>
+      <table id="misTable">
+        <thead><tr><th>État</th><th>AlarmId</th><th></th></tr></thead>
+        <tbody id="misTbody"></tbody>
+      </table>
+      <div id="misEmpty" class="empty" style="display:none">Aucun mapping.</div>
+    </div>
+
+    <div class="panel">
+      <div class="form-title" id="almFormTitle">Ajouter une alarme</div>
+      <form id="almForm">
+        <div>
+          <label for="almId">AlarmId (snake_case, ex: fire_bell)</label>
+          <input id="almId" type="text" placeholder="fire_bell" required>
+        </div>
+        <div>
+          <label for="almLabel">Libellé</label>
+          <input id="almLabel" type="text" placeholder="Fire bell (perte moteur)" required>
+        </div>
+        <div>
+          <label for="almSoundFile">Fichier son (base, sans extension)</label>
+          <input id="almSoundFile" type="text" placeholder="fire_bell" required>
+          <div class="mono-small">Dépose GCS/public/sounds/&lt;fichier&gt;.mp3/.wav/.mp4</div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="almType">Type</label>
+            <select id="almType" required></select>
+          </div>
+          <div>
+            <label for="almClass">Classe (bouton d'ack)</label>
+            <select id="almClass" required></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="almPriority">Priorité (0-999, plus haut = plus urgent)</label>
+            <input id="almPriority" type="number" min="0" max="999" value="50" required>
+          </div>
+          <div>
+            <label for="almPeriodMs">Période ms (Loop, 0 = boucle continue)</label>
+            <input id="almPeriodMs" type="number" min="0" value="0" required>
+          </div>
+        </div>
+        <div class="error" id="almError"></div>
+        <div class="btn-row">
+          <button type="button" id="almCancelEdit" class="btn-secondary" style="display:none">Annuler</button>
+          <button type="submit" id="almSubmitBtn">Ajouter l'alarme</button>
+        </div>
+      </form>
+
+      <div class="form-title" style="margin-top:1.5rem" id="misFormTitle">Ajouter un mapping d'état</div>
+      <form id="misForm">
+        <div class="row2">
+          <div>
+            <label for="misState">État MISSION_STATE</label>
+            <select id="misState" required></select>
+          </div>
+          <div>
+            <label for="misAlarmId">Alarme</label>
+            <select id="misAlarmId" required></select>
+          </div>
+        </div>
+        <div class="error" id="misError"></div>
+        <div class="btn-row">
+          <button type="button" id="misCancelEdit" class="btn-secondary" style="display:none">Annuler</button>
+          <button type="submit" id="misSubmitBtn">Ajouter le mapping</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+
 <script>
 let meta = null;
 let codes = [];
@@ -317,6 +418,8 @@ function renderTable() {
       <td>${c.name}</td>
       <td>${c.description}</td>
       <td><span class="badge ${c.is_major ? 'major' : 'minor'}">${c.severity}</span></td>
+      <td class="mono-small">${c.alarm || '—'}</td>
+      <td class="mono-small">${c.panel || '—'}</td>
       <td class="actions">
         <button type="button" class="icon-btn" data-edit="${c.code}">Modifier</button>
         <button type="button" class="icon-btn danger" data-delete="${c.code}">Supprimer</button>
@@ -374,6 +477,8 @@ function startEdit(code) {
   document.getElementById('name').value = c.name;
   document.getElementById('description').value = c.description;
   document.getElementById('severity').value = c.severity;
+  document.getElementById('alarm').value = c.alarm || '';
+  document.getElementById('panel').value = c.panel || '';
   document.getElementById('error').textContent = '';
 
   document.getElementById('formTitle').textContent = `Modifier ${code}`;
@@ -421,6 +526,8 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     name: document.getElementById('name').value,
     description: document.getElementById('description').value,
     severity: document.getElementById('severity').value,
+    alarm: document.getElementById('alarm').value,
+    panel: document.getElementById('panel').value,
   };
 
   const url = editingCode ? `/api/codes/${encodeURIComponent(editingCode)}` : '/api/codes';
@@ -616,6 +723,267 @@ document.getElementById('pktForm').addEventListener('submit', async (e) => {
 });
 
 loadPacketMeta().then(loadPackets);
+
+// ─── Alarmes ─────────────────────────────────────────────────────────────
+let almMeta = null;
+let alarms = [];
+let missionAlarms = [];
+let editingAlarm = null;       // alarm_id en cours d'édition, ou null = ajout
+let editingMissionAlarm = null; // state en cours d'édition, ou null = ajout
+
+function populateAlarmSelects() {
+  // Formulaire Codes (onglet Codes) -- alarme dédiée optionnelle.
+  const codeAlarmSel = document.getElementById('alarm');
+  const prevCodeVal = codeAlarmSel.value;
+  codeAlarmSel.innerHTML = '<option value="">— générique MW/MC —</option>' +
+    alarms.map(a => `<option value="${a.alarm_id}">${a.alarm_id} — ${a.label} (${a.klass})</option>`).join('');
+  codeAlarmSel.value = prevCodeVal;
+
+  // Formulaire mapping d'état.
+  const misAlarmSel = document.getElementById('misAlarmId');
+  const prevMisVal = misAlarmSel.value;
+  misAlarmSel.innerHTML = alarms.map(a =>
+    `<option value="${a.alarm_id}">${a.alarm_id} — ${a.label}</option>`).join('');
+  misAlarmSel.value = prevMisVal;
+}
+
+async function loadAlarmMeta() {
+  almMeta = await (await fetch('/api/alarms/meta')).json();
+  document.getElementById('almType').innerHTML =
+    almMeta.types.map(t => `<option value="${t}">${t}</option>`).join('');
+  document.getElementById('almClass').innerHTML =
+    almMeta.classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.getElementById('misState').innerHTML =
+    almMeta.mission_states.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+function renderAlarmTable() {
+  const tbody = document.getElementById('almTbody');
+  const empty = document.getElementById('almEmpty');
+  document.getElementById('almResultCount').textContent = `${alarms.length} alarme(s)`;
+
+  if (alarms.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = alarms.map(a => `
+    <tr>
+      <td class="code">${a.alarm_id}</td>
+      <td>${a.label}</td>
+      <td class="mono-small">${a.sound_file}</td>
+      <td>${a.type}</td>
+      <td>${a.priority}</td>
+      <td>${a.period_ms}</td>
+      <td><span class="badge ${a.klass === 'MW' ? 'major' : 'minor'}">${a.klass}</span></td>
+      <td class="actions">
+        <button type="button" class="icon-btn" data-alm-edit="${a.alarm_id}">Modifier</button>
+        <button type="button" class="icon-btn danger" data-alm-delete="${a.alarm_id}">Supprimer</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-alm-edit]').forEach(btn =>
+    btn.addEventListener('click', () => startEditAlarm(btn.dataset.almEdit)));
+  tbody.querySelectorAll('[data-alm-delete]').forEach(btn =>
+    btn.addEventListener('click', () => deleteAlarm(btn.dataset.almDelete)));
+}
+
+function renderMissionAlarmTable() {
+  const tbody = document.getElementById('misTbody');
+  const empty = document.getElementById('misEmpty');
+
+  if (missionAlarms.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = missionAlarms.map(m => `
+    <tr>
+      <td class="code">${m.state}</td>
+      <td class="mono-small">${m.alarm_id}</td>
+      <td class="actions">
+        <button type="button" class="icon-btn" data-mis-edit="${m.state}">Modifier</button>
+        <button type="button" class="icon-btn danger" data-mis-delete="${m.state}">Supprimer</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-mis-edit]').forEach(btn =>
+    btn.addEventListener('click', () => startEditMissionAlarm(btn.dataset.misEdit)));
+  tbody.querySelectorAll('[data-mis-delete]').forEach(btn =>
+    btn.addEventListener('click', () => deleteMissionAlarm(btn.dataset.misDelete)));
+}
+
+async function loadAlarms() {
+  alarms = await (await fetch('/api/alarms')).json();
+  populateAlarmSelects();
+  renderAlarmTable();
+}
+
+async function loadMissionAlarms() {
+  missionAlarms = await (await fetch('/api/mission_alarms')).json();
+  renderMissionAlarmTable();
+}
+
+function startEditAlarm(alarmId) {
+  const a = alarms.find(x => x.alarm_id === alarmId);
+  if (!a) return;
+  editingAlarm = alarmId;
+
+  document.getElementById('almId').value = a.alarm_id;
+  document.getElementById('almId').disabled = true; // identifiant = clé, pas de renommage a chaud
+  document.getElementById('almLabel').value = a.label;
+  document.getElementById('almSoundFile').value = a.sound_file;
+  document.getElementById('almType').value = a.type;
+  document.getElementById('almClass').value = a.klass;
+  document.getElementById('almPriority').value = a.priority;
+  document.getElementById('almPeriodMs').value = a.period_ms;
+  document.getElementById('almError').textContent = '';
+
+  document.getElementById('almFormTitle').textContent = `Modifier ${alarmId}`;
+  document.getElementById('almSubmitBtn').textContent = 'Enregistrer';
+  document.getElementById('almCancelEdit').style.display = '';
+  document.getElementById('almId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetAlarmForm() {
+  editingAlarm = null;
+  document.getElementById('almForm').reset();
+  document.getElementById('almId').disabled = false;
+  document.getElementById('almFormTitle').textContent = 'Ajouter une alarme';
+  document.getElementById('almSubmitBtn').textContent = 'Ajouter l\'alarme';
+  document.getElementById('almCancelEdit').style.display = 'none';
+  document.getElementById('almError').textContent = '';
+}
+
+document.getElementById('almCancelEdit').addEventListener('click', resetAlarmForm);
+
+async function deleteAlarm(alarmId) {
+  if (!confirm(`Supprimer l'alarme ${alarmId} ?`)) return;
+  const res = await fetch(`/api/alarms/${encodeURIComponent(alarmId)}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'erreur inconnue');
+    return;
+  }
+  alarms = data;
+  if (editingAlarm === alarmId) resetAlarmForm();
+  populateAlarmSelects();
+  renderAlarmTable();
+}
+
+document.getElementById('almForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('almError');
+  errorEl.textContent = '';
+
+  const payload = {
+    alarm_id: document.getElementById('almId').value,
+    label: document.getElementById('almLabel').value,
+    sound_file: document.getElementById('almSoundFile').value,
+    type: document.getElementById('almType').value,
+    klass: document.getElementById('almClass').value,
+    priority: document.getElementById('almPriority').value,
+    period_ms: document.getElementById('almPeriodMs').value,
+  };
+
+  const url = editingAlarm ? `/api/alarms/${encodeURIComponent(editingAlarm)}` : '/api/alarms';
+  const method = editingAlarm ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    errorEl.textContent = data.error || 'erreur inconnue';
+    return;
+  }
+
+  alarms = data;
+  resetAlarmForm();
+  populateAlarmSelects();
+  renderAlarmTable();
+});
+
+function startEditMissionAlarm(state) {
+  const m = missionAlarms.find(x => x.state === state);
+  if (!m) return;
+  editingMissionAlarm = state;
+
+  document.getElementById('misState').value = m.state;
+  document.getElementById('misState').disabled = true;
+  document.getElementById('misAlarmId').value = m.alarm_id;
+  document.getElementById('misError').textContent = '';
+
+  document.getElementById('misFormTitle').textContent = `Modifier ${state}`;
+  document.getElementById('misSubmitBtn').textContent = 'Enregistrer';
+  document.getElementById('misCancelEdit').style.display = '';
+}
+
+function resetMissionAlarmForm() {
+  editingMissionAlarm = null;
+  document.getElementById('misForm').reset();
+  document.getElementById('misState').disabled = false;
+  document.getElementById('misFormTitle').textContent = 'Ajouter un mapping d\'état';
+  document.getElementById('misSubmitBtn').textContent = 'Ajouter le mapping';
+  document.getElementById('misCancelEdit').style.display = 'none';
+  document.getElementById('misError').textContent = '';
+}
+
+document.getElementById('misCancelEdit').addEventListener('click', resetMissionAlarmForm);
+
+async function deleteMissionAlarm(state) {
+  if (!confirm(`Supprimer le mapping ${state} ?`)) return;
+  const res = await fetch(`/api/mission_alarms/${encodeURIComponent(state)}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'erreur inconnue');
+    return;
+  }
+  missionAlarms = data;
+  if (editingMissionAlarm === state) resetMissionAlarmForm();
+  renderMissionAlarmTable();
+}
+
+document.getElementById('misForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('misError');
+  errorEl.textContent = '';
+
+  const payload = {
+    state: document.getElementById('misState').value,
+    alarm_id: document.getElementById('misAlarmId').value,
+  };
+
+  const url = editingMissionAlarm
+    ? `/api/mission_alarms/${encodeURIComponent(editingMissionAlarm)}`
+    : '/api/mission_alarms';
+  const method = editingMissionAlarm ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    errorEl.textContent = data.error || 'erreur inconnue';
+    return;
+  }
+
+  missionAlarms = data;
+  resetMissionAlarmForm();
+  renderMissionAlarmTable();
+});
+
+loadAlarmMeta().then(loadAlarms).then(loadMissionAlarms);
 </script>
 </body>
 </html>

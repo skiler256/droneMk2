@@ -1,0 +1,27 @@
+id: 002_arm_waypoints_land
+description: >
+  Roadmap etape 3 ("Nav valide sur SITL nu") : armer, decoller, laisser
+  TMiSequencer/Nav executer un aller-retour de deux Waypoint reels (pas un
+  Hold seul comme le scenario 001) puis un court Hold, atterrir. Premier
+  test de la sequence Waypoint -> Nav -> SegmentProgress::Atteint en SITL --
+  pas de moteur 3D/obstacle (roadmap etape 4).
+
+plan: 002_arm_waypoints_land.plan.yaml
+monde: world_engine/worlds/empty.json
+
+mission:
+  # EKF3 a besoin de ~30-50s pour converger a froid.
+  - {type: wait, duration: 50}
+  - {type: arm}
+  - {type: wait, duration: 5}
+  - {type: takeoff, alt: 10}
+  # Genereux et volontaire : premiere execution reelle de segments Waypoint
+  # en SITL, duree exacte inconnue (aller-retour 15m + Hold 5s a 2m/s
+  # theorique ~20s, marge large pour accel/deceleration/premiere mesure).
+  - {type: wait, duration: 90}
+  - {type: land}
+
+criteres:
+  - {metrique: mission_state_sequence, attendu: [Armed, Mission, Landing]}
+  - {metrique: aucun_code_emergency, attendu: true}
+  - {metrique: processus_vivants_a_la_fin, attendu: [drone, udp_bridge]}

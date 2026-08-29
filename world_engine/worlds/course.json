@@ -1,0 +1,7 @@
+{
+  "obstacles": [
+    {"shape": "box", "position": [10.0, 8.0, -6.0], "size": [3.0, 24.0, 3.0]},
+    {"shape": "cylinder", "position": [14.0, 8.0, -6.0], "radius": 0.5, "height": 14.0},
+    {"shape": "box", "position": [10.0, 23.0, -6.0], "size": [3.0, 24.0, 3.0]}
+  ]
+}

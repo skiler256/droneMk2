@@ -1,0 +1,35 @@
+id: 003_lidar_obstacle_check
+description: >
+  Validation bout en bout de la boucle lidar (roadmap etape 4, point E) :
+  armer, decoller (alt par defaut 10m), tenir en Hold pres du point de
+  decollage, atterrir. Un obstacle reel (worlds/obstacle_north.json, un
+  "immeuble" a 15m plein nord) doit etre detecte par le LD06 simule --
+  preuve que World.gd -> LidarServer.gd -> sensor_bridge.py ->
+  UdpLidarDriver -> SensorFusion -> shm -> dashboard fonctionne bout en
+  bout, pas juste chaque brique isolement.
+
+plan: 003_lidar_obstacle_check.plan.yaml
+monde: world_engine/worlds/obstacle_north.json
+
+mission:
+  # EKF3 a besoin de ~30-50s pour converger a froid.
+  - {type: wait, duration: 50}
+  - {type: arm}
+  - {type: wait, duration: 5}
+  - {type: takeoff, alt: 10}
+  # Hold pres du point de decollage -- assez long pour accumuler des
+  # observations lidar (poll shm_observer a 10Hz, cf. run_scenario.py).
+  - {type: wait, duration: 30}
+  - {type: land}
+
+criteres:
+  - {metrique: mission_state_sequence, attendu: [Armed, Mission, Landing]}
+  - {metrique: aucun_code_emergency, attendu: true}
+  - {metrique: processus_vivants_a_la_fin, attendu: [drone, udp_bridge]}
+  # Au moins un point lidar observe a une norme (distance depuis le drone)
+  # dans cette plage -- box plein nord a ~15m, near face attendue a 14m
+  # (demi-epaisseur 1m), depuis un hover pres du point de decollage
+  # (north~=0). Tolerance large (13-16m) pour absorber le "pres de" du
+  # Hold (le drone ne revient pas a north=0.000 exactement) et le bruit
+  # EKF/attitude (lidarPointNed utilise l'attitude FUSIONNEE, pas SIM_STATE brut).
+  - {metrique: lidar_hit_range_m, attendu: [13.0, 16.0]}

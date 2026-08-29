@@ -1,0 +1,206 @@
+[
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o -c /home/jules/droneMk2/src/SensorsFusion/SensorFusion.cpp",
+  "file": "/home/jules/droneMk2/src/SensorsFusion/SensorFusion.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SensorsFusion/SensorFusion.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o -c /home/jules/droneMk2/src/Navigation/Navigation.cpp",
+  "file": "/home/jules/droneMk2/src/Navigation/Navigation.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Navigation/Navigation.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.o -c /home/jules/droneMk2/src/MissionControl/MissionPlan.cpp",
+  "file": "/home/jules/droneMk2/src/MissionControl/MissionPlan.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MissionControl/MissionPlan.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.o -c /home/jules/droneMk2/src/MissionControl/MissionControl.cpp",
+  "file": "/home/jules/droneMk2/src/MissionControl/MissionControl.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MissionControl/MissionControl.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.o -c /home/jules/droneMk2/src/MavlinkInterface/MavlinkInterface.cpp",
+  "file": "/home/jules/droneMk2/src/MavlinkInterface/MavlinkInterface.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MavlinkInterface/MavlinkInterface.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/MavlinkInterface/UartMavlinkLink.cpp.o -c /home/jules/droneMk2/src/MavlinkInterface/UartMavlinkLink.cpp",
+  "file": "/home/jules/droneMk2/src/MavlinkInterface/UartMavlinkLink.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MavlinkInterface/UartMavlinkLink.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/MavlinkInterface/UdpMavlinkLink.cpp.o -c /home/jules/droneMk2/src/MavlinkInterface/UdpMavlinkLink.cpp",
+  "file": "/home/jules/droneMk2/src/MavlinkInterface/UdpMavlinkLink.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/MavlinkInterface/UdpMavlinkLink.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/SystemMonitoring.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/SystemMonitoring.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/SystemMonitoring.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/UdpTelemetryDriver.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/UdpTelemetryDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpTelemetryDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/UdpVideoDriver.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/UdpVideoDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/UdpVideoDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/SystemMonitoring/LinuxThermalZoneDriver.cpp.o -c /home/jules/droneMk2/src/SystemMonitoring/LinuxThermalZoneDriver.cpp",
+  "file": "/home/jules/droneMk2/src/SystemMonitoring/LinuxThermalZoneDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/SystemMonitoring/LinuxThermalZoneDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o -c /home/jules/droneMk2/src/Drivers/NEO-M8N.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/NEO-M8N.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/NEO-M8N.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o -c /home/jules/droneMk2/src/Drivers/LIS3MDL.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/LIS3MDL.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/LIS3MDL.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o -c /home/jules/droneMk2/src/Drivers/LD06.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/LD06.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/LD06.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/UdpGpsDriver.cpp.o -c /home/jules/droneMk2/src/Drivers/UdpGpsDriver.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/UdpGpsDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/UdpGpsDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone_lib.dir/src/Drivers/UdpLidarDriver.cpp.o -c /home/jules/droneMk2/src/Drivers/UdpLidarDriver.cpp",
+  "file": "/home/jules/droneMk2/src/Drivers/UdpLidarDriver.cpp",
+  "output": "CMakeFiles/drone_lib.dir/src/Drivers/UdpLidarDriver.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/drone.dir/src/main.cpp.o -c /home/jules/droneMk2/src/main.cpp",
+  "file": "/home/jules/droneMk2/src/main.cpp",
+  "output": "CMakeFiles/drone.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_types.dir/tests/test_types.cpp.o -c /home/jules/droneMk2/tests/test_types.cpp",
+  "file": "/home/jules/droneMk2/tests/test_types.cpp",
+  "output": "CMakeFiles/test_types.dir/tests/test_types.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o -c /home/jules/droneMk2/tests/test_shared_state.cpp",
+  "file": "/home/jules/droneMk2/tests/test_shared_state.cpp",
+  "output": "CMakeFiles/test_shared_state.dir/tests/test_shared_state.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o -c /home/jules/droneMk2/tests/test_watchdog.cpp",
+  "file": "/home/jules/droneMk2/tests/test_watchdog.cpp",
+  "output": "CMakeFiles/test_watchdog.dir/tests/test_watchdog.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.o -c /home/jules/droneMk2/tests/test_telemetry.cpp",
+  "file": "/home/jules/droneMk2/tests/test_telemetry.cpp",
+  "output": "CMakeFiles/test_telemetry.dir/tests/test_telemetry.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.o -c /home/jules/droneMk2/tests/test_navigation.cpp",
+  "file": "/home/jules/droneMk2/tests/test_navigation.cpp",
+  "output": "CMakeFiles/test_navigation.dir/tests/test_navigation.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.o -c /home/jules/droneMk2/tests/test_missionplan.cpp",
+  "file": "/home/jules/droneMk2/tests/test_missionplan.cpp",
+  "output": "CMakeFiles/test_missionplan.dir/tests/test_missionplan.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o -c /home/jules/droneMk2/tests/test_missioncontrol.cpp",
+  "file": "/home/jules/droneMk2/tests/test_missioncontrol.cpp",
+  "output": "CMakeFiles/test_missioncontrol.dir/tests/test_missioncontrol.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o -c /home/jules/droneMk2/tests/test_mavlink.cpp",
+  "file": "/home/jules/droneMk2/tests/test_mavlink.cpp",
+  "output": "CMakeFiles/test_mavlink.dir/tests/test_mavlink.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.o -c /home/jules/droneMk2/tests/test_sensorfusion.cpp",
+  "file": "/home/jules/droneMk2/tests/test_sensorfusion.cpp",
+  "output": "CMakeFiles/test_sensorfusion.dir/tests/test_sensorfusion.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS  -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.o -c /home/jules/droneMk2/tests/helpers/stub_child.cpp",
+  "file": "/home/jules/droneMk2/tests/helpers/stub_child.cpp",
+  "output": "CMakeFiles/test_stub_child.dir/tests/helpers/stub_child.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -DSTUB_CHILD_PATH=\\\"/home/jules/droneMk2/build_sitl/test_stub_child\\\" -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -fexceptions -DGTEST_HAS_PTHREAD=1 -o CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o -c /home/jules/droneMk2/tests/test_global_watchdog.cpp",
+  "file": "/home/jules/droneMk2/tests/test_global_watchdog.cpp",
+  "output": "CMakeFiles/test_global_watchdog.dir/tests/test_global_watchdog.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/MV_SITL.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/MV_SITL.cpp",
+  "output": "CMakeFiles/mv_sitl.dir/src/IntegrationTests/MV_SITL.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/HIL_SF_MV.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/HIL_SF_MV.cpp",
+  "output": "CMakeFiles/hil_sf_mv.dir/src/IntegrationTests/HIL_SF_MV.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/NAV_SITL.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/NAV_SITL.cpp",
+  "output": "CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/MC_SITL.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/MC_SITL.cpp",
+  "output": "CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/UDP_bridge.cpp",
+  "output": "CMakeFiles/udp_bridge.dir/src/IntegrationTests/UDP_bridge.cpp.o"
+},
+{
+  "directory": "/home/jules/droneMk2/build_sitl",
+  "command": "/usr/bin/c++ -DDRONE_USE_SIM_CLOCK -DDRONE_USE_SITL_DRIVERS -I/home/jules/droneMk2/include -isystem /usr/include/eigen3 -isystem /home/jules/droneMk2/third_party/mavlink/c_library_v2/ardupilotmega -std=c++23 -Wall -Wextra -Werror -Wshadow -Wconversion -Wnull-dereference -fno-exceptions -fno-rtti -o CMakeFiles/sysmon_sitl.dir/src/IntegrationTests/SYSMON_SITL.cpp.o -c /home/jules/droneMk2/src/IntegrationTests/SYSMON_SITL.cpp",
+  "file": "/home/jules/droneMk2/src/IntegrationTests/SYSMON_SITL.cpp",
+  "output": "CMakeFiles/sysmon_sitl.dir/src/IntegrationTests/SYSMON_SITL.cpp.o"
+}
+]

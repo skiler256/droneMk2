@@ -2,6 +2,7 @@
 #include "drone/Components/MissionControl/Conversions.hpp"
 #include "drone/generated/codes.hpp"
 #include "drone/utilities.hpp"
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 
@@ -35,6 +36,14 @@ constexpr Ms kNavStaleThreshold{500};
 // Au-dessus : désarmé en plein mouvement, suspicion de crash plutôt qu'un
 // atterrissage — valeur de départ arbitraire, à affiner en vol réel.
 constexpr float kLandedVelocityThreshold = 1.0f;
+
+// Détection de fin de montée post-arm (cf. MiSequencerTask::loop()) —
+// ArduPilot ne signale pas explicitement "takeoff terminé" sur NAV_TAKEOFF
+// (juste ACCEPTED), donc jugé sur l'état réel : proche de l'altitude cible
+// ET vitesse verticale quasi nulle (stabilisé, pas juste "passé devant" en
+// montée rapide). Valeurs de départ arbitraires, à affiner en vol réel.
+constexpr float kTakeoffAltToleranceM = 1.0f;
+constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
 
 [[nodiscard]] bool hasMajorCode(SharedSysStateMemHandler &sysState, ComponentID id,
                                 CODES::Code code) {
@@ -80,13 +89,30 @@ constexpr float kLandedVelocityThreshold = 1.0f;
 // Charge + valide le plan de mission (MISSIONPLAN_CONV::parse fait déjà
 // toutes les vérifications de format : magic/version/CRC/segments, cf.
 // test_missionplan.cpp) — écrit comp.plan_ si succès.
+// GPS/EKF perdu ou batterie (bas OU critique) au PRE_FLIGHT -> refus
+// d'armer (MCA009), distinct d'un plan de mission illisible (MCA004).
+// batt_low (FCP001) bloque ici aussi, pas seulement batt_critical (FCP003)
+// -- decision explicite (plus conservateur qu'un simple voyant).
 [[nodiscard]] bool runPreflightChecks(MissionControl &comp) {
+  bool gpsOk = !hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS002) &&
+              !hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS005);
+  bool battOk = !hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::FCP001) &&
+               !hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::FCP003);
+  if (!gpsOk || !battOk) {
+    comp.sysState_.raiseCode(CODES::MCA009);
+    return false;
+  }
+
   auto bytes = readFile(missionPlanPath());
-  if (!bytes)
+  if (!bytes) {
+    comp.sysState_.raiseCode(CODES::MCA004);
     return false;
+  }
   auto plan = MISSIONPLAN_CONV::parse(*bytes);
-  if (!plan)
+  if (!plan) {
+    comp.sysState_.raiseCode(CODES::MCA004);
     return false;
+  }
   comp.plan_ = *plan;
   return true;
 }
@@ -165,10 +191,10 @@ void StateMachineTask::loop() {
 
   if (comp.state_ == MissionState::PreFlight) {
     if (!preflightChecked_) {
+      // runPreflightChecks() leve le code precis lui-meme (MCA004 plan de
+      // mission vs MCA009 sante GPS/EKF/batterie) -- rien a lever ici.
       preflightPassed_ = runPreflightChecks(comp);
       preflightChecked_ = true;
-      if (!preflightPassed_)
-        comp.sysState_.raiseCode(CODES::MCA004);
     }
     in.preflightResult = preflightPassed_;
   } else {
@@ -230,13 +256,26 @@ void StateMachineTask::loop() {
   // décide l'état, c'est ici qu'on parle vraiment à MavlinkInterface.
   if (outcome.next == MissionState::Armed && comp.state_ != MissionState::Armed) {
     armRequestedAt_ = now;
+    // GUIDED avant l'arm : STABILIZE (mode par defaut au sol) ne supporte
+    // pas le takeoff programmatique (cf. ArduCopter takeoff.cpp
+    // do_user_takeoff_U_m() -> has_user_takeoff(), STABILIZE absent de la
+    // liste des modes supportes) -- sans ca, MAV_CMD_NAV_TAKEOFF est
+    // rejete (FAILED) au moment du decollage.
+    [[maybe_unused]] auto modePushed = comp.cmd_.pushMavlinkCommand(CODES::MCO002, 0);
     [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO003, 0);
   }
   if (outcome.next == MissionState::Idle && comp.state_ == MissionState::Armed) {
     [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO004, 0);
   }
   if (outcome.next == MissionState::Mission && comp.state_ == MissionState::Armed) {
-    auto altitudeCm = in.gcsCmd ? static_cast<uint32_t>(in.gcsCmd->altitude.v * 100.0f) : 0u;
+    // Altitude du plan de mission (plan_.header.takeoffAlt), pas celle du
+    // GCS (in.gcsCmd->altitude) -- le GCS demande juste "decolle", c'est le
+    // plan qui fixe combien. takeoffComplete_ reinitialise ici : TMiSequencer
+    // n'armera le premier segment qu'une fois cette montee confirmee (evite
+    // la collision NAV_TAKEOFF d'ArduPilot / velNED de Nav envoyes trop tot).
+    comp.takeoffTargetAlt_ = comp.plan_.header.takeoffAlt;
+    comp.takeoffComplete_ = false;
+    auto altitudeCm = static_cast<uint32_t>(comp.plan_.header.takeoffAlt * 100.0f);
     [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO001, altitudeCm);
   }
   if (outcome.next == MissionState::Landing && comp.state_ != MissionState::Landing) {
@@ -272,6 +311,23 @@ void MiSequencerTask::loop() {
 
   auto now = Clock::now();
 
+  // N'arme le premier segment qu'une fois la montée post-arm confirmée
+  // (altitude proche de la cible ET vitesse verticale quasi nulle) --
+  // sinon les commandes velNED du premier Waypoint partent en même temps
+  // que le NAV_TAKEOFF d'ArduPilot est encore en train de s'exécuter,
+  // constaté en session SITL (le drone ne decolle jamais vraiment).
+  if (!comp.takeoffComplete_) {
+    auto state = comp.SF_.getDynamicState();
+    if (!state)
+      return; // pas d'état SF dispo, on retente au prochain cycle
+    float altUpM = -state->posNed.ned.z; // NED : z négatif = vers le haut
+    float altErrorM = std::abs(altUpM - comp.takeoffTargetAlt_);
+    float vertSpeedMs = std::abs(state->velNed.ned.z);
+    if (altErrorM > kTakeoffAltToleranceM || vertSpeedMs > kTakeoffVertSpeedToleranceMs)
+      return; // montée toujours en cours
+    comp.takeoffComplete_ = true;
+  }
+
   if (inHold_) {
     if (now < holdUntil_)
       return;
@@ -286,7 +342,24 @@ void MiSequencerTask::loop() {
     bool navHealthy = comp.sysState_.getHealth(ComponentID::Navigation)
                           .value_or(ComponentHealth::DEAD) == ComponentHealth::NOMINAL;
     auto navCmd = comp.nav_.getCommand();
-    bool navCmdFresh = navCmd && UTILITIES::msBetween(navCmd->ts, now) < kNavStaleThreshold;
+    auto progress = comp.cmd_.getSegmentProgress();
+    // Confirmation POSITIVE que Nav a bien promu ce segment precis (pas une
+    // duree ecoulee -- une course contre un delai fixe reste une course,
+    // meme genereuse, cf. bug constate en SITL malgre un premier correctif
+    // a base de delai). navCmd n'est JAMAIS nullopt en pratique (bug trouve
+    // via print de diagnostic en SITL) : APTask ecrit deja un NavCommand
+    // pendant la phase Hold (EKF pas encore converge, avant meme l'armement,
+    // cf. holdActive_ dans APTask::loop()) -- ce vieux timestamp reste donc
+    // en shm, jamais rafraichi entre la fin du Hold et le premier
+    // engagement reel. D'ou l'ordre de verification : navConfirmedEngaged
+    // AVANT de regarder l'age de navCmd, peu importe qu'il existe deja.
+    bool navConfirmedEngaged = progress && progress->seq == armedSeqPending_;
+    bool navCmdFresh;
+    if (!navConfirmedEngaged) {
+      navCmdFresh = true; // pas encore confirme -- latence normale de promotion, pas une panne
+    } else {
+      navCmdFresh = navCmd && UTILITIES::msBetween(navCmd->ts, now) < kNavStaleThreshold;
+    }
     bool navOk = navHealthy && navCmdFresh;
 
     if (!navOk && !navStaleActive_) {
@@ -297,7 +370,6 @@ void MiSequencerTask::loop() {
       navStaleActive_ = false;
     }
 
-    auto progress = comp.cmd_.getSegmentProgress();
     if (!progress || progress->seq != armedSeqPending_ ||
         progress->status != SegmentStatus::Atteint)
       return; // toujours en route vers la cible armée

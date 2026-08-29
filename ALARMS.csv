@@ -1,0 +1,7 @@
+AlarmId;Label;SoundFile;Type;Priority;PeriodMs;Class
+airbus_caution;Autopilote (EKF/GPS/MAG);airbus_caution;Loop;90;0;MW
+fire_bell;Fire bell (perte moteur);fire_bell;Loop;100;0;MW
+hold_entered;Entree en Hold;hold_entered;Oneshot;50;0;MC
+master_caution;Master Caution generique;master_caution;Oneshot;40;0;MC
+master_warning;Master Warning generique;master_warning;Loop;80;0;MW
+obstacle;obstacle;obstacle;Loop;60;0;MC

@@ -40,22 +40,36 @@ MAJOR_SEVERITIES = {"Critical", "Emergency"}
 
 CODE_RE = re.compile(r"^([A-Z]{2})([A-Z])(\d{3})$")
 
-CSV_FIELDS = ["Code", "Component", "Category", "Name", "Description", "Criticity", "Sound"]
+CSV_FIELDS = ["Code", "Component", "Category", "Name", "Description", "Criticity", "Alarm", "Panel"]
 
 
 class DiagCode:
-    # sound="" : pas de son dédié — le GCS retombe sur le bip générique
-    # Master Warning/Master Caution (cf. severity), le détail restant de
-    # toute façon affiché en clair sur la page (event log).
+    # alarm="" : pas d'alarme dédiée -- le GCS retombe sur l'alarme générique
+    # de catégorie (master_warning/master_caution, cf. ALARMS.csv et
+    # server.js::MW_GROUP), le détail restant de toute façon affiché en
+    # clair sur la page (event log). Sinon, AlarmId référençant une ligne de
+    # ALARMS.csv (cf. tools/alarms_common.py) -- plusieurs codes peuvent
+    # partager la même alarme (ex: SFS002/SFS003/SFS005 -> "airbus_caution").
+    # panel="" : aucun voyant physique dédié (pas relayé sur le boîtier ESP32).
+    # Sinon liste de labels mapingESP.csv séparés par virgule (ex: "GPS,EKF"),
+    # cf. GCS/ESP32/mapingESP.csv — un code peut allumer plusieurs voyants
+    # ("panne cause plusieurs voyants", décision explicite : politique dark
+    # cockpit, chaque code décrit lui-même sa cascade plutôt qu'une règle
+    # implicite basée sur la sévérité).
     def __init__(self, code, component_label, category_label, name, description, severity,
-                sound=""):
+                alarm="", panel=""):
         self.code = code
         self.component_label = component_label
         self.category_label = category_label
         self.name = name
         self.description = description
         self.severity = severity
-        self.sound = sound
+        self.alarm = alarm
+        self.panel = panel
+
+    @property
+    def panel_labels(self):
+        return [p.strip() for p in self.panel.split(",") if p.strip()]
 
     @property
     def component_id(self):
@@ -81,7 +95,8 @@ class DiagCode:
             "Name": self.name,
             "Description": self.description,
             "Criticity": self.severity,
-            "Sound": self.sound,
+            "Alarm": self.alarm,
+            "Panel": self.panel,
         }
 
 
@@ -97,7 +112,7 @@ def _label_from_full_name(table, full_name):
 
 
 def parse_row(code_raw, component_raw, category_raw, name, description, severity_raw,
-              sound_raw=None, *, seen=None, where=""):
+              alarm_raw=None, panel_raw=None, *, seen=None, known_alarm_ids=None, where=""):
     """Valide une ligne brute (types str) et renvoie un DiagCode. Lève
     CodeValidationError avec un message clair sinon — utilisé à la fois par
     le parsing CSV (gen_codes.py) et par l'API web (codes_editor.py)."""
@@ -140,6 +155,12 @@ def parse_row(code_raw, component_raw, category_raw, name, description, severity
             raise CodeValidationError(f"{where}code '{code_raw}' dupliqué")
         seen.add(code_raw)
 
+    alarm = (alarm_raw or "").strip().lower()
+    if alarm and known_alarm_ids is not None and alarm not in known_alarm_ids:
+        raise CodeValidationError(
+            f"{where}Alarm '{alarm}' inconnu de ALARMS.csv "
+            f"(ajoute-le d'abord dans l'onglet Alarmes)")
+
     return DiagCode(
         code=code_raw,
         component_label=comp_label,
@@ -147,11 +168,12 @@ def parse_row(code_raw, component_raw, category_raw, name, description, severity
         name=(name or "").strip(),
         description=(description or "").strip(),
         severity=SEVERITIES[severity_key],
-        sound=(sound_raw or "").strip(),
+        alarm=alarm,
+        panel=(panel_raw or "").strip().upper(),
     )
 
 
-def read_csv(path: Path):
+def read_csv(path: Path, known_alarm_ids=None):
     raw = path.read_bytes()
     for enc in ("utf-8", "cp850", "cp1252"):
         try:
@@ -177,8 +199,8 @@ def read_csv(path: Path):
             codes.append(parse_row(
                 code_raw, row.get("Component"), row.get("Category"),
                 row.get("Name"), row.get("Description"), row.get("Criticity"),
-                row.get("Sound"),
-                seen=seen, where=f"{path}:{lineno}: ",
+                row.get("Alarm"), row.get("Panel"),
+                seen=seen, known_alarm_ids=known_alarm_ids, where=f"{path}:{lineno}: ",
             ))
         except CodeValidationError as e:
             sys.exit(f"erreur: {e}")

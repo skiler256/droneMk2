@@ -1,0 +1,4 @@
+models/*.glb
+models/*.gltf
+models/*.bin
+.import/

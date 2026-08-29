@@ -128,11 +128,19 @@ std::string serializeFc(std::string_view ns, SharedFCStatusHandler &h) {
   if (auto att = h.getAttitude())
     os << "attitude.w=" << att->q.w << "\nattitude.x=" << att->q.x
        << "\nattitude.y=" << att->q.y << "\nattitude.z=" << att->q.z << "\n";
+  if (auto attTs = h.getAttitudeTs()) {
+    auto ageMs = UTILITIES::msBetween(*attTs, Clock::now());
+    os << "attitude.age_ms=" << ageMs.count() << "\n";
+  }
 
   if (auto pv = h.getLocalPosVel())
     os << "pos.x=" << pv->pos.ned.x << "\npos.y=" << pv->pos.ned.y
        << "\npos.z=" << pv->pos.ned.z << "\nvel.x=" << pv->vel.ned.x
        << "\nvel.y=" << pv->vel.ned.y << "\nvel.z=" << pv->vel.ned.z << "\n";
+  if (auto posTs = h.getLocalPosVelTs()) {
+    auto ageMs = UTILITIES::msBetween(*posTs, Clock::now());
+    os << "pos.age_ms=" << ageMs.count() << "\n";
+  }
 
   if (auto bat = h.getBattery())
     os << "battery.voltage=" << bat->voltage.v << "\nbattery.current=" << bat->current.v
@@ -141,6 +149,18 @@ std::string serializeFc(std::string_view ns, SharedFCStatusHandler &h) {
   if (auto pres = h.getPressure())
     os << "pressure.abs=" << pres->absHpa << "\npressure.diff=" << pres->diffHpa
        << "\npressure.temp=" << pres->temperatureC << "\n";
+
+  if (auto armed = h.getArmed())
+    os << "armed=" << (*armed ? 1 : 0) << "\n";
+
+  if (auto esc = h.getEscStatus()) {
+    for (std::size_t i = 0; i < esc->rpmValue.size(); ++i)
+      os << "rpm." << i << "=" << esc->rpmValue[i] << "\n";
+  }
+  if (auto escTs = h.getEscStatusTs()) {
+    auto ageMs = UTILITIES::msBetween(*escTs, Clock::now());
+    os << "rpm.age_ms=" << ageMs.count() << "\n";
+  }
 
   if (auto hb = h.getLastHeartbeat()) {
     auto ageMs = UTILITIES::msBetween(*hb, Clock::now());
@@ -238,6 +258,11 @@ std::string serializeSf(std::string_view ns, SharedSFMemHandler &h) {
 
 // Points non-nuls seulement (sentinelle "pas de mesure", cf. LidarMap) —
 // réduit la taille du datagramme, un tour complet peut sinon dépasser 25Ko.
+//
+// Distance BRUTE (rangeMm, indexée par angle corps 0-359°, sens horaire
+// depuis le nez -- même convention que World.gd/lidar_wire.py) plutôt que
+// les points NED convertis : plus compact, et directement comparable au
+// raycast géométrique sans reconversion mentale angle<->xyz.
 std::string serializeLidar(std::string_view ns, SharedSFMemHandler &h) {
   auto map = h.getLidarMap();
   if (!map)
@@ -249,12 +274,12 @@ std::string serializeLidar(std::string_view ns, SharedSFMemHandler &h) {
   os << "age_ms=" << ageMs.count() << "\n";
 
   int count = 0;
-  for (std::size_t i = 0; i < map->points.size(); ++i) {
-    if (map->points[i].isZero())
+  for (std::size_t i = 0; i < map->rangeMm.size(); ++i) {
+    if (map->rangeMm[i] == 0)
       continue;
-    os << "pt." << count << ".x=" << map->points[i].x << "\npt." << count
-       << ".y=" << map->points[i].y << "\npt." << count << ".z=" << map->points[i].z
-       << "\npt." << count << ".i=" << static_cast<int>(map->intensity[i]) << "\n";
+    os << "pt." << count << ".angle=" << i << "\npt." << count
+       << ".range_mm=" << map->rangeMm[i] << "\npt." << count
+       << ".i=" << static_cast<int>(map->intensity[i]) << "\n";
     ++count;
   }
   os << "count=" << count << "\n";

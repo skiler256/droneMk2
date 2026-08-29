@@ -15,13 +15,14 @@
 namespace MISSIONPLAN {
 
 struct MissionHeader {
-  static constexpr std::size_t kSize = 21;
+  static constexpr std::size_t kSize = 25;
   float battWarningV{14.0f};
   float battCriticalV{12.5f};
   float rtbTransitAlt{30.0f};
   uint8_t gcsLossAction{0};
   float navVolumeRadius{200.0f};
   float navVolumeCeiling{100.0f};
+  float takeoffAlt{10.0f};
 
   [[nodiscard]] std::array<std::byte, kSize> pack() const noexcept {
     std::array<std::byte, kSize> buf{};
@@ -31,6 +32,7 @@ struct MissionHeader {
     std::memcpy(buf.data() + 12, &gcsLossAction, sizeof(gcsLossAction));
     std::memcpy(buf.data() + 13, &navVolumeRadius, sizeof(navVolumeRadius));
     std::memcpy(buf.data() + 17, &navVolumeCeiling, sizeof(navVolumeCeiling));
+    std::memcpy(buf.data() + 21, &takeoffAlt, sizeof(takeoffAlt));
     return buf;
   }
 
@@ -43,6 +45,7 @@ struct MissionHeader {
     std::memcpy(&out.gcsLossAction, bytes.data() + 12, sizeof(out.gcsLossAction));
     std::memcpy(&out.navVolumeRadius, bytes.data() + 13, sizeof(out.navVolumeRadius));
     std::memcpy(&out.navVolumeCeiling, bytes.data() + 17, sizeof(out.navVolumeCeiling));
+    std::memcpy(&out.takeoffAlt, bytes.data() + 21, sizeof(out.takeoffAlt));
     return out;
   }
 };

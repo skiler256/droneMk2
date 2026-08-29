@@ -15,7 +15,7 @@ constexpr float kMaxPlausibleSpeedMs = 50.0f; // ~180 km/h, marge généreuse
 constexpr std::uint32_t kMaxHAccMm = 5000;    // 5 m, hAcc NAV-PVT
 constexpr std::uint32_t kMaxSAccMmS = 1000;   // 1 m/s, sAcc NAV-PVT
 
-constexpr Ms kAgeThrEKF{200}; // EKF FC : ATTITUDE/LOCAL_POSITION_NED arrivent à 10-50Hz
+constexpr Ms kAgeThrEKF{1000}; // EKF FC : ATTITUDE/LOCAL_POSITION_NED arrivent à 10-50Hz
 
 // Staleness : capteur considéré en panne au-delà de ce délai, même sans
 // erreur driver explicite (ex: câble débranché mais port toujours réactif).

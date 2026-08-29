@@ -1,0 +1,21 @@
+# sitl/scenarios/001_arm_takeoff_wait_land.plan.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan de mission execute par MissionControl pour le scenario
+# 001_arm_takeoff_wait_land.yaml -- distinct du scenario lui-meme (qui pilote
+# ARM/TAKEOFF/LAND cote GCS, jamais la trajectoire). Un seul segment Hold,
+# suffisamment long pour que ce soit le LAND envoye par le scenario qui
+# termine la mission, pas TMiSequencer qui epuise le plan tout seul (cf.
+# session debug : plan vide -> missionComplete_ instantane des l'entree en
+# Mission, "wait" post-takeoff du scenario jamais atteint).
+
+header:
+  battWarningV: 14.0
+  battCriticalV: 12.5
+  rtbTransitAlt: 30.0
+  gcsLossAction: 0
+  navVolumeRadius: 200.0
+  navVolumeCeiling: 100.0
+
+segments:
+  - type: Hold
+    duration: 30.0

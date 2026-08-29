@@ -30,6 +30,10 @@ class RunTrace:
     codes_seen: set[str] = field(default_factory=set)
     # nom de process (cf. procman.ProcessManager) -> vivant à la fin du run.
     processes_alive_at_end: dict[str, bool] = field(default_factory=dict)
+    # Distances brutes (mètres) des points lidar non-nuls observés pendant
+    # le run (cf. PROD_LIDAR, `pt.N.range_mm` — dédupliquées au dixième de
+    # mètre près, sinon liste non bornée sur un run long).
+    lidar_hit_distances_m: set[float] = field(default_factory=set)
 
 
 @dataclass
@@ -79,6 +83,12 @@ def evaluate(scenario, trace: RunTrace) -> Verdict:
                         if not trace.processes_alive_at_end.get(name, False)]
             results.append(CriterionResult(crit.metrique, crit.attendu,
                                            manquants, len(manquants) == 0))
+
+        elif crit.metrique == "lidar_hit_range_m":
+            lo, hi = crit.attendu
+            hits = sorted(n for n in trace.lidar_hit_distances_m if lo <= n <= hi)
+            results.append(CriterionResult(crit.metrique, crit.attendu,
+                                           hits, len(hits) > 0))
 
         else:
             results.append(CriterionResult(crit.metrique, crit.attendu,

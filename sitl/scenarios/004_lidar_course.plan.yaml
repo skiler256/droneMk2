@@ -1,0 +1,46 @@
+# sitl/scenarios/004_lidar_course.plan.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan de mission pour 004_lidar_course.yaml -- vrai parcours rectangulaire
+# (4 Waypoint, un virage a chaque coin) autour du point de decollage (home,
+# north=0/east=0 dans le repere fixe de sensor_bridge.py), puis un court
+# Hold avant le land du scenario. Sert a tester la boucle complete "en
+# conditions" : virages reels (Nav pilote dessus), obstacles reels detectes
+# a differents moments/caps (cf. worlds/course.json), et un vol assez long
+# pour observer confortablement au viewer (modele 3D, 3 cameras).
+
+header:
+  battWarningV: 14.0
+  battCriticalV: 12.5
+  rtbTransitAlt: 30.0
+  gcsLossAction: 0
+  navVolumeRadius: 200.0
+  navVolumeCeiling: 100.0
+  takeoffAlt: 10.0
+
+segments:
+  - type: Waypoint 
+    north: 20.0
+    east: 0.0
+    alt: -10.0
+    speed: 3.0
+    acceptRadius: 2.0
+  - type: Waypoint
+    north: 20.0
+    east: 15.0
+    alt: -10.0
+    speed: 3.0
+    acceptRadius: 2.0
+  - type: Waypoint
+    north: 0.0
+    east: 15.0
+    alt: -10.0
+    speed: 3.0
+    acceptRadius: 2.0
+  - type: Waypoint
+    north: 0.0
+    east: 0.0
+    alt: -10.0
+    speed: 3.0
+    acceptRadius: 2.0
+  - type: Hold
+    duration: 5.0

@@ -19,6 +19,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from alarms_common import read_alarms_csv
 from codes_common import COMPONENTS, CATEGORIES, read_csv
 
 
@@ -86,9 +87,12 @@ def generate(codes, csv_path: Path) -> str:
     lines.append("  Severity severity;")
     lines.append("  const char *name;")
     lines.append("  const char *description;")
-    lines.append("  // Identifiant de son dédié pour l'alarme GCS (\"\" = pas de son dédié, retombe")
-    lines.append("  // sur le bip générique Master Warning/Caution — cf. GCS/public/js/link.js).")
-    lines.append("  const char *sound;")
+    lines.append("  // AlarmId (ALARMS.csv) pour l'alarme GCS (\"\" = pas d'alarme dédiée, retombe")
+    lines.append("  // sur l'alarme générique de catégorie MW/MC — cf. GCS/public/js/alarm.js).")
+    lines.append("  const char *alarm;")
+    lines.append("  // Voyants du boîtier ESP32 à allumer, séparés par virgule (\"\" = aucun) —")
+    lines.append("  // labels de GCS/ESP32/mapingESP.csv, cf. GCS/serial-bridge.js.")
+    lines.append("  const char *panel;")
     lines.append("};")
     lines.append("")
     for c in codes:
@@ -99,7 +103,7 @@ def generate(codes, csv_path: Path) -> str:
     for c in codes:
         lines.append(f'    Entry{{{c.code}, Severity::{c.severity}, '
                      f'"{cpp_escape(c.name)}", "{cpp_escape(c.description)}", '
-                     f'"{cpp_escape(c.sound)}"}},')
+                     f'"{cpp_escape(c.alarm)}", "{cpp_escape(c.panel)}"}},')
     lines.append("}};")
     lines.append("")
     lines.append("// Recherche linéaire : table petite, appelée hors boucle chaude uniquement")
@@ -119,14 +123,17 @@ def generate(codes, csv_path: Path) -> str:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", default="INDEX.csv", type=Path)
+    parser.add_argument("--alarms-csv", default="ALARMS.csv", type=Path)
     parser.add_argument("--out", default="include/drone/generated/codes.hpp", type=Path)
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
     csv_path = args.csv if args.csv.is_absolute() else repo_root / args.csv
+    alarms_csv_path = args.alarms_csv if args.alarms_csv.is_absolute() else repo_root / args.alarms_csv
     out_path = args.out if args.out.is_absolute() else repo_root / args.out
 
-    codes = read_csv(csv_path)
+    known_alarm_ids = {a.alarm_id for a in read_alarms_csv(alarms_csv_path)}
+    codes = read_csv(csv_path, known_alarm_ids=known_alarm_ids)
     if not codes:
         sys.exit(f"erreur: aucun code valide trouvé dans {csv_path}")
 

@@ -73,6 +73,7 @@ private:
   void loop() override;
   bool linkLostActive_{false};
   bool rpmLowActive_{false};
+  bool rpmHighActive_{false};
   bool battLowActive_{false};
   bool battCriticalActive_{false};
   // Fallback autonome (LAND) — cf. MAVLINKINTERFACE.md.
