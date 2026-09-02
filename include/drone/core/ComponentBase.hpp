@@ -18,8 +18,7 @@ struct TaskConfig {
   TYPES::Hz loopFrequency;
   TYPES::Ms timeout;
 
-  // Si la Task redémarre maxRestart fois dans restartWindow, le watchdog
-  // local tue le process entier (exit(1)) au lieu de la relancer sans fin.
+  // Escalade Task -> process entier si dépassé, cf. ARCHITECTURE_IPC.md §4.1.
   size_t maxRestart = 3;
   TYPES::Ms restartWindow{60000};
 };
@@ -33,8 +32,7 @@ public:
         Tconfig.maxRestart, Tconfig.restartWindow);
   };
 
-  // Incrémenté à chaque appel : preuve externe qu'un restart a eu lieu
-  // (pthread_self() n'est pas fiable pour ça, glibc recycle les tid).
+  // Preuve externe de restart, PAS pthread_self() -- cf. ARCHITECTURE_IPC.md §3.
   [[nodiscard]] size_t generation() const noexcept {
     return generation_.load(std::memory_order_acquire);
   }
@@ -57,7 +55,7 @@ public:
     }
   }
 
-  // Idempotent : no-op si pas de thread valide (déjà stoppé, ou jamais démarré).
+  // Idempotent (cf. ARCHITECTURE_IPC.md §3).
   void stop() {
     running_.store(false, std::memory_order_release);
     if (threadValid_) {
@@ -66,8 +64,7 @@ public:
     }
   }
 
-  // Évite qu'un thread RT survive à la destruction de l'objet.
-  virtual ~Task() { stop(); }
+  virtual ~Task() { stop(); } // RAII, cf. ARCHITECTURE_IPC.md §3
 
 protected:
   virtual void loop() = 0;
@@ -83,7 +80,6 @@ private:
   void run() {
     using namespace std::chrono_literals;
 
-    // Conversion sécurisée Hz -> période
     auto period =
         TYPES::Us(static_cast<int64_t>(1'000'000.0f / Tconfig.loopFrequency.v));
 
@@ -104,12 +100,11 @@ private:
   std::atomic<size_t> generation_{0};
 };
 
+// Décision hot/cold/DEAD à la construction : cf. ARCHITECTURE_IPC.md §4.3.
 struct ComponenConfig {
-  size_t max_cold_start = 1; // si le composant dépasse la limite de cold start,
-                             // il sera considéré comme "fou"
+  size_t max_cold_start = 1;
   TYPES::Ms max_cold_start_interval{60000};
-  size_t max_hot_start = 3; // limite de crash a partir de laquelle on considère
-                            // la mémoire du composant comme "malade"
+  size_t max_hot_start = 3;
   TYPES::Ms max_hot_start_interval{60000};
   TYPES::Us shm_timeout{2000};
 
@@ -133,9 +128,7 @@ public:
     auto lastCold = compMem_.getColdtStartTs(config_.max_cold_start - 1);
     auto lastHot = compMem_.getHotStartTs(config_.max_hot_start - 1);
 
-    // has_value() seul ne suffit pas : le tableau a une taille fixe, donc
-    // un slot jamais écrit renvoie quand même un optional valide (à
-    // l'epoch). Sans ce check, un composant neuf serait vu comme DEGRADED.
+    // has_value() seul ne suffit pas ici, cf. piège documenté ARCHITECTURE_IPC.md §4.3.
     auto isRecorded = [](const std::optional<TYPES::TimePoint> &ts) {
       return ts.has_value() && ts.value() != TYPES::TimePoint{};
     };
@@ -181,17 +174,13 @@ protected:
   bool hotstart{false};
   bool coldstart{false}; // séquence de démarrage du composant
 
-  // A appeler pour chaque Task membre, dans le ctor du composant dérivé,
-  // avant activate().
+  // registerTask() puis activate(), en fin de ctor du composant dérivé --
+  // pourquoi ComponentBase ne peut pas le faire lui-même : ARCHITECTURE_IPC.md §4.3.
   void registerTask(Task &t) {
     if (taskCount_ < tasks_.size())
       tasks_[taskCount_++] = &t;
-    
   }
 
-  // A appeler UNE fois, en fin de ctor du composant dérivé (une fois ses
-  // Tasks enregistrées) — ComponentBase ne peut pas le faire lui-même,
-  // ses membres se construisent avant ceux de la classe dérivée.
   void activate() {
     if (!hotstart && !coldstart)
       return; // DEAD : rien à démarrer

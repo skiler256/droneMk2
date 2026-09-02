@@ -14,22 +14,65 @@
                          │   défaut)        │
                          └───┬─────────┬────┘
                     fork+exec│         │fork+exec
-                    ┌────────▼──┐   ┌──▼─────────┐
-                    │ Navigation │   │SensorFusion│  ... un process par composant
-                    │  (process) │   │ (process)  │
-                    └─────┬──────┘   └──────┬─────┘
-                          │                 │
-                          │  ComponentBase  │
-                          │  ├─ ComponentWatchdog (thread RT local)
-                          │  └─ N × Task (thread RT chacune)
-                          │                 │
-                          └────────┬────────┘
-                                   │ lit/écrit via handlers
-                          ┌────────▼────────┐
-                          │  Mémoire partagée │  SharedNavMem, SharedSFMem,
-                          │  (POSIX shm_open) │  SharedSysStateMem...
-                          └───────────────────┘
+              ┌────────▼──┐ ... ┌──▼─────────────┐
+              │ Navigation │     │ MissionControl │  5 process, un par domaine
+              │  (process) │     │   (process)    │  fonctionnel (§1.1)
+              └─────┬──────┘     └──────┬─────────┘
+                    │                   │
+                    │  ComponentBase    │
+                    │  ├─ ComponentWatchdog (thread RT local)
+                    │  └─ N × Task (thread RT chacune, §3)
+                    │                   │
+                    └─────────┬─────────┘
+                              │ lit/écrit via handlers
+                     ┌────────▼────────┐
+                     │  Mémoire partagée │  SharedNavMem, SharedSFMem,
+                     │  (POSIX shm_open) │  SharedSysStateMem...
+                     └───────────────────┘
 ```
+
+### 1.1 Process : un binaire, un rôle par argv
+
+Un seul exécutable (`drone`, `add_executable(drone src/main.cpp)`) sert pour
+le process racine et les 5 composants — pas un binaire par composant. Le rôle
+est choisi à l'exécution :
+
+```cpp
+// src/main.cpp
+std::string_view role = (argc > 1) ? argv[1] : "globalwatchdog";
+if (role == "navigation")       return runNavigation();
+if (role == "sensorfusion")     return runSensorFusion();
+if (role == "sysmonitoring")    return runSysMonitoring();
+if (role == "mavlinkinterface") return runMavlinkInterface();
+if (role == "missioncontrol")   return runMissionControl();
+// sinon : rôle par défaut, GlobalWatchdog
+```
+
+`GlobalWatchdog::forkChildren()` lance les 5 en passant le rôle en `argv[1]`
+du `fork()+exec(argv[0], role)` :
+
+```cpp
+children_[0] = spawn(ComponentID::Navigation, "navigation");
+children_[1] = spawn(ComponentID::SensorFusion, "sensorfusion");
+children_[2] = spawn(ComponentID::SysMonitoring, "sysmonitoring");
+children_[3] = spawn(ComponentID::MavlinkInterface, "mavlinkinterface");
+children_[4] = spawn(ComponentID::MissionControl, "missioncontrol");
+```
+
+Chaque domaine fonctionnel (Navigation, SensorFusion, SysMonitoring,
+MavlinkInterface, MissionControl) est donc un **process Linux isolé** —
+crash d'un composant = crash d'un process, sans effet mémoire direct sur les
+autres (cf. §2.5 pour la récupération). Un `add_executable` séparé n'existe
+que pour les binaires SITL/HIL (`src/IntegrationTests/*.cpp`, ex. `mv_sitl`,
+`hil_sf_mv`), jamais pour les composants de production.
+
+**À l'intérieur d'un process**, la granularité descend au thread : chaque
+tâche indépendante du composant (ex. séquencement de mission, loi de
+pilotage, fail-safe pour `Navigation`) est une `Task` = un thread `SCHED_FIFO`
+dédié avec sa propre fréquence et son propre hearteat — voir §3. Le process
+ne contient donc jamais de logique métier directement dans son `main()` de
+rôle : il construit un `ComponentBase<N>` dérivé, qui possède ses `Task` et
+son `ComponentWatchdog` local.
 
 Trois niveaux de supervision, chacun avec une responsabilité précise et
 **aucun recouvrement** :
@@ -292,15 +335,17 @@ codes OBD2 automobile : `FCP001` = Flight Controller / Power / 001.
     bon stockage en cherchant la sévérité dans `CODES::kTable` — l'appelant
     n'a jamais à choisir.
 
-## 6. Ce qui n'est PAS encore fait (au 2026, dernière mise à jour de ce doc)
+## 6. Limites connues
 
 - `ComponentBase::restore()` reste un no-op par défaut — aucun composant
   n'a encore d'état réel à réhydrater après un hot-start.
 - La règle "`MissionControl` ne fait jamais de cold-start" (`CLAUDE.md`)
-  n'est pas codée dans `ComponentBase` — pas de logique spécifique par
-  composant aujourd'hui, `MissionControl` n'existe pas encore.
-- `GlobalWatchdog::children_` est un `std::array<ChildProc, 2>` figé
-  (Navigation + SensorFusion) — à généraliser au 3e composant.
+  n'est pas codée dans `ComponentBase` — aucune logique spécifique par
+  composant aujourd'hui, la décision hot/cold/DEAD (§4.3) est uniforme pour
+  les 5 composants. `MissionControl` existe et tourne (`GlobalWatchdog::
+  children_` est un `std::array<ChildProc, 5>`, les 5 domaines sont forkés
+  — voir §1.1), seule la règle de non-cold-start n'a pas encore de
+  traitement différencié.
 - La bande passante réseau (codes courts 1 octet pour la télémétrie
   wfb-ng) n'a pas de mécanisme dédié — c'est un problème de sérialisation
   côté `Monitoring`→GCS, pas de l'IPC, volontairement pas traité ici.

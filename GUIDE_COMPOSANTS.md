@@ -221,7 +221,8 @@ ComponenConfig{
 2. Ajoute un chemin shm dans `GlobalWatchdog.hpp` (`kMonComposantShmPath`) et
    publie-le dans `publishAll()`.
 3. Ajoute un fork dans `forkChildren()` (`spawn(ComponentID::MonComposant, "moncomposant")`)
-   et étends `children_` (actuellement `std::array<ChildProc, 2>`).
+   et étends `children_` (actuellement `std::array<ChildProc, 5>`, un par
+   composant existant).
 4. Dans `main.cpp`, ajoute une fonction `runMonComposant()` (copie
    `runNavigation()`) : `attachSharedMemory` sur chaque segment nécessaire,
    construis les handlers puis le composant, boucle `while(true) sleep(2)`.
@@ -230,7 +231,7 @@ ComponenConfig{
 ## 6. Signaler un événement/une panne (système de codes)
 
 Chaque code (`FCP001`, style OBD2 — composant + catégorie + numéro) est
-défini dans `INDEX.csv` à la racine et génère `include/drone/generated/
+défini dans `data/INDEX.csv` et génère `include/drone/generated/
 codes.hpp` (régénéré automatiquement par CMake à chaque build si le CSV a
 changé — `python3 tools/gen_codes.py` pour le faire à la main). Édite le
 CSV via `python3 tools/codes_editor.py` (recherche/filtre/ajout/édition/

@@ -39,8 +39,7 @@ private:
 
 struct SharedMemory {
   std::atomic<bool> initialized{false};
-  // Free == ComponentID::Count. Sert à la fois de verrou (CAS) et de
-  // registre d'identité du détenteur.
+  // Verrou CAS + registre d'identité, cf. ARCHITECTURE_IPC.md §2.2.
   std::atomic<TYPES::ComponentID> owner{TYPES::ComponentID::Count};
   uint32_t checksum;
 };
@@ -50,8 +49,7 @@ public:
   explicit SharedMemoryHandler(SharedMemory &mem) : mem_(mem) {};
   virtual ~SharedMemoryHandler() = default;
 
-  // Appelé par GlobalWatchdog à la mort d'un composant : ne libère que si
-  // `id` détenait vraiment le verrou (sinon no-op, pas de vol possible).
+  // CAS conditionnel, cf. ARCHITECTURE_IPC.md §2.5.
   void resetWriterFlag(TYPES::ComponentID id) {
     TYPES::ComponentID expected = id;
     mem_.owner.compare_exchange_strong(expected, TYPES::ComponentID::Count,
@@ -67,17 +65,13 @@ public:
 protected:
   SharedMemory &mem_;
 
-  // `id` transite jusqu'ici pour permettre un checksum PAR COMPOSANT sur
-  // les segments multi-écrivains (override checksumValid/updateChecksum ET
-  // computeChecksum ci-dessous) — sans ça, reset(id) d'un writer revalide
-  // silencieusement la corruption d'un slot qu'il n'a pas touché, en
-  // recalculant un checksum global sur des données jamais vérifiées.
+  // Checksum par composant sur les segments multi-écrivains, cf.
+  // ARCHITECTURE_IPC.md §2.4.
   virtual uint32_t computeChecksum(TYPES::ComponentID id) = 0;
   virtual void reset(TYPES::ComponentID id) = 0;
 
-  // Défaut : un seul checksum pour tout le payload (id ignoré) — correct
-  // pour un segment mono-propriétaire (Nav/SF/CompMem). À override pour un
-  // segment multi-écrivains (cf. SharedSysStateMem).
+  // Défaut : un seul checksum (segment mono-propriétaire). Override pour
+  // multi-écrivains, cf. SharedSysStateMem.
   virtual bool checksumValid(TYPES::ComponentID id) {
     return mem_.checksum == computeChecksum(id);
   }
@@ -85,9 +79,9 @@ protected:
     mem_.checksum = computeChecksum(id);
   }
 
-  // `id` : identité de l'appelant (jeton de verrou, pas forcément le sujet
-  // lu/écrit). `repairOnCorrupt` : à true seulement pour un read-modify-write
-  // interne à une écriture (ex: recordStart), jamais pour une lecture pure.
+  // `id` = jeton de verrou, pas forcément le sujet lu/écrit (cf.
+  // ARCHITECTURE_IPC.md §2.3). `repairOnCorrupt` : true seulement pour un
+  // read-modify-write interne à une écriture, jamais pour une lecture pure.
   template <typename T>
   [[nodiscard]] std::optional<T> getData(TYPES::ComponentID id, TYPES::Us timeout,
                                          T &t, bool repairOnCorrupt = false) {
@@ -111,8 +105,6 @@ protected:
     }
   };
 
-  // Échoue (renvoie false) si la FIFO est pleine, plutôt que d'écraser
-  // l'élément le plus ancien.
   template <typename T, size_t N>
   [[nodiscard]] bool pushFifo(TYPES::ComponentID id, TYPES::Us timeout,
                               RingBuffer<T, N> &fifo, const T &value) {
@@ -175,11 +167,7 @@ private:
     lastError_.store(e, std::memory_order_release);
   };
 
-  // Voie d'accès unique (lecture ET écriture) : même CAS `owner`, donc pas
-  // de fenêtre check-then-set et pas de lecture concurrente à une écriture.
-  // `id` doit être l'identité réelle de l'appelant, pas le sujet lu/écrit
-  // (sinon GlobalWatchdog ne peut pas libérer le verrou au crash du bon
-  // process — deadlock permanent).
+  // Verrou CAS unique, lecture ET écriture, cf. ARCHITECTURE_IPC.md §2.2-2.3.
   template <typename F>
   std::expected<void, TYPES::shmError>
   lockedAccess(TYPES::ComponentID id, TYPES::Us timeout, bool repairOnCorrupt,

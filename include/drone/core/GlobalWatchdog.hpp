@@ -3,7 +3,7 @@
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
-#include "drone/Components/System Monitoring/SharedComMem.hpp"
+#include "drone/Components/SystemMonitoring/SharedComMem.hpp"
 #include "drone/core/SharedSysStateMem.hpp"
 #include "drone/core/WatchdogControl.hpp"
 #include "drone/shm.hpp"
@@ -76,9 +76,7 @@ private:
     keepRunning_.store(false, std::memory_order_release);
   }
 
-  // sigaction() (pas std::signal()) : sur Linux/glibc signal() active
-  // SA_RESTART par défaut, ce qui relance waitpid() au lieu de le faire
-  // échouer avec EINTR — monitorLoop() resterait bloqué indéfiniment.
+  // sigaction() pas std::signal(), cf. ARCHITECTURE_IPC.md §2.5.
   void installSignalHandler() {
     struct sigaction sa {};
     sa.sa_handler = signalHandler;
@@ -157,8 +155,7 @@ private:
   }
 
   void monitorLoop() {
-    // waitpid(-1, ..., 0) bloque jusqu'à ce qu'UN enfant change d'état —
-    // pas de poll, réveil immédiat par le kernel.
+    // Bloque sur waitpid(), cf. ARCHITECTURE_IPC.md §2.5.
     while (keepRunning_.load(std::memory_order_acquire)) {
       int status = 0;
       pid_t pid = waitpid(-1, &status, 0);
@@ -169,15 +166,12 @@ private:
       for (auto &child : children_) {
         if (child.pid == pid) {
           if (!keepRunning_.load(std::memory_order_acquire)) {
-            // Ctrl+C envoie le signal à tout le groupe, donc à cet enfant
-            // aussi : ne pas le respawn, juste noter qu'il est déjà mort.
+            // Double détection Ctrl+C, cf. ARCHITECTURE_IPC.md §4.2.
             child.pid = -1;
           } else if (respawnSuppressed(child.id)) {
-            // Panne système délibérée (cf. INTEGRATION_TEST.md §7.2) : un
-            // outil de test a positionné le flag AVANT de tuer ce composant
-            // pour observer la réaction du reste du système à une absence
-            // prolongée — ne pas revenir tout de suite lui couperait l'herbe
-            // sous le pied.
+            // Panne système différée déclenchée par un outil de test avant
+            // le kill (SharedWatchdogControl::suppressRespawn), cf.
+            // sitl/SITL.md §5.
             std::cerr << "GlobalWatchdog: " << child.role
                       << " est mort, respawn suspendu (SharedWatchdogControl)\n";
             resetAll(child.id);

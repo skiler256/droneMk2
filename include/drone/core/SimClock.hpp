@@ -4,16 +4,16 @@
 
 namespace TYPES {
 
-// Horloge simulée — satisfait TrivialClock (rep/period/duration/time_point/
-// is_steady/now()), donc interchangeable avec std::chrono::steady_clock via
-// TYPES::Clock (cf. types.hpp, option CMake DRONE_USE_SIM_CLOCK). Résolu à
-// la compilation, pas de dispatch virtuel — cf. INTEGRATION_TEST.md §8.2.
+// Horloge simulée — satisfait TrivialClock, interchangeable avec
+// std::chrono::steady_clock via TYPES::Clock (types.hpp, option CMake
+// DRONE_USE_SIM_CLOCK). Résolue à la compilation, pas de dispatch virtuel
+// (contrainte JPL -fno-rtti) -- cf. sitl/SITL.md §11.
 //
-// Pour l'instant : relais vers std::chrono::steady_clock::now(), décalable
-// via setOffset(). Le pilotage explicite du temps pour le rejeu accéléré
-// (INTEGRATION_TEST.md §3.6/§11 étape 5) n'est pas encore construit — ce
-// point d'extension est posé maintenant, pendant que le rétrofit ne touche
-// que 5 composants au lieu de 8 (cf. §8.2 : coût qui grandit avec le temps).
+// Pour l'instant : relais vers steady_clock::now(), décalable via
+// setOffset(). Pilotage explicite du temps pour le rejeu accéléré pas
+// encore construit (cf. sitl/SITL.md §10) -- ce point d'extension est posé
+// maintenant plutôt qu'après, pendant que le rétrofit ne touche que les 5
+// composants existants.
 struct SimClock {
   using rep = std::chrono::steady_clock::rep;
   using period = std::chrono::steady_clock::period;

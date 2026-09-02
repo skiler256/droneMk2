@@ -61,22 +61,13 @@ Décisions déjà actées, ne pas remettre en question sans raison forte :
   structs POD intermédiaires + `Eigen::Map` pour la reconstruction
 - Pattern template `access(id, lambda)` pour unifier lock/operate/unlock
 
-### Bugs connus à corriger dans la couche IPC (avant de la figer)
+### État de la couche IPC
 
-1. `ComponentID::Count` doit être `static_cast<std::size_t>()` pour les
-   paramètres de template de tableau
-2. `access()` bloque actuellement sur TOUS les writer flags au lieu du seul
-   slot concerné — doit attendre uniquement le flag pertinent
-3. `access()` retourne `void`, ce qui rend les échecs silencieux → garbage
-   dans des appelants comme `getHealth()`. Doit propager une erreur/optional
-4. Le champ `checksum` unique cause des races d'écriture entre writers
-   concurrents — doit devenir un tableau (un checksum par writer/slot)
-5. `using namespace std` / `using namespace TYPES` dans les headers polluent
-   le namespace global — à supprimer, qualifier explicitement
-6. `virtual void reset()` et `setHealth()` déclarés sans corps ni `= 0` —
-   trancher le contrat d'interface et implémenter
-7. `MAX_COMPONENT_RESTART` dupliqué en magic number au lieu d'utiliser la
-   constante définie
+Considérée comme figée — les points ouverts qui subsistaient (indexation de
+tableau par `ComponentID`, granularité du verrou, propagation d'erreur sur
+accès shm, isolation de namespace, contrat `reset()`/`setHealth()`, taille de
+l'historique de restart) sont réglés. Détail du design et des raisons
+derrière chaque décision : `ARCHITECTURE_IPC.md`.
 
 ## Hiérarchie de watchdog (deux niveaux)
 

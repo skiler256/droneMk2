@@ -19,9 +19,7 @@ public:
     }
   }
 
-  // Évite qu'un thread RT survive à la destruction de l'objet (this
-  // pendouillant, capturé par [this]{run();}).
-  ~ComponentWatchdog() { stop(); }
+  ~ComponentWatchdog() { stop(); } // RAII, cf. ARCHITECTURE_IPC.md §3
 
   struct TaskHandle {
     std::function<void()> stop;
@@ -30,7 +28,7 @@ public:
     TYPES::Ms timeout;
     TYPES::TaskID id;
 
-    // Ring buffer d'horodatages, pas un compteur absolu.
+    // Fenêtre glissante, cf. ARCHITECTURE_IPC.md §4.1.
     size_t maxRestart;
     TYPES::Ms restartWindow;
     std::deque<TYPES::TimePoint> restartHistory;
@@ -60,8 +58,7 @@ public:
     }
   }
 
-  // loop() consomme la dernière erreur de chaque source à fréquence fixe,
-  // pour ne pas en rater une écrasée entre deux accès du composant.
+  // Erreur sticky consommée par loop(), cf. ARCHITECTURE_IPC.md §4.1.
   void registerShmSource(SharedMemoryHandler &handler) {
     shmSources_.push_back(&handler);
   }
@@ -117,7 +114,6 @@ private:
   void handleDeadTask(TaskHandle &t) {
     auto now = TYPES::Clock::now();
 
-    // Purge la fenêtre glissante puis enregistre ce redémarrage.
     while (!t.restartHistory.empty() &&
            UTILITIES::msBetween(t.restartHistory.front(), now) >
                t.restartWindow)
@@ -125,9 +121,7 @@ private:
     t.restartHistory.push_back(now);
 
     if (t.restartHistory.size() >= t.maxRestart) {
-      // Trop de redémarrages : on tue le process entier plutôt que de
-      // continuer à relancer la Task seule. GlobalWatchdog respawn, et
-      // ComponentBase décide hot-start/cold-start/DEAD.
+      // Escalade -> process entier, cf. ARCHITECTURE_IPC.md §4.1.
       shutdown();
       return;
     }
