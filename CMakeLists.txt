@@ -63,7 +63,7 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 # ou le générateur a changé. Tourne sur la machine de build (host), donc pas
 # de souci pour le cross-compile ARM64 : Python n'est requis que pour build,
 # pas sur la cible.
-set(CODES_CSV ${CMAKE_SOURCE_DIR}/INDEX.csv)
+set(CODES_CSV ${CMAKE_SOURCE_DIR}/data/INDEX.csv)
 set(CODES_HPP ${CMAKE_SOURCE_DIR}/include/drone/generated/codes.hpp)
 
 add_custom_command(
@@ -85,7 +85,7 @@ add_custom_target(generate_codes ALL DEPENDS ${CODES_HPP})
 # Même principe que codes.hpp ci-dessus : telemetry.hpp est généré depuis
 # TELEMETRY.csv, source de vérité unique partagée entre TelMainTask et
 # TelSecTask (et lisible côté GCS Python).
-set(TELEMETRY_CSV ${CMAKE_SOURCE_DIR}/TELEMETRY.csv)
+set(TELEMETRY_CSV ${CMAKE_SOURCE_DIR}/data/TELEMETRY.csv)
 set(TELEMETRY_HPP ${CMAKE_SOURCE_DIR}/include/drone/generated/telemetry.hpp)
 
 add_custom_command(
@@ -105,7 +105,7 @@ add_custom_target(generate_telemetry ALL DEPENDS ${TELEMETRY_HPP})
 # généré depuis MISSIONPLAN.csv (header + types de segment, source de vérité
 # unique). Le framing du plan complet (magic/version/CRC32/TLV) n'est PAS
 # généré — c'est de la logique écrite à la main, voir MissionControl/MissionPlan.hpp.
-set(MISSIONPLAN_CSV ${CMAKE_SOURCE_DIR}/MISSIONPLAN.csv)
+set(MISSIONPLAN_CSV ${CMAKE_SOURCE_DIR}/data/MISSIONPLAN.csv)
 set(MISSIONPLAN_HPP ${CMAKE_SOURCE_DIR}/include/drone/generated/missionplan.hpp)
 
 add_custom_command(
