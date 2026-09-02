@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/codes_common.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Logique partagée entre gen_codes.py (générateur C++) et codes_editor.py
 # (éditeur web local) — une seule source de vérité pour le format/la
 # validation des codes, pour que la page web ne puisse jamais produire un

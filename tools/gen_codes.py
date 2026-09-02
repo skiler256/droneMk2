@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/gen_codes.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Génère include/drone/generated/codes.hpp à partir de INDEX.csv (source de
 # vérité unique du dictionnaire de codes, lisible aussi tel quel par le GCS
 # Python, et éditable via tools/codes_editor.py). Ne PAS éditer codes.hpp à
@@ -122,8 +120,8 @@ def generate(codes, csv_path: Path) -> str:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default="INDEX.csv", type=Path)
-    parser.add_argument("--alarms-csv", default="ALARMS.csv", type=Path)
+    parser.add_argument("--csv", default="data/INDEX.csv", type=Path)
+    parser.add_argument("--alarms-csv", default="data/ALARMS.csv", type=Path)
     parser.add_argument("--out", default="include/drone/generated/codes.hpp", type=Path)
     args = parser.parse_args()
 

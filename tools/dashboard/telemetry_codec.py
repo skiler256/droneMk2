@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/dashboard/telemetry_codec.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Encode/décode les paquets TELEM::* (voir TELEMETRY.csv) côté Python, pour
 # le dashboard. Réutilise tools/telemetry_common.py — même source de vérité
 # que le générateur C++ (tools/gen_telemetry.py), donc les PacketID

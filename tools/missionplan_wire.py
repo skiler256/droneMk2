@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/missionplan_wire.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Codec Python du format binaire plan de mission consomme par MissionControl
 # (cf. include/drone/Components/MissionControl/MissionPlan.hpp/.cpp,
 # include/drone/generated/missionplan.hpp). Source de verite = le C++ --

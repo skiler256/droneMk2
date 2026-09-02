@@ -1,22 +1,9 @@
 #!/usr/bin/env python3
-# tools/codes_editor.py
-# ─────────────────────────────────────────────────────────────────────────────
-# Petit serveur web local (stdlib uniquement, pas de dépendance) pour
-# visualiser/éditer INDEX.csv (codes de diagnostic) ET TELEMETRY.csv
-# (paquets télémétrie). Ne touche QUE les CSV — la régénération de
-# codes.hpp/telemetry.hpp reste la responsabilité du build (cf.
-# CMakeLists.txt / tools/gen_codes.py / tools/gen_telemetry.py).
+# Serveur web local (stdlib uniquement) pour éditer INDEX.csv, ALARMS.csv/
+# MISSION_ALARMS.csv et TELEMETRY.csv -- ne touche QUE les CSV, cf.
+# tools/README.md §1-3 pour les procédures et le piège PacketID=index.
 #
-# Usage : python3 tools/codes_editor.py [--port 8765] [--csv INDEX.csv] [--telemetry-csv TELEMETRY.csv]
-# Puis : cmake --build build/  (ou make) pour régénérer les deux headers.
-#
-# IMPORTANT pour les paquets télémétrie : contrairement aux codes (dont
-# l'identifiant est la chaîne "FCP001" elle-même), le PacketID d'un paquet
-# est son INDEX dans TELEMETRY.csv (cf. gen_telemetry.py) — l'ordre des
-# lignes fait donc partie du format binaire. Cette page préserve toujours
-# l'ordre existant (ajout en fin, édition en place) ; supprimer un paquet
-# décale les ID de tous ceux qui le suivent et casse la compatibilité avec
-# un binaire déjà compilé — à éviter après un premier déploiement réel.
+# Usage : python3 tools/codes_editor.py [--port 8765] [--csv data/INDEX.csv] [--telemetry-csv data/TELEMETRY.csv]
 
 import argparse
 import json
@@ -569,10 +556,10 @@ def make_handler(csv_path: Path, telemetry_csv_path: Path, alarms_csv_path: Path
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--csv", default="INDEX.csv", type=Path)
-    parser.add_argument("--telemetry-csv", default="TELEMETRY.csv", type=Path)
-    parser.add_argument("--alarms-csv", default="ALARMS.csv", type=Path)
-    parser.add_argument("--mission-alarms-csv", default="MISSION_ALARMS.csv", type=Path)
+    parser.add_argument("--csv", default="data/INDEX.csv", type=Path)
+    parser.add_argument("--telemetry-csv", default="data/TELEMETRY.csv", type=Path)
+    parser.add_argument("--alarms-csv", default="data/ALARMS.csv", type=Path)
+    parser.add_argument("--mission-alarms-csv", default="data/MISSION_ALARMS.csv", type=Path)
     parser.add_argument("--no-browser", action="store_true")
     # 0.0.0.0 : accessible depuis tout le réseau local, sans authentification
     # — pratique en dev quand le port-forwarding SSH pose souci, mais garder

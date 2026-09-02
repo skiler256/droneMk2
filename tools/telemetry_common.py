@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/telemetry_common.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Logique partagée pour le format de paquets télémétrie TelMain/TelSec.
 # TELEMETRY.csv est la source de vérité unique, lue par gen_telemetry.py.
 # Même esprit que codes_common.py pour les codes de diagnostic.

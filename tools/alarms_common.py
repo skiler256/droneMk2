@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/alarms_common.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Logique partagée pour ALARMS.csv (définitions d'alarme) et
 # MISSION_ALARMS.csv (alarme déclenchée par une transition MISSION_STATE) --
 # même principe que codes_common.py/telemetry_common.py : une seule source de

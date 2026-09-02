@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/gen_missionplan.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Génère include/drone/generated/missionplan.hpp à partir de MISSIONPLAN.csv
 # (source de vérité unique du header + des types de segment d'un plan de
 # mission). Ne PAS éditer missionplan.hpp à la main.
@@ -158,7 +156,7 @@ def generate(entities, csv_path: Path) -> str:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default="MISSIONPLAN.csv", type=Path)
+    parser.add_argument("--csv", default="data/MISSIONPLAN.csv", type=Path)
     parser.add_argument("--out", default="include/drone/generated/missionplan.hpp", type=Path)
     args = parser.parse_args()
 

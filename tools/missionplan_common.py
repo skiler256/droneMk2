@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/missionplan_common.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Logique partagée pour le format binaire du plan de mission (MissionControl).
 # MISSIONPLAN.csv est la source de vérité unique (header + types de segment),
 # lue par gen_missionplan.py. Même esprit que telemetry_common.py/codes_common.py

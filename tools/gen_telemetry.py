@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# tools/gen_telemetry.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Génère include/drone/generated/telemetry.hpp à partir de TELEMETRY.csv
 # (source de vérité unique du format des paquets TelMain/TelSec, partagée
 # entre les deux liens). Ne PAS éditer telemetry.hpp à la main.
@@ -117,7 +115,7 @@ def generate(packets, csv_path: Path) -> str:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default="TELEMETRY.csv", type=Path)
+    parser.add_argument("--csv", default="data/TELEMETRY.csv", type=Path)
     parser.add_argument("--out", default="include/drone/generated/telemetry.hpp", type=Path)
     args = parser.parse_args()
 

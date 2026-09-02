@@ -1,19 +1,9 @@
 #!/usr/bin/env python3
-# tools/dashboard/dashboard_server.py
-# ─────────────────────────────────────────────────────────────────────────────
-# Serveur web unique pour tous les outils de dev droneMk2 — un menu ("/"),
-# et une page isolée par cas de test :
-#   /sysmonitoring  — télémétrie TelMain/TelSec (UDP loopback), cf. §SysMonitoring
-#   /sitl/mv        — état shm FC/Nav/SF de MavlinkInterface face au SITL
-#   /hil/sf_mv      — état shm FC/SF/Lidar/Sys de SensorFusion+MavlinkInterface face au vrai matériel
-#   /nav/sitl       — état shm FC/Nav/Seg de Navigation+MavlinkInterface face au SITL (sans SensorFusion)
+# Serveur web unique pour tous les outils de dev droneMk2 (menu "/" + une
+# page par cas de test) -- table des routes et avertissement anti-collision
+# de ports avec GCS/server.js : tools/README.md §5.
 #
-# /sitl/mv, /hil/sf_mv et /nav/sitl lisent tous les trois le MÊME pont
-# UDP_bridge.cpp (un seul process, namespaces SITL_*/HIL_*/NAV_SITL_* — cf.
-# IntegrationTests/UDP_bridge.cpp), distingués par le préfixe du segment.
-#
-# Stdlib uniquement (mêmes contraintes que tools/codes_editor.py). Pas de
-# WebSocket — un polling toutes les ~300ms suffit pour du debug.
+# Stdlib uniquement. Pas de WebSocket -- un polling ~300ms suffit pour du debug.
 #
 # Usage : python3 tools/dashboard/dashboard_server.py [--port 8766]
 
@@ -31,7 +21,7 @@ from telemetry_codec import decode, encode, load_packets
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 HTML_DIR = Path(__file__).resolve().parent
-DEFAULT_CSV = REPO_ROOT / "TELEMETRY.csv"
+DEFAULT_CSV = REPO_ROOT / "data" / "TELEMETRY.csv"
 
 # ─── SysMonitoring (UdpTelemetryDriver, cf. src/main.cpp) ───────────────────
 TELMAIN_RX_PORT = 5602
