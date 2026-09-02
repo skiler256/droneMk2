@@ -9,7 +9,7 @@ connexions élec faites). Phase actuelle : implémentation logicielle, tests
 unitaires, puis intégration SITL.
 
 - **Compute embarqué** : Raspberry Pi 5, kernel PREEMPT_RT
-- **Flight controller** : SpeedyBee H743 sous ArduPilot (stabilisation
+- **Flight controller** : Sequre sous ArduPilot (stabilisation
   d'attitude, contrôle moteurs) — le Pi 5 ne fait PAS de contrôle bas niveau
 - **Communication FC** : MAVLink v2 sur UART
 - **Capteurs** : MPU6050 (IMU), LIS3MDL (magnéto), LD06 + TF Luna (lidars),

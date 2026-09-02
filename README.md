@@ -26,7 +26,7 @@ boîtier physique d'alarmes.
 ```
 Capteurs (IMU, magnéto, GPS, lidars) ─┐
                                        ├─► drone (Pi 5, C++, process isolés)
-FC ArduPilot (SpeedyBee H743) ◄───────┘        │
+FC ArduPilot (Sequre) ◄───────────────┘        │
         ▲ MAVLink v2 / UART                    │ wfb-ng 433MHz (télémétrie)
         │                                       ▼
      moteurs                                   GCS (Node.js + boîtier ESP32)
@@ -56,6 +56,7 @@ propres tâches en threads temps réel — détails dans
 
 | Document | Contenu |
 |---|---|
+| [`HARDWARE.md`](HARDWARE.md) | Vue d'ensemble matérielle : sous-systèmes physiques (radio, LIDAR, IMU, GPS, caméra, FC, propulsion), interface et intégration logicielle |
 | [`ARCHITECTURE_IPC.md`](ARCHITECTURE_IPC.md) | Couche IPC (shared memory), répartition process/thread, watchdogs |
 | [`GUIDE_COMPOSANTS.md`](GUIDE_COMPOSANTS.md) | Comment ajouter un composant (patron de code) |
 | `include/drone/Components/*/*.md` | Doc par composant (MissionControl, Navigation, SensorFusion, MavlinkInterface, SysMonitoring) |

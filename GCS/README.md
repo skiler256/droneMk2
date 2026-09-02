@@ -3,8 +3,10 @@
 Station sol physique ("malette") : un PC (Node.js + dashboard web Chromium)
 et un boîtier ESP32 dédié aux voyants d'alarme et à deux boutons
 d'acquittement physiques. Télémétrie émulée en LAN (UDP loopback) tant que
-le nœud STM32 H562 réel n'existe pas (cf. mémoire projet "GCS architecture" —
-GCS = 3 nœuds à terme : SysMonitoring/H562/pont Node.js).
+les liens radio réels (wfb-ng primaire, CC1101 secondaire) ne sont pas
+implémentés côté drone (cf. `HARDWARE.md` §2) — le nœud STM32 H562
+initialement envisagé pour la télémétrie secondaire a été abandonné au
+profit de l'ESP32 déjà en place pour le panneau d'alarme.
 
 ## 1. Architecture logicielle
 
@@ -203,4 +205,5 @@ tous les plans (pas d'écriture disque en usage normal, kiosk propre, mise
   (Node.js) sont deux implémentations indépendantes du même concept de
   dashboard télémétrie, sur les mêmes ports UDP — ne **jamais** les
   lancer en même temps (cf. `tools/README.md`). Duplication volontaire et
-  temporaire, tant que le matériel H562 réel n'existe pas.
+  temporaire, tant que les liens radio réels ne sont pas implémentés
+  (cf. `HARDWARE.md` §2).
