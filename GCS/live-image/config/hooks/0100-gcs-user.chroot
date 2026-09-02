@@ -15,4 +15,4 @@ useradd -m -s /bin/bash -G dialout,video,input,audio,sudo gcs || true
 # Mot de passe temporaire pour le bring-up (acces console physique le temps
 # de debugger gcs-kiosk.service) -- a remplacer par une cle SSH une fois le
 # systeme stable, cf. README.md.
-echo 'gcs:Lego2409' | chpasswd
+echo 'gcs:1234' | chpasswd
