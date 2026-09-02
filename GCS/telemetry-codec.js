@@ -1,5 +1,3 @@
-// GCS/telemetry-codec.js
-// ─────────────────────────────────────────────────────────────────────────────
 // Encode/décode les paquets TELEM::* (voir ../TELEMETRY.csv) côté Node.
 // Port JS de tools/dashboard/telemetry_codec.py — même source de vérité
 // (TELEMETRY.csv), même format sur le fil : [PacketID:1][champs LE, ordre

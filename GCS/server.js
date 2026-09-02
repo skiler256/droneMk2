@@ -1,15 +1,8 @@
-// GCS/server.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Sert le dashboard statique (public/) et relaie la télémétrie réelle :
-//   drone (SysMonitoring, UdpTelemetryDriver) --UDP loopback--> ce serveur
-//   ce serveur --WebSocket--> navigateur(s)
-// et dans l'autre sens, commandes UP navigateur -> WebSocket -> UDP -> drone.
-//
-// Ports identiques à tools/dashboard/dashboard_server.py (même émulation
-// LAN de TelMain/TelSec tant que le H562 physique n'existe pas, cf.
-// mémoire "GCS architecture") — ne PAS lancer les deux dashboards en même
-// temps, ils se disputeraient les mêmes ports UDP.
+// Sert le dashboard statique (public/) et relaie la télémétrie UDP <->
+// WebSocket dans les deux sens. Architecture, ports, limite de duplication
+// avec tools/dashboard/dashboard_server.py : cf. GCS/README.md §1.
 
+const { execFile } = require("child_process");
 const dgram = require("dgram");
 const express = require("express");
 const path = require("path");
@@ -20,8 +13,7 @@ const { SerialBridge } = require("./serial-bridge");
 
 const PORT = 3000;
 
-// Boîtier ESP32 (voyants + boutons) -- cf. GCS/ESP32/. "Bête" côté firmware,
-// toute la logique (quel code allume quel voyant) est ici.
+// Boîtier ESP32 (voyants + boutons), cf. GCS/README.md §2.
 const ESP32_PORT = process.env.GCS_ESP32_PORT || "/dev/ttyUSB0";
 
 // cf. src/main.cpp : kUdpTelMainLocalPort/PeerPort, kUdpTelSecLocalPort/PeerPort.
@@ -30,10 +22,10 @@ const TELMAIN_TX_PORT = 5601; // le drone ÉCOUTE ici (son "local port")
 const TELSEC_RX_PORT = 5612;
 const TELSEC_TX_PORT = 5611;
 
-const TELEMETRY_CSV = path.join(__dirname, "..", "TELEMETRY.csv");
+const TELEMETRY_CSV = path.join(__dirname, "..", "data", "TELEMETRY.csv");
 const { byId, byName } = loadPackets(TELEMETRY_CSV);
 
-const INDEX_CSV = path.join(__dirname, "..", "INDEX.csv");
+const INDEX_CSV = path.join(__dirname, "..", "data", "INDEX.csv");
 const codesTable = loadCodesTable(INDEX_CSV);
 
 const serial = new SerialBridge(ESP32_PORT);
@@ -59,15 +51,8 @@ let lastRxSec = 0;
 const HEARTBEAT_STALE_MS = 3000; // au-delà, le lien est considéré mort -> pas de clignotement
 let blinkOn = false;
 
-// MW (Master Warning) / MC (Master Caution) ne sont PAS dans Panel (contrairement
-// aux voyants de défaut individuels) : ce sont des agrégats calculés ici, pour
-// le VOYANT ESP32 uniquement -- le son suit désormais sa propre logique côté
-// navigateur (cf. alarm.js, ALARMS.csv), ack indépendant de celui-ci.
-// Règle donnée par Jules : ENG/PWR/FC/EKF/MAG/GPS/NAV/EMG -> MW, tout le reste
-// des voyants de défaut -> MC. Accusé de réception (MW_ACK/MC_ACK) éteint
-// l'agrégat SANS éteindre le voyant de défaut sous-jacent (dark cockpit : seul
-// un code qui redevient inactif l'éteint) -- et un NOUVEAU voyant de la
-// catégorie qui apparaît réarme l'ack (sémantique cockpit standard).
+// Agrégats MW/MC pour le VOYANT ESP32 uniquement (son : alarm.js, ack
+// indépendant) -- règle MW_GROUP et sémantique d'ack : GCS/README.md §1.
 const MW_GROUP = new Set(["ENG", "PWR", "FC", "EKF", "MAG", "GPS", "NAV", "EMG"]);
 let prevFaultLabels = new Set();
 let ackedMW = false;
@@ -130,12 +115,50 @@ app.use(express.static(path.join(__dirname, "public")));
 // Table de codes diagnostics (INDEX.csv) — servie telle quelle, décodée
 // côté navigateur (public/codes.js), même source de vérité que
 // tools/gen_codes.py.
-app.get("/codes.csv", (_req, res) => res.sendFile(path.join(__dirname, "..", "INDEX.csv")));
+app.get("/codes.csv", (_req, res) => res.sendFile(path.join(__dirname, "..", "data", "INDEX.csv")));
 // Idem pour les définitions d'alarme (cf. tools/alarms_common.py, éditées
 // via l'onglet "Alarmes" de codes_editor.py) -- décodées côté navigateur
 // par GCS/public/js/alarm.js.
-app.get("/alarms.csv", (_req, res) => res.sendFile(path.join(__dirname, "..", "ALARMS.csv")));
-app.get("/mission_alarms.csv", (_req, res) => res.sendFile(path.join(__dirname, "..", "MISSION_ALARMS.csv")));
+app.get("/alarms.csv", (_req, res) => res.sendFile(path.join(__dirname, "..", "data", "ALARMS.csv")));
+app.get("/mission_alarms.csv", (_req, res) => res.sendFile(path.join(__dirname, "..", "data", "MISSION_ALARMS.csv")));
+
+// Volume systeme (PulseAudio), cf. GCS/README.md §4/§5 (le service doit
+// tourner sous le meme utilisateur que la session graphique).
+function pactl(args, cb) {
+  execFile("pactl", args, (err, stdout) => cb(err, (stdout || "").trim()));
+}
+
+app.get("/api/volume", (_req, res) => {
+  pactl(["get-sink-volume", "@DEFAULT_SINK@"], (err, out) => {
+    if (err) { res.status(500).json({ error: err.message }); return; }
+    const m = out.match(/(\d+)%/);
+    pactl(["get-sink-mute", "@DEFAULT_SINK@"], (err2, out2) => {
+      if (err2) { res.status(500).json({ error: err2.message }); return; }
+      res.json({ percent: m ? parseInt(m[1], 10) : null, muted: /yes/i.test(out2) });
+    });
+  });
+});
+
+app.post("/api/volume/:percent", (req, res) => {
+  const pct = parseInt(req.params.percent, 10);
+  if (!Number.isInteger(pct) || pct < 0 || pct > 100) {
+    res.status(400).json({ error: "percent doit être un entier 0-100" });
+    return;
+  }
+  pactl(["set-sink-volume", "@DEFAULT_SINK@", `${pct}%`], (err) => {
+    if (err) { res.status(500).json({ error: err.message }); return; }
+    res.json({ ok: true, percent: pct });
+  });
+});
+
+app.post("/api/mute/:state", (req, res) => {
+  const state = req.params.state === "1" ? "1" : req.params.state === "0" ? "0" : null;
+  if (state === null) { res.status(400).json({ error: "state doit être 0 ou 1" }); return; }
+  pactl(["set-sink-mute", "@DEFAULT_SINK@", state], (err) => {
+    if (err) { res.status(500).json({ error: err.message }); return; }
+    res.json({ ok: true, muted: state === "1" });
+  });
+});
 
 const server = app.listen(PORT, () => {
   console.log(`GCS dashboard sur http://localhost:${PORT}`);

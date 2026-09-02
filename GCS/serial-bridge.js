@@ -1,9 +1,6 @@
-// GCS/serial-bridge.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Pont USB série <-> ESP32 (boîtier GCS). Le firmware (GCS/ESP32/firmware) est
-// volontairement "bête" : aucune décision ici côté ESP32, tout vit ici.
+// Pont USB série <-> ESP32 (boîtier GCS, firmware "bête" -- cf. GCS/README.md §2).
 //
-// Protocole (ASCII, une commande par ligne '\n', cf. main.cpp) :
+// Protocole (ASCII, une commande par ligne '\n') :
 //   -> ESP32 : LED:label1,label2,...\n   (état COMPLET des voyants actifs)
 //   <- ESP32 : BTN:label\n               (un appui bouton, front descendant)
 

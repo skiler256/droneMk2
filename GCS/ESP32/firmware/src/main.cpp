@@ -1,5 +1,3 @@
-// GCS/ESP32/firmware/src/main.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Firmware "bête" du boîtier GCS : aucune décision ici (quel code allume quel
 // voyant, priorité d'alarme...), tout ça vit côté Node.js
 // (GCS/serial-bridge.js). Ce firmware fait seulement :

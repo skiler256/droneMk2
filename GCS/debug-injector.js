@@ -1,15 +1,6 @@
-// GCS/debug-injector.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Page de debug séparée (autre port que le dashboard réel) pour injecter de
-// faux paquets CODE, comme le ferait le drone (SysMonitoring) -- teste tout
-// le chemin réel : UDP -> server.js -> voyants ESP32 + alarme sonore
-// navigateur, sans toucher au code du dashboard ni à celui du drone.
-//
-// Volontairement un process Node séparé (pas une route ajoutée à
-// server.js) : un outil de debug ne doit jamais pouvoir planter ou
-// ralentir le serveur GCS réel.
-//
-// Usage : node debug-injector.js  (port 3001 par défaut, GCS_DEBUG_PORT pour changer)
+// Injecteur de faux paquets CODE pour tester tout le chemin réel sans
+// toucher au drone ni au dashboard -- process séparé volontairement, cf.
+// GCS/README.md §1. Usage : node debug-injector.js (port 3001, GCS_DEBUG_PORT).
 
 const dgram = require("dgram");
 const express = require("express");
@@ -22,7 +13,7 @@ const PORT = process.env.GCS_DEBUG_PORT || 3001;
 // drone enverrait, aucun raccourci qui contournerait le pipeline réel.
 const TELMAIN_RX_PORT = 5602;
 
-const TELEMETRY_CSV = path.join(__dirname, "..", "TELEMETRY.csv");
+const TELEMETRY_CSV = path.join(__dirname, "..", "data", "TELEMETRY.csv");
 const { byName } = loadPackets(TELEMETRY_CSV);
 
 const sock = dgram.createSocket("udp4");

@@ -1,5 +1,3 @@
-// GCS/codes-table.js
-// ─────────────────────────────────────────────────────────────────────────────
 // Charge INDEX.csv côté serveur (même source de vérité que tools/gen_codes.py
 // et GCS/public/js/link.js côté navigateur) — sert uniquement à calculer
 // quels voyants ESP32 allumer pour les codes actifs (colonne Panel), cf.

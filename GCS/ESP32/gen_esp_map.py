@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# GCS/ESP32/gen_esp_map.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Génère firmware/include/esp_map_generated.h à partir de mapingESP.csv —
 # source de vérité unique du câblage (voyants MCP23017/GPIO direct + boutons),
 # même principe que tools/gen_codes.py. Ne PAS éditer esp_map_generated.h à

@@ -1,31 +1,5 @@
-/* ============================================================================
-   alarm.js — alarme sonore façon cockpit, N voix définies dans ALARMS.csv
-   (éditable via tools/codes_editor.py, onglet "Alarmes").
-
-   Deux sources d'alarme :
-     - Un code CODE actif (cf. link.js) -> résout vers INDEX.csv::Alarm si
-       renseigné, sinon repli générique par catégorie (master_warning si le
-       voyant appartient à MW_GROUP -- même règle que server.js pour les
-       voyants ESP32 -- sinon master_caution). Type Loop tant que le code
-       reste actif, Oneshot pour un simple événement.
-     - Une transition MISSION_STATE -> résout via MISSION_ALARMS.csv
-       (ex: HOLD -> hold_entered), jouée une fois à l'entrée dans l'état.
-
-   Un seul canal audio (haut-parleur unique) : la plus prioritaire ACTIVE
-   joue, préempte IMMEDIATEMENT (à chaque tick, pas seulement quand le canal
-   se libère) toute alarme moins prioritaire en cours -- jamais coincée
-   derrière une file d'attente.
-
-   Accusé de réception : MW_ACK/MC_ACK (boutons ESP32, cf. link.js) coupent
-   toutes les alarmes actives de leur classe (ALARMS.csv::Class), jusqu'à ce
-   qu'une NOUVELLE occurrence de cette classe apparaisse (réarme
-   automatiquement, sémantique cockpit standard) -- état géré ICI,
-   indépendamment de l'ack des voyants (server.js) qui suit ses propres
-   règles (cf. server.js::ackedMW/ackedMC).
-
-   Fichiers son : GCS/public/sounds/<SoundFile>.{mp3,wav,mp4} -- un seul des
-   trois formats suffit par voix.
-   ========================================================================== */
+/* alarm.js — alarme sonore façon cockpit. Architecture complète (priorité,
+   préemption, acquittement, sources) : GCS/README.md §3. */
 
 (function (global) {
   'use strict';
@@ -34,10 +8,8 @@
 
   var SCHEDULER_TICK_MS = 200;
 
-  // Même règle que server.js::MW_GROUP -- dupliquée volontairement (table
-  // stable et minuscule, même pattern que COMPONENTS/CATEGORIES ailleurs
-  // dans ce projet) : un code sans Alarm dédiée retombe sur master_warning
-  // si un de ses voyants Panel est dans ce groupe, sinon master_caution.
+  // Même règle que server.js::MW_GROUP, dupliquée volontairement (table
+  // stable et minuscule) -- cf. GCS/README.md §3, résolution de repli.
   var MW_GROUP = new Set(['ENG', 'PWR', 'FC', 'EKF', 'MAG', 'GPS', 'NAV', 'EMG']);
 
   // ── Chargement ALARMS.csv / MISSION_ALARMS.csv ──────────────────────────
@@ -95,19 +67,23 @@
     return el;
   }
 
-  // ── Déblocage audio (obligatoire : autoplay bloqué sans geste utilisateur) ──
-  var unlocked = false;
+  // ── Badge de statut audio ────────────────────────────────────────────────
+  // Indicateur visuel seulement, ne bloque jamais .play() -- cf. GCS/README.md §3.
+  var audioConfirmed = false;
   var unlockBadge = document.createElement('div');
   unlockBadge.style.cssText = 'position:fixed;right:.6rem;bottom:.6rem;z-index:9999;' +
     'font:11px ui-monospace,monospace;padding:.3rem .6rem;border-radius:5px;' +
     'background:#3a2a00;color:#ffb84f;border:1px solid #7a5a00;pointer-events:none;';
   document.addEventListener('DOMContentLoaded', function () {
-    if (!unlocked) { unlockBadge.textContent = 'SON: cliquer pour activer'; document.body.appendChild(unlockBadge); }
+    if (!audioConfirmed) { unlockBadge.textContent = 'SON: cliquer pour activer'; document.body.appendChild(unlockBadge); }
   });
+  function dismissBadge() {
+    audioConfirmed = true;
+    unlockBadge.remove();
+  }
   ['click', 'keydown'].forEach(function (evt) {
     global.addEventListener(evt, function once() {
-      unlocked = true;
-      unlockBadge.remove();
+      dismissBadge();
       global.removeEventListener(evt, once);
     }, { once: true });
   });
@@ -232,12 +208,6 @@
   }
 
   function startPlaying(candidate) {
-    // Rien a muter tant que le son est verrouille (pas de geste utilisateur) :
-    // si on posait currentlyPlaying ici sans jouer, tick() croirait que ça
-    // joue deja et ne retenterait plus jamais -- laisser currentlyPlaying a
-    // null pour que chaque tick retente startPlaying() jusqu'au deblocage.
-    if (!unlocked) return;
-
     var el = getAudioEl(candidate.alarmId, candidate.def);
     var continuous = candidate.def.type === 'Loop' && candidate.def.periodMs <= 0;
     el.loop = continuous;
@@ -250,7 +220,9 @@
     if (candidate.def.type === 'Loop') lastPlayedAt.set(candidate.alarmId, performance.now());
     else oneshotQueue = oneshotQueue.filter(function (q) { return q.alarmId !== candidate.alarmId; });
 
-    el.play().catch(function (e) {
+    // Toujours tenter, cf. GCS/README.md §3 -- rejet normal sans geste,
+    // reessaie au prochain tick (currentlyPlaying=null dans le catch).
+    el.play().then(dismissBadge).catch(function (e) {
       console.warn('[gcs] alarme ' + candidate.alarmId + ': lecture bloquée (' + e.message + ')');
       currentlyPlaying = null;
     });
