@@ -1,5 +1,5 @@
 #pragma once
-#include "drone/Components/System Monitoring/Driver.hpp"
+#include "drone/Components/SystemMonitoring/Driver.hpp"
 #include <array>
 #include <cstdint>
 

@@ -6,21 +6,7 @@
 #include <cstddef>
 
 // Choisit, à chaque cycle radio, le paquet TELEM::* à émettre en priorité
-// sur un lien donné (TelMain ou TelSec) — un seul paquet par cycle, le
-// lien ne permettant qu'un envoi à la fois.
-//
-// Règles (cf. discussion archi) :
-//  - seuls les paquets descendants (Direction::Down) sont schedulés ici ;
-//    les montants (commandes GCS) sont reçus via ITelemetryLink::poll(),
-//    pas envoyés depuis ce scheduler.
-//  - Critical passe toujours avant Routine.
-//  - à priorité égale, le paquet le plus en retard sur sa période gagne
-//    (pas un round-robin naïf) — évite qu'un paquet haute fréquence
-//    affame silencieusement un paquet plus lent.
-//  - un paquet événementiel (rateHz == 0) est dû dès que markDirty() a été
-//    appelé pour lui, ou — s'il a une redondance configurée — à la
-//    fréquence de redondance même sans changement (résistance à la perte
-//    du paquet événementiel sur un lien lossy, sans ACK).
+// sur un lien donné -- un seul par cycle. Règles de choix : SYSMONITORING.md §5.
 class PacketScheduler {
 public:
   explicit PacketScheduler(TELEM::Link link) : link_(link) {
@@ -33,18 +19,12 @@ public:
     }
   }
 
-  // À appeler par la Task quand elle détecte que l'état source d'un paquet
-  // événementiel a changé (ex: MISSION_STATE) — force son envoi au
-  // prochain cycle dû, en plus de sa redondance périodique.
   void markDirty(TELEM::PacketID id) {
     if (Slot *s = find(id))
       s->pending = true;
   }
 
-  // Le paquet le plus urgent dû à cet instant, ou nullptr si rien n'est dû.
-  // Ne modifie pas l'état interne : c'est markSent() qui fait foi, une fois
-  // l'envoi réellement effectué (permet à l'appelant de gérer un échec de
-  // send() sans perdre le paquet).
+  // Ne modifie pas l'état : markSent() fait foi, cf. SYSMONITORING.md §5.
   [[nodiscard]] const TELEM::Meta *nextDue(TYPES::TimePoint now) const {
     const Slot *best = nullptr;
     TYPES::Ms bestOverdue{0};

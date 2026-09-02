@@ -6,10 +6,7 @@
 #include <optional>
 #include <span>
 
-// [PacketID:1][payload applicatif:N]. Le lien (WFB-NG/CC1101) gère déjà sa
-// propre trame bas niveau (longueur, CRC radio) — cet en-tête d'un octet
-// sert uniquement à distinguer le type de paquet TELEM une fois le payload
-// applicatif extrait par le driver.
+// [PacketID:1][payload applicatif:N], cf. SYSMONITORING.md §4.
 namespace TELEM {
 
 template <typename Pkt>

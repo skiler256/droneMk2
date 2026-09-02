@@ -3,9 +3,9 @@
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
-#include "drone/Components/System Monitoring/Driver.hpp"
-#include "drone/Components/System Monitoring/PacketScheduler.hpp"
-#include "drone/Components/System Monitoring/SharedComMem.hpp"
+#include "drone/Components/SystemMonitoring/Driver.hpp"
+#include "drone/Components/SystemMonitoring/PacketScheduler.hpp"
+#include "drone/Components/SystemMonitoring/SharedComMem.hpp"
 #include "drone/core/ComponentBase.hpp"
 
 class SysMonitoring;
@@ -94,10 +94,7 @@ private:
 
 class SysMonitoring : public ComponentBase<4> {
 public:
-  // Les drivers sont injectés par interface, pas possédés en dur : en dev
-  // main.cpp passe des drivers UDP factices, en prod WFB_NG_Driver/
-  // CC1101_Driver — SysMonitoring ne connaît jamais le type concret
-  // (portabilité inter-véhicules, cf. discussion archi).
+  // Drivers injectés par interface, cf. SYSMONITORING.md §7.
   explicit SysMonitoring(ComponenConfig config, SharedSysStateMemHandler &sysState,
                          SharedComMemHandler &com, SharedNavMemHandler &nav,
                          SharedSFMemHandler &sf, SharedFCStatusHandler &fc,

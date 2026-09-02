@@ -1,5 +1,5 @@
 #pragma once
-#include "drone/Components/System Monitoring/Driver.hpp"
+#include "drone/Components/SystemMonitoring/Driver.hpp"
 
 // Lit la température CPU depuis /sys/class/thermal/<zone>/temp (API kernel
 // Linux standard, pas spécifique Pi5) — même driver en dev et en prod,
