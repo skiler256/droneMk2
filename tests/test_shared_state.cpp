@@ -1,5 +1,3 @@
-// tests/test_shared_state.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Couvre les deux bugs corrigés dans SharedMemory.hpp :
 //  - lastError_ sticky (un succès ne doit pas effacer une erreur en attente)
 //  - setArrayElement atomique (pas de lost-update entre writers concurrents)

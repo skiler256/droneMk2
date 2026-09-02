@@ -1,11 +1,9 @@
-// tests/test_telemetry.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Format de paquets télémétrie (TELEM::, généré depuis TELEMETRY.csv) et
 // PacketScheduler (choix du prochain paquet à émettre sur TelMain/TelSec).
 // Lance : cd build && ctest -v
 
-#include "drone/Components/System Monitoring/Framing.hpp"
-#include "drone/Components/System Monitoring/PacketScheduler.hpp"
+#include "drone/Components/SystemMonitoring/Framing.hpp"
+#include "drone/Components/SystemMonitoring/PacketScheduler.hpp"
 #include "drone/generated/telemetry.hpp"
 #include <gtest/gtest.h>
 #include <thread>

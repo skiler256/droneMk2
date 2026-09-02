@@ -1,5 +1,3 @@
-// tests/test_types.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Types forts (drone/types.hpp). Lance : cd build && ctest -v
 
 #include "drone/types.hpp"

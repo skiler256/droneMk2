@@ -1,4 +1,4 @@
-#include "drone/Components/System Monitoring/Driver/UdpTelemetryDriver.hpp"
+#include "drone/Components/SystemMonitoring/Driver/UdpTelemetryDriver.hpp"
 
 #include <arpa/inet.h>
 #include <cerrno>

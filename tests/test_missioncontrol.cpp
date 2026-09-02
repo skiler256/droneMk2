@@ -1,5 +1,3 @@
-// tests/test_missioncontrol.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Table de transition MC_CONV::step() — logique pure, testable sans passer
 // par TStateMachine (loop() est privée). Lance : cd build && ctest -v
 

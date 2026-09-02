@@ -1,4 +1,4 @@
-#include "drone/Components/System Monitoring/Driver/LinuxThermalZoneDriver.hpp"
+#include "drone/Components/SystemMonitoring/Driver/LinuxThermalZoneDriver.hpp"
 
 #include <charconv>
 #include <cstdio>

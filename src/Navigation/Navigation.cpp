@@ -6,12 +6,11 @@
 using namespace TYPES;
 
 namespace {
-// Diamètre 1m constaté suffisant (dérive lente au cours du temps, pas
-// d'écarts >1.5-2m observés sur ce GPS en usage réel) — rayon donc 0.5m.
+// cf. NAVIGATION.md §5.
 constexpr Meters kArrivalTolerance{0.5f};
 
-// Redondant au seuil d'EKFTask côté SF (200ms), volontairement plus large
-// — pas une simple relecture du même check, cf. NAVIGATION.md §6.
+// Redondant au seuil d'EKFTask côté SF, volontairement plus large -- pas
+// une simple relecture du même check, cf. NAVIGATION.md §6.
 constexpr Ms kEkfStaleThreshold{400};
 } // namespace
 
@@ -49,9 +48,8 @@ Navigation::Navigation(ComponenConfig config, SharedSysStateMemHandler &sysState
   activate();
 };
 
+// cf. NAVIGATION.md §4.
 bool TSeqTask::tryPromote() {
-  // seq==0 : rien d'armé. Même seq que l'engagé actuel : déjà promu, pas
-  // de re-promotion (évite de rejouer newSegment_ en boucle).
   if (comp.armedSegment_.seq == 0 || comp.armedSegment_.seq == comp.engagedSegment_.seq)
     return false;
 
@@ -86,8 +84,7 @@ void TSeqTask::loop() {
       [[maybe_unused]] auto pushed =
           comp.cmd_.pushNavReport(order->seq, order->code, ok);
     } else {
-      // Autres ordres (ex: reprise après panne) pas encore définis —
-      // accusé d'échec quand même, sinon MC attend indéfiniment.
+      // Ordres pas encore définis, cf. NAVIGATION.md §4.
       [[maybe_unused]] auto pushed =
           comp.cmd_.pushNavReport(order->seq, order->code, false);
     }
@@ -125,8 +122,7 @@ void APTask::loop() {
   }
 
   if (comp.engagedSegment_.seq == 0)
-    return; // rien n'a jamais été engagé — ne pas interférer avec
-             // takeoff/loiter d'ArduPilot en GUIDED tant que Nav n'a rien à piloter
+    return; // rien engagé -- cf. NAVIGATION.md §5
 
   auto state = comp.SF_.getDynamicState();
   if (!state)

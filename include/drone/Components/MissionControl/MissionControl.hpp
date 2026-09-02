@@ -4,7 +4,7 @@
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
-#include "drone/Components/System Monitoring/SharedComMem.hpp"
+#include "drone/Components/SystemMonitoring/SharedComMem.hpp"
 #include "drone/core/ComponentBase.hpp"
 #include "drone/core/watchdog.hpp"
 #include <mutex>

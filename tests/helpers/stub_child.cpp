@@ -1,5 +1,3 @@
-// tests/helpers/stub_child.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Binaire compagnon minimal pour tester GlobalWatchdog en boîte noire, sans
 // dépendre du vrai `drone` (le dispatch de composants réel est trop lourd,
 // et pas encore branché, pour servir de cible de test ici).

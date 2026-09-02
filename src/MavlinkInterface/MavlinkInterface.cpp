@@ -12,92 +12,46 @@ using namespace TYPES;
 using namespace MAVLINK_CONV;
 
 namespace {
-// Identité GCS usurpée pour TOUS les messages émis (pas que HEARTBEAT) —
-// deux system id différents cassait le filtrage SYSID_MYGCS côté ArduPilot.
+// Identité unique pour tous les messages émis, cf. MAVLINKINTERFACE.md §3.
 constexpr uint8_t kGcsSystemId = 255;
 constexpr uint8_t kGcsComponentId = MAV_COMP_ID_MISSIONPLANNER;
 
-// Un canal par thread émetteur : _pack() (sans chan) partage tous
-// MAVLINK_COMM_0 dont le compteur de séquence est global et non protégé —
-// TTx/TTxACK sur le même canal implicite causait une race de données réelle.
+// Un canal par thread émetteur, cf. MAVLINKINTERFACE.md §3.
 constexpr uint8_t kTxChanTTx = MAVLINK_COMM_1;
 constexpr uint8_t kTxChanTTxAck = MAVLINK_COMM_2;
-// TRx garde MAVLINK_COMM_0 pour mavlink_parse_char() (cf. TRxTask::loop()).
-// Cible des messages adressés (SET_POSITION_TARGET_LOCAL_NED) : le FC lui-même.
 constexpr uint8_t kFcSystemId = 1;
 constexpr uint8_t kFcComponentId = MAV_COMP_ID_AUTOPILOT1;
 
-// Au-delà de cet âge, un échantillon sf_/nav_ est périmé : on ne l'envoie
-// pas plutôt que de nourrir le FC avec une donnée obsolète (cf. §5 du .md).
+// Échantillon périmé au-delà, cf. MAVLINKINTERFACE.md §4.
 constexpr TYPES::Ms kMaxSampleAge{300};
 
-// Seuil de détection "lien FC perdu" côté FSTask — aligné sur le failsafe
-// GCS natif d'ArduPilot (2-3s), pour signaler à peu près en même temps que
-// le FC bascule lui-même en LAND autonome.
+// Aligné sur le failsafe GCS natif d'ArduPilot, cf. MAVLINKINTERFACE.md §9.
 constexpr TYPES::Ms kFcLinkTimeout{3000};
 
-// Valeur de départ arbitraire — à calibrer sur banc avec les vrais
-// moteurs/ESC/hélices. Sous ce seuil pendant que le FC est armé : moteur
-// mort ou à l'arrêt malgré l'armement, panne mécanique/électrique probable.
+// Seuils RPM/batterie à calibrer sur banc, cf. MAVLINKINTERFACE.md §9 / MISSIONCONTROL.md §4.
 constexpr float kMinArmedRpm = 1000.0f;
-
-// Idem, borne haute — voyant GCS (MVP002), pas une panne bloquante en soi
-// (contrairement au RPM bas) : moteur qui s'emballe, à surveiller mais pas
-// forcément un motif d'atterrissage immédiat.
 constexpr float kMaxArmedRpm = 10000.0f;
-
-// Pas de nouvelle ESC_STATUS depuis ce délai = donnée absente (capteur/
-// télémétrie en panne), traité comme une anomalie au même titre qu'un RPM
-// trop bas — cf. FSTask::loop().
 constexpr TYPES::Ms kEscStaleThreshold{500};
 
-// Surchargeable par variable d'environnement, meme pattern que
-// DRONE_MISSION_PLAN_PATH (MissionControl.cpp) -- pour le SITL uniquement :
-// le modele de frame ArduPilot SITL simule un pack 3S generique (maxVoltage
-// code en dur a 12.6V dans SIM_Frame.h, pas overridable par --defaults),
-// incompatible avec des seuils calibres sur un vrai pack 4S. Comportement
-// de prod inchange si les variables ne sont pas definies.
+// Override env var pour le SITL uniquement (pack batterie/ESC simulés non
+// réalistes) -- comportement de prod inchangé si non définies, cf. sitl/SITL.md §4.
 [[nodiscard]] float envFloatOrDefault(const char *envVar, float defaultV) {
   if (const char *v = std::getenv(envVar))
     return std::strtof(v, nullptr);
   return defaultV;
 }
 
-// SITL n'a pas de telemetrie ESC/DShot simulee (ESC_TELEMETRY_1_TO_4
-// rejete par ArduPilot SITL standard, cf. MVC002/command_rejected) --
-// ESC_STATUS n'arrive donc jamais, la staleness (cf. FSTask::loop()) se
-// declenchait immediatement a l'arm et desarmait le drone sans aucune
-// demande GCS. Surchargeable en SITL uniquement (env var, meme pattern que
-// DRONE_BATT_LOW_V) -- comportement de vol reel inchange (le check RPM
-// reste une protection legitime en vol).
 const bool kSkipRpmCheck = std::getenv("DRONE_SKIP_RPM_CHECK") != nullptr;
 
-// Seuils de départ arbitraires, mêmes valeurs que les défauts du header
-// MISSIONPLAN.csv (battWarningV/battCriticalV) pour la cohérence — à
-// calibrer sur le vrai pack/ESC. kBattCriticalVoltage doit rester
-// confortablement au-dessus du seuil de coupure moteur de l'ESC (constaté :
-// l'ESC coupe les moteurs sous un certain seuil, gravissime en vol).
 const float kBattLowVoltage = envFloatOrDefault("DRONE_BATT_LOW_V", 14.0f);
 const float kBattCriticalVoltage = envFloatOrDefault("DRONE_BATT_CRITICAL_V", 12.5f);
 
-// TStateMachine publie à 20Hz (50ms/cycle) — largement au-dessus si MC est
-// bloqué/mort plutôt qu'en simple lag. MissionControl ne fait jamais de
-// cold-start (cf. CLAUDE.md) : si son heartbeat s'arrête, rien d'autre ne
-// le redémarrera en sécurité — FSTask est le seul filet (cf. §9 du .md).
+// Fallback autonome si MissionControl ou le GCS ne répondent plus, cf.
+// MAVLINKINTERFACE.md §9.
 constexpr TYPES::Ms kMcHeartbeatTimeout{2000};
-
-// Vu indépendamment de SysMonitoring/MissionControl (défense en
-// profondeur, cf. SDD §4 "Double perte lien ... timeout géré par
-// MavlinkInterface indépendamment") — même valeur que kEmergencyTimeout
-// côté MC pour la cohérence, mais calculée ici à partir des timestamps
-// bruts, pas des codes SMC002/003 (ne pas dépendre de SysMonitoring pour
-// détecter que SysMonitoring lui-même a un problème).
 constexpr TYPES::Ms kGcsIndependentTimeout{30000};
 
-// Construit et enfile un MAV_CMD_DO_SET_MODE/LAND — utilisé par TCmdTask
-// (MCO006, ordre normal de MissionControl) et FSTask (fallback autonome
-// si MC ou le GCS ne répondent plus). fromMissionControl=false : pas de
-// CommandReport à pousser, rien n'attend cet ACK côté SharedCmdMem.
+// cf. MAVLINKINTERFACE.md §9.
 void enqueueLandCommand(MavlinkInterface &comp, bool fromMissionControl,
                         uint32_t seq, CODES::Code code) {
   mavlink_message_t msg{};
@@ -122,13 +76,8 @@ void enqueueLandCommand(MavlinkInterface &comp, bool fromMissionControl,
   }
 }
 
-// Vitesse pure sur les 3 axes + cap absolu, position/accélérations ignorées.
-// ArduCopter bascule tout le message en mode vitesse dès qu'un seul axe de
-// vitesse est actif et ignore le champ position, même si z n'est pas dans
-// le masque "ignore" — mélanger position(z)/vitesse(x,y) n'a aucun effet
-// réel. vz vient directement de NavCommand::velNed.ned.z — le P-controller
-// altitude vit maintenant côté Nav (NAV_CONV::computeVerticalGuidance,
-// migré depuis MavlinkInterface, cf. discussion architecture FMA phase 3).
+// Vitesse pure sur les 3 axes, position/accélérations ignorées -- piège
+// ArduCopter et migration du P-controller altitude vers Nav : MAVLINKINTERFACE.md §5.
 constexpr uint16_t kPosTargetTypeMask =
     POSITION_TARGET_TYPEMASK_X_IGNORE | POSITION_TARGET_TYPEMASK_Y_IGNORE |
     POSITION_TARGET_TYPEMASK_Z_IGNORE | POSITION_TARGET_TYPEMASK_AX_IGNORE |
@@ -202,16 +151,7 @@ struct StreamRequest {
   uint32_t intervalUs;
 };
 
-// Taux réduits vs cibles prod (50Hz) : lien SITL wifi peu fiable, à revoir
-// sur lien filaire/UART réel. ATTITUDE/ESC_TELEMETRY_1_TO_4 (pas les
-// variantes QUATERNION/STATUS) : seuls messages qu'ArduPilot SITL émet
-// réellement, cf. eulerToQuat() dans TRxTask::loop().
-//
-// ATTITUDE/LOCAL_POSITION_NED a 20Hz (pas 10Hz) : kAgeThrEKF (SensorFusion,
-// 200ms) ne laissait qu'un facteur 2 de marge a 10Hz -- le moindre jitter
-// faisait clignoter EKF_dead (constate en session SITL, cf. runPreflightChecks()
-// qui ne re-teste qu'une fois par tentative d'arm, pas de retry si le
-// clignotement tombe pile a ce moment-la).
+// Taux et rationale par message : MAVLINKINTERFACE.md §7.
 constexpr std::array<StreamRequest, 8> kInitStreams{{
     {MAVLINK_MSG_ID_ATTITUDE, 50000},              // 20Hz
     {MAVLINK_MSG_ID_LOCAL_POSITION_NED, 50000},    // 20Hz
@@ -241,18 +181,14 @@ void MavlinkInterface::requestInitStreams() {
         reinterpret_cast<uint8_t *>(req.frame.data()), &msg));
 
     if (!ackQueue_.push(req)) {
-      // kInitStreams a 8 entrées pour une queue de capacité 8 : marge nulle
-      // si TCmd pousse un ordre MC pendant cette rafale (fenêtre étroite,
-      // seulement au tout premier HEARTBEAT). Celles déjà poussées partiront
-      // quand même.
+      // File pleine, marge nulle avec un ordre MC concurrent -- cf. MAVLINKINTERFACE.md §7.
       sysState_.raiseCode(CODES::MVC003);
       break;
     }
   }
 }
 
-// Détection seulement, pas d'action côté Pi (le FC a son propre failsafe
-// GCS autonome) — cf. §9 du .md.
+// Détection seulement, cf. MAVLINKINTERFACE.md §9.
 void FSTask::loop() {
   auto hb = comp.fc_.getLastHeartbeat();
   bool lost = !hb || UTILITIES::msBetween(*hb, Clock::now()) > kFcLinkTimeout;
@@ -265,12 +201,8 @@ void FSTask::loop() {
     linkLostActive_ = false;
   }
 
-  // RPM bas/haut ou ESC_STATUS absente/aberrante pendant que le FC est armé
-  // — pour le tableau de voyants GCS (façon hélico), pas seulement pour
-  // MissionControl. Pas de vérif si désarmé : RPM=0 y est normal. RPM haut
-  // (MVP002) n'est PAS déclenché par une donnée absente (staleness = "pas
-  // de donnée", pas "RPM eleve") — seulement une vraie valeur au-dessus du
-  // seuil.
+  // Voyants GCS RPM bas/haut, cf. MAVLINKINTERFACE.md §9. Pas de vérif si
+  // désarmé (RPM=0 normal) ; RPM haut jamais déclenché par une donnée absente.
   bool rpmFault = false;
   bool rpmHigh = false;
   if (!kSkipRpmCheck && comp.fc_.getArmed().value_or(false)) {
@@ -304,9 +236,7 @@ void FSTask::loop() {
     rpmHighActive_ = false;
   }
 
-  // Tension batterie — pas conditionné à l'armement (contrairement au RPM,
-  // la tension sague indépendamment). voltage<=0 : jamais reçu de
-  // BATTERY_STATUS, rien à signaler encore.
+  // Pas conditionné à l'armement, contrairement au RPM. voltage<=0 = jamais reçu.
   float voltage = comp.fc_.getBattery().value_or(FCBatteryStatus{}).voltage.v;
   bool battLow = voltage > 0.0f && voltage < kBattLowVoltage;
   bool battCritical = voltage > 0.0f && voltage < kBattCriticalVoltage;
@@ -319,8 +249,6 @@ void FSTask::loop() {
     battLowActive_ = false;
   }
 
-  // Seuil critique — proche de la coupure moteur ESC (constaté), MC
-  // atterrit immédiatement sans attendre de récupération (cf. MISSIONCONTROL.md §6).
   if (battCritical && !battCriticalActive_) {
     comp.sysState_.raiseCode(CODES::FCP003);
     battCriticalActive_ = true;
@@ -329,9 +257,7 @@ void FSTask::loop() {
     battCriticalActive_ = false;
   }
 
-  // Fallback autonome — MissionControl ne fait jamais de cold-start (cf.
-  // CLAUDE.md) : s'il est mort, rien d'autre ne le redémarre en sécurité.
-  // FSTask est le seul filet, indépendant de MC lui-même par construction.
+  // Fallback autonome, cf. MAVLINKINTERFACE.md §9.
   auto mcHb = comp.cmd_.getHeartbeat();
   bool mcLost = !mcHb || UTILITIES::msBetween(*mcHb, Clock::now()) > kMcHeartbeatTimeout;
   if (mcLost && !mcHeartbeatLostActive_) {
@@ -343,8 +269,7 @@ void FSTask::loop() {
     mcHeartbeatLostActive_ = false;
   }
 
-  // Perte simultanée des deux liens GCS, vue indépendamment de
-  // SysMonitoring/MissionControl (défense en profondeur, cf. SDD §4).
+  // Défense en profondeur, indépendante de SysMonitoring -- MAVLINKINTERFACE.md §9.
   auto hbMain = comp.com_.getLastHeartbeatMain();
   auto hbSec = comp.com_.getLastHeartbeatSec();
   bool mainLost = !hbMain || UTILITIES::msBetween(*hbMain, Clock::now()) > kGcsIndependentTimeout;
@@ -361,8 +286,7 @@ void FSTask::loop() {
   }
 }
 
-// Traduit un ordre MissionControl (SharedCmdMem) en COMMAND_LONG poussé
-// dans ackQueue_ — TTxACK gère l'envoi/ACK/retry, un ordre par tick.
+// cf. MAVLINKINTERFACE.md §8.
 void TCmdTask::loop() {
   auto order = comp.cmd_.popMavlinkCommand();
   if (!order)

@@ -1,5 +1,3 @@
-// src/SITL/MV_SITL.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Binaire de dev : fait tourner MavlinkInterface seule face à ArduPilot
 // SITL, sans GlobalWatchdog. Publie ses propres segments shm (dédiés SITL,
 // cf. drone/IntegrationTests/ShmPaths.hpp) — c'est lui le propriétaire ici, contrairement

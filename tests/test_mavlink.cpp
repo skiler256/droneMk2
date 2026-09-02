@@ -1,5 +1,3 @@
-// tests/test_mavlink.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // MavlinkInterface : conversions pures, matching ACK, AckFifo, segments shm
 // (SharedFCStatus/SharedSFMem/SharedNavMem), et le mécanisme de parsing
 // mavlink_parse_char() dont TRx dépend (tronqué/concaténé/CRC invalide).

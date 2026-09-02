@@ -1,5 +1,3 @@
-// tests/test_missionplan.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Framing du plan de mission (MISSIONPLAN_CONV::serialize/parse) — logique
 // pure, testable sans MissionControl. Lance : cd build && ctest -v
 

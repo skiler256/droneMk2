@@ -1,5 +1,5 @@
-#include "drone/Components/System Monitoring/Framing.hpp"
-#include "drone/Components/System Monitoring/SysMonitoring.hpp"
+#include "drone/Components/SystemMonitoring/Framing.hpp"
+#include "drone/Components/SystemMonitoring/SysMonitoring.hpp"
 #include "drone/generated/codes.hpp"
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
@@ -234,9 +234,7 @@ void TelMainTask::loop() {
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
-    // TODO: pas de source — MavlinkInterface ne parse/stocke pas encore
-    // le bit MAV_MODE_FLAG_SAFETY_ARMED de HEARTBEAT.base_mode dans
-    // SharedFCStatus. Paquet envoyé à valeurs par défaut en attendant.
+    // TODO: pas de source encore côté MavlinkInterface, cf. SYSMONITORING.md §9.
     auto frame = TELEM::encode(TELEM::ArmStatePkt{});
     if (!comp.mainLink_.send(frame))
       comp.mainSched_.markSent(due->id, now);
@@ -439,11 +437,9 @@ namespace {
 
 enum class UplinkSource { Main, Sec };
 
-// Dispatch commun aux deux liens montants — factorisé ici plutôt que
-// dupliqué dans chaque branche mainLink_/secLink_ de GCSRxTask::loop().
-// CMD_EMERGENCY court-circuite volontairement gcsCmds (cf. SharedComMem.hpp) :
-// signalée via un CODES::Code, lu par TSafetyMonitor indépendamment du
-// rythme de dépilement du FIFO.
+// Dispatch commun aux deux liens montants, factorisé plutôt que dupliqué
+// dans chaque branche de GCSRxTask::loop(). CMD_EMERGENCY court-circuite
+// gcsCmds, cf. SYSMONITORING.md §10.
 void handleUplink(SysMonitoring &comp, UplinkSource src,
                   std::span<const std::byte> bytes) {
   auto frame = TELEM::decode(bytes);

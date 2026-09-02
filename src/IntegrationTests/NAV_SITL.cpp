@@ -1,5 +1,3 @@
-// src/IntegrationTests/NAV_SITL.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Binaire de dev : Navigation + MavlinkInterface face à ArduPilot SITL, SANS
 // SensorFusion — test intermédiaire pour valider le séquencement/guidage de
 // Nav sans monter tout l'appareillage moteur 3D + modèle capteur (cf.

@@ -1,5 +1,3 @@
-// tests/test_watchdog.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Couvre ComponentWatchdog (ring buffer de restart, escalade vers exit(1),
 // polling des erreurs shm), Task (câblage TaskConfig -> ComponentWatchdog),
 // et ComponentBase (décision hot-start/cold-start/DEAD).

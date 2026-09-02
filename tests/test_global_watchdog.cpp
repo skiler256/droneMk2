@@ -1,5 +1,3 @@
-// tests/test_global_watchdog.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // GlobalWatchdog en boîte noire : run() bloque indéfiniment (publish shm +
 // fork + monitorLoop + shutdown), donc chaque scénario est lancé dans un
 // process forké dédié, contrôlé depuis le process de test via signaux, et

@@ -1,5 +1,3 @@
-// src/IntegrationTests/HIL_SF_MV.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Binaire de test HIL (Hardware In the Loop) : fait tourner SensorFusion et
 // MavlinkInterface dans le même process, face aux VRAIS capteurs (GPS/
 // LIDAR) et au vrai FC (UART), sans GlobalWatchdog ni les autres composants.

@@ -1,6 +1,6 @@
 #pragma once
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
-#include "drone/Components/System Monitoring/SharedComMem.hpp"
+#include "drone/Components/SystemMonitoring/SharedComMem.hpp"
 #include "drone/types.hpp"
 #include <optional>
 #include <utility>

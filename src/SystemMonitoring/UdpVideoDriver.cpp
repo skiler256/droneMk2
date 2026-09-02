@@ -1,4 +1,4 @@
-#include "drone/Components/System Monitoring/Driver/UdpVideoDriver.hpp"
+#include "drone/Components/SystemMonitoring/Driver/UdpVideoDriver.hpp"
 
 #include <arpa/inet.h>
 #include <cerrno>

@@ -1,5 +1,3 @@
-// tests/test_sensorfusion.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // SensorFusion : conversions pures extraites de GPSTask/LidarTask (cf.
 // Conversions.hpp) — mêmes contraintes que test_mavlink.cpp : les loop() des
 // Tasks (GPSTask/EKFTask/LidarTask) sont privées, appelées uniquement par le

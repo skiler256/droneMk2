@@ -10,38 +10,24 @@ using namespace TYPES;
 
 namespace {
 
-// Chemin fixe pour l'instant — pas d'upload GCS -> disque, pas de hot-swap
-// (décidé explicitement, "on fait simple" en attendant). À revoir quand le
-// pipeline d'upload sera construit. Surchargeable par variable
-// d'environnement (DRONE_MISSION_PLAN_PATH) pour les tests (mc_sitl) —
-// écrire dans /etc/drone en dev/CI demande souvent root, comportement de
-// prod inchangé si la variable n'est pas définie.
+// Chemin fixe, override DRONE_MISSION_PLAN_PATH pour les tests -- cf.
+// MISSIONCONTROL.md §5.
 [[nodiscard]] std::string missionPlanPath() {
   if (const char *override = std::getenv("DRONE_MISSION_PLAN_PATH"))
     return override;
   return "/etc/drone/missionplan.bin";
 }
 
-// Poignée de main matérielle bornée (le FC met un temps fini à confirmer
-// l'armement) — PAS le genre de timeout écarté par l'utilisateur pour les
-// segments de mission (ceux-là jugés sur la santé de Nav, pas la durée).
+// cf. MISSIONCONTROL.md §4 (armError).
 constexpr Ms kArmTimeout{5000};
 
-// Nav publie un NavCommand frais à chaque cycle APTask (50Hz) quand il a
-// quelque chose à piloter — largement au-dessus de ce seuil si Nav est
-// bloqué/mort plutôt que juste "un segment un peu long".
+// cf. MISSIONCONTROL.md §5 (pas de timeout sur la durée du segment).
 constexpr Ms kNavStaleThreshold{500};
 
-// En dessous de cette vitesse pendant LANDING+désarmé : posé normalement.
-// Au-dessus : désarmé en plein mouvement, suspicion de crash plutôt qu'un
-// atterrissage — valeur de départ arbitraire, à affiner en vol réel.
+// cf. MISSIONCONTROL.md §4 (landed).
 constexpr float kLandedVelocityThreshold = 1.0f;
 
-// Détection de fin de montée post-arm (cf. MiSequencerTask::loop()) —
-// ArduPilot ne signale pas explicitement "takeoff terminé" sur NAV_TAKEOFF
-// (juste ACCEPTED), donc jugé sur l'état réel : proche de l'altitude cible
-// ET vitesse verticale quasi nulle (stabilisé, pas juste "passé devant" en
-// montée rapide). Valeurs de départ arbitraires, à affiner en vol réel.
+// Détection de fin de montée post-arm, cf. sitl/SITL.md §3.
 constexpr float kTakeoffAltToleranceM = 1.0f;
 constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
 
@@ -57,12 +43,8 @@ constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
   return false;
 }
 
-// S'appuie sur le mécanisme déjà en place (ComponentBase, cf.
-// ComponenConfig::max_hot_start/max_cold_start) plutôt que de recompter
-// les crashs soi-même : DEAD = ComponentBase a renoncé à démarrer les Task
-// de ce composant (trop de cold-starts), ne reviendra pas sans
-// intervention. SICK = a dû cold-start mais a fini par s'initialiser —
-// tourne, juste secoué.
+// S'appuie sur ComponentBase plutôt que de recompter les crashs, cf.
+// MISSIONCONTROL.md §6.
 [[nodiscard]] bool anyComponentHealth(SharedSysStateMemHandler &sysState,
                                       std::span<const ComponentID> ids,
                                       ComponentHealth health) {
@@ -86,13 +68,11 @@ constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
   return buf;
 }
 
-// Charge + valide le plan de mission (MISSIONPLAN_CONV::parse fait déjà
-// toutes les vérifications de format : magic/version/CRC/segments, cf.
-// test_missionplan.cpp) — écrit comp.plan_ si succès.
-// GPS/EKF perdu ou batterie (bas OU critique) au PRE_FLIGHT -> refus
-// d'armer (MCA009), distinct d'un plan de mission illisible (MCA004).
-// batt_low (FCP001) bloque ici aussi, pas seulement batt_critical (FCP003)
-// -- decision explicite (plus conservateur qu'un simple voyant).
+// Charge + valide le plan de mission, cf. MISSIONCONTROL.md §5. GPS/EKF
+// perdu ou batterie (bas OU critique) au PRE_FLIGHT -> refus d'armer
+// (MCA009), distinct d'un plan de mission illisible (MCA004). batt_low
+// (FCP001) bloque ici aussi, pas seulement batt_critical (FCP003) --
+// decision explicite (plus conservateur qu'un simple voyant).
 [[nodiscard]] bool runPreflightChecks(MissionControl &comp) {
   bool gpsOk = !hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS002) &&
               !hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS005);
@@ -119,10 +99,7 @@ constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
 
 } // namespace
 
-// Fréquences/priorités : valeurs de départ arbitraires (même démarche que
-// Navigation cette session), à ajuster une fois chaque Task réellement
-// implémentée. TSafetyMonitor la plus prioritaire : c'est la Task dont un
-// retard a le plus grand impact sécurité (cf. CLAUDE.md, MC "le plus critique").
+// Fréquences/priorités, cf. MISSIONCONTROL.md §2.
 MissionControl::MissionControl(ComponenConfig config,
                                SharedSysStateMemHandler &sysState,
                                SharedCmdMemHandler &cmd,
@@ -171,17 +148,13 @@ MissionControl::MissionControl(ComponenConfig config,
 void StateMachineTask::loop() {
   auto now = Clock::now();
 
-  // Preuve de vie — lue par MavlinkInterface (FSTask) pour un fallback
-  // autonome (LAND) si TStateMachine s'arrête, cf. MAVLINKINTERFACE.md.
-  // Publiée inconditionnellement, avant toute logique : un blocage plus
-  // bas dans ce cycle ne doit pas empêcher ce heartbeat d'être déjà parti.
+  // Preuve de vie pour le fallback autonome MavlinkInterface, cf.
+  // MISSIONCONTROL.md §9 -- publiée avant toute logique.
   comp.cmd_.setHeartbeat(now);
 
   MC_CONV::Inputs in{};
 
-  // Seul TGCSCmdRouter dépile SharedComMem::gcsCmds (cf. MissionControl.hpp,
-  // StateMachineOrderQueue) — ici on ne lit que ce qu'il a déjà classé
-  // comme concernant la state machine.
+  // Seul TGCSCmdRouter dépile gcsCmds, cf. MISSIONCONTROL.md §7.
   if (auto gcs = comp.gcsOrders_.pop()) {
     if (gcs->type == GCSCommandType::Answer)
       in.queryAnswer = std::pair<uint32_t, uint8_t>{gcs->answerSeq, gcs->answerChoice};
@@ -191,8 +164,7 @@ void StateMachineTask::loop() {
 
   if (comp.state_ == MissionState::PreFlight) {
     if (!preflightChecked_) {
-      // runPreflightChecks() leve le code precis lui-meme (MCA004 plan de
-      // mission vs MCA009 sante GPS/EKF/batterie) -- rien a lever ici.
+      // Code precis leve par runPreflightChecks() elle-meme, cf. MISSIONCONTROL.md §5.
       preflightPassed_ = runPreflightChecks(comp);
       preflightChecked_ = true;
     }
@@ -208,8 +180,6 @@ void StateMachineTask::loop() {
     bool armConfirmTimeout = !comp.fc_.getArmed().value_or(false) &&
                             UTILITIES::msBetween(armRequestedAt_, now) > kArmTimeout;
 
-    // RPM bas/donnée ESC absente : détecté et publié par TFSTask (MV, cf.
-    // MavlinkInterface.cpp) — ici on ne fait que lire le code MVP001.
     bool rpmFault = hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::MVP001);
 
     in.armError = armConfirmTimeout || rpmFault;
@@ -222,11 +192,7 @@ void StateMachineTask::loop() {
   in.lidarLost = comp.lidarLost_;
   in.missionComplete = comp.missionComplete_;
 
-  // Le FC désarme seul en fin d'atterrissage (LAND_DISARMDELAY côté
-  // ArduPilot) — armed=false pendant LANDING est un premier signal, mais
-  // pas suffisant seul : un désarmement en plein vol (crash) le
-  // déclencherait aussi. Vérification supplémentaire sur la vitesse —
-  // cf. kLandedVelocityThreshold.
+  // cf. MISSIONCONTROL.md §4 (landed).
   in.landed = false;
   if (comp.state_ == MissionState::Landing && !comp.fc_.getArmed().value_or(true)) {
     auto state = comp.SF_.getDynamicState();
@@ -252,15 +218,9 @@ void StateMachineTask::loop() {
 
   auto outcome = MC_CONV::step(comp.state_, previousFlightMode_, pendingSeq, in);
 
-  // Commande effective au FC sur les transitions qui l'exigent — MC_CONV
-  // décide l'état, c'est ici qu'on parle vraiment à MavlinkInterface.
+  // cf. MISSIONCONTROL.md §4, "Commande effective du FC".
   if (outcome.next == MissionState::Armed && comp.state_ != MissionState::Armed) {
     armRequestedAt_ = now;
-    // GUIDED avant l'arm : STABILIZE (mode par defaut au sol) ne supporte
-    // pas le takeoff programmatique (cf. ArduCopter takeoff.cpp
-    // do_user_takeoff_U_m() -> has_user_takeoff(), STABILIZE absent de la
-    // liste des modes supportes) -- sans ca, MAV_CMD_NAV_TAKEOFF est
-    // rejete (FAILED) au moment du decollage.
     [[maybe_unused]] auto modePushed = comp.cmd_.pushMavlinkCommand(CODES::MCO002, 0);
     [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO003, 0);
   }
@@ -268,11 +228,7 @@ void StateMachineTask::loop() {
     [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO004, 0);
   }
   if (outcome.next == MissionState::Mission && comp.state_ == MissionState::Armed) {
-    // Altitude du plan de mission (plan_.header.takeoffAlt), pas celle du
-    // GCS (in.gcsCmd->altitude) -- le GCS demande juste "decolle", c'est le
-    // plan qui fixe combien. takeoffComplete_ reinitialise ici : TMiSequencer
-    // n'armera le premier segment qu'une fois cette montee confirmee (evite
-    // la collision NAV_TAKEOFF d'ArduPilot / velNED de Nav envoyes trop tot).
+    // Altitude source et garde takeoffComplete_ : MISSIONCONTROL.md §4, sitl/SITL.md §3.
     comp.takeoffTargetAlt_ = comp.plan_.header.takeoffAlt;
     comp.takeoffComplete_ = false;
     auto altitudeCm = static_cast<uint32_t>(comp.plan_.header.takeoffAlt * 100.0f);
@@ -289,12 +245,7 @@ void StateMachineTask::loop() {
   if (outcome.next == MissionState::Emergency && comp.state_ != MissionState::Emergency)
     emergencyEnteredAt_ = now;
 
-  // Publication de la question au GCS — générique sur outcome.query (type
-  // de question qui DEVRAIT être active ce cycle, cf. Conversions.hpp),
-  // pas câblé sur un état particulier : couvre EMERGENCY (recoverable) et
-  // HOLD (LidarLost) avec la même logique. Ne republie que sur changement
-  // de type, sinon chaque cycle romprait la corrélation de seq avec
-  // CMD_ANSWER (setPendingQuery incrémente toujours le seq).
+  // cf. MISSIONCONTROL.md §8.
   auto currentQuery = comp.cmd_.getPendingQuery();
   QueryType currentType = currentQuery ? currentQuery->type : QueryType::None;
   QueryType desiredType = outcome.query.value_or(QueryType::None);
@@ -311,11 +262,7 @@ void MiSequencerTask::loop() {
 
   auto now = Clock::now();
 
-  // N'arme le premier segment qu'une fois la montée post-arm confirmée
-  // (altitude proche de la cible ET vitesse verticale quasi nulle) --
-  // sinon les commandes velNED du premier Waypoint partent en même temps
-  // que le NAV_TAKEOFF d'ArduPilot est encore en train de s'exécuter,
-  // constaté en session SITL (le drone ne decolle jamais vraiment).
+  // cf. sitl/SITL.md §3.
   if (!comp.takeoffComplete_) {
     auto state = comp.SF_.getDynamicState();
     if (!state)
@@ -336,23 +283,12 @@ void MiSequencerTask::loop() {
   }
 
   if (armedSeqPending_ != 0) {
-    // Pas de timeout sur la durée du segment (décidé explicitement : tant
-    // que Nav est sain, un segment un peu long ne doit rien déclencher) —
-    // on juge Nav sur sa santé et la fraîcheur de son dernier NavCommand.
+    // cf. MISSIONCONTROL.md §5, sitl/SITL.md §9 bug #2 (navConfirmedEngaged
+    // vérifié AVANT l'âge de navCmd, jamais l'inverse).
     bool navHealthy = comp.sysState_.getHealth(ComponentID::Navigation)
                           .value_or(ComponentHealth::DEAD) == ComponentHealth::NOMINAL;
     auto navCmd = comp.nav_.getCommand();
     auto progress = comp.cmd_.getSegmentProgress();
-    // Confirmation POSITIVE que Nav a bien promu ce segment precis (pas une
-    // duree ecoulee -- une course contre un delai fixe reste une course,
-    // meme genereuse, cf. bug constate en SITL malgre un premier correctif
-    // a base de delai). navCmd n'est JAMAIS nullopt en pratique (bug trouve
-    // via print de diagnostic en SITL) : APTask ecrit deja un NavCommand
-    // pendant la phase Hold (EKF pas encore converge, avant meme l'armement,
-    // cf. holdActive_ dans APTask::loop()) -- ce vieux timestamp reste donc
-    // en shm, jamais rafraichi entre la fin du Hold et le premier
-    // engagement reel. D'ou l'ordre de verification : navConfirmedEngaged
-    // AVANT de regarder l'age de navCmd, peu importe qu'il existe deja.
     bool navConfirmedEngaged = progress && progress->seq == armedSeqPending_;
     bool navCmdFresh;
     if (!navConfirmedEngaged) {
@@ -433,32 +369,13 @@ void MiSequencerTask::loop() {
   ++nextIndex_;
 }
 
-// Surveillance seule — la décision (bascule d'état) reste dans
-// TStateMachine, cf. comp.recoverableFailureActive_/unrecoverableFailureActive_/
-// obstacleActive_ (même séparation que TFSTask chez Nav/MavlinkInterface).
+// Surveillance seule, décision dans TStateMachine -- cf. MISSIONCONTROL.md §6.
 void SafetyMonitorTask::loop() {
-  // Codes "emergency-worthy" seulement — cf. Conversions.hpp : NVA004
-  // (obstacle) et NVA005 (ekf stale côté Nav) sont volontairement exclus,
-  // ils déclenchent un HOLD (Nav se freine déjà seul via holdActive_), pas
-  // une bascule système en EMERGENCY. SFS003 (Mag_lost) volontairement
-  // absent : le magnétomètre est sur le FC depuis la bascule d'archi, plus
-  // surveillé par SensorFusion — code orphelin, cf. SENSORFUSION.md §7.
-  //
-  // Perte GCS : un seul lien perdu (l'autre tient) n'est qu'informatif —
-  // le lien restant fait déjà office de secours (cf. SYSMONITORING.md).
-  // Seule la perte SIMULTANÉE des deux devient un échec système : si le
-  // GCS revient dans les 30s, EMERGENCY lui demande "reprendre ou
-  // atterrir ?" ; sinon, timeout -> LANDING automatique (cf. §3/§8) — ça
-  // couvre naturellement le cas où le lien est down et personne ne peut
-  // répondre à la question.
   bool bothGcsLinksLost =
       hasMajorCode(comp.sysState_, ComponentID::SysMonitoring, CODES::SMC002) &&
       hasMajorCode(comp.sysState_, ComponentID::SysMonitoring, CODES::SMC003);
 
-  // Composants surveillés pour l'escalade sur santé (pas MissionControl
-  // lui-même : s'il est mort, il n'est pas là pour se surveiller — c'est
-  // à MavlinkInterface de commander LAND de façon autonome dans ce cas,
-  // cf. MISSIONCONTROL.md §9, pas encore construit).
+  // MissionControl absent de cette liste par construction, cf. MISSIONCONTROL.md §6/§9.
   static constexpr std::array<ComponentID, 4> kMonitoredComponents{
       ComponentID::Navigation, ComponentID::SensorFusion,
       ComponentID::MavlinkInterface, ComponentID::SysMonitoring};
@@ -466,9 +383,6 @@ void SafetyMonitorTask::loop() {
   bool anyDead = anyComponentHealth(comp.sysState_, kMonitoredComponents, ComponentHealth::DEAD);
   bool anySick = anyComponentHealth(comp.sysState_, kMonitoredComponents, ComponentHealth::SICK);
 
-  // Recoverable : peut revenir tout seul (GPS/EKF/lien FC/GCS), ou via un
-  // hot-start (Nav, SICK = a dû cold-start mais tourne) — vaut la peine
-  // d'attendre/demander au GCS.
   comp.recoverableFailureActive_ =
       hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS002) ||
       hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS005) ||
@@ -476,13 +390,6 @@ void SafetyMonitorTask::loop() {
       hasMajorCode(comp.sysState_, ComponentID::MissionControl, CODES::MCA005) ||
       bothGcsLinksLost || anySick;
 
-  // Unrecoverable : aucune attente possible, atterrissage direct.
-  // - E-stop GCS : l'opérateur a demandé l'arrêt, pas la peine de lui
-  //   redemander "reprendre ou atterrir ?" juste après (cf. SDD §4).
-  // - RPM bas / batterie critique : panne matérielle qui ne se résout pas
-  //   en vol (ex: l'ESC coupe les moteurs sous un seuil de tension).
-  // - anyDead : ComponentBase a renoncé à démarrer ce composant, ne
-  //   reviendra pas tout seul.
   comp.unrecoverableFailureActive_ =
       hasMajorCode(comp.sysState_, ComponentID::SysMonitoring, CODES::SMO001) ||
       hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::MVP001) ||
@@ -490,15 +397,9 @@ void SafetyMonitorTask::loop() {
       anyDead;
 
   comp.obstacleActive_ = hasMajorCode(comp.sysState_, ComponentID::Navigation, CODES::NVA004);
-  // LIDAR perdu : ni recoverable ni unrecoverable — HOLD + question au
-  // GCS (cf. Conversions.hpp, discussion : pas une panne qui menace le
-  // vol lui-même, juste la capacité d'évitement d'obstacle).
   comp.lidarLost_ = hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS004);
 
-  // Volume de vol autorisé — cahier des charges SDD §1.2 ("maintenir le
-  // drone à l'intérieur de la zone d'opération"). Rayon/plafond à 0 (plan
-  // pas encore chargé) désactive le check plutôt que de déclencher sur un
-  // volume par défaut nul.
+  // Volume de vol autorisé, cf. MISSIONCONTROL.md §6.
   bool breached = false;
   if (auto state = comp.SF_.getDynamicState()) {
     const auto &hdr = comp.plan_.header;
@@ -522,9 +423,7 @@ void SafetyMonitorTask::loop() {
   comp.volumeBreached_ = breached;
 }
 
-// Seul consommateur de SharedComMem::gcsCmds — cf. StateMachineOrderQueue
-// (MissionControl.hpp) : un deuxième point de dépilement volerait des
-// commandes qui ne lui étaient pas destinées.
+// Seul consommateur de gcsCmds, cf. MISSIONCONTROL.md §7.
 void GCSCmdRouterTask::loop() {
   auto gcs = comp.com_.popGCSCommand();
   if (!gcs)
@@ -543,16 +442,11 @@ void GCSCmdRouterTask::loop() {
       comp.sysState_.raiseCode(CODES::SMC001); // même code que la FIFO GCS pleine, même nature d'échec
     break;
   case GCSCommandType::Waypoint:
-    // TODO: pilotage manuel — décision prise de le construire comme une
-    // consigne velNED envoyée en direct par le GCS (pas un enchaînement de
-    // waypoints), reporté après validation des premiers tests
-    // d'intégration. CMD_WAYPOINT n'a donc pour l'instant aucune
-    // destination (ni ce format, ni Nav côté réception).
+    // TODO: pilotage manuel non construit, cf. MISSIONCONTROL.md §9.
     comp.sysState_.raiseCode(CODES::MCA002);
     break;
   case GCSCommandType::Rtl:
-    // Pas de RTB en V1 (décidé explicitement) — CMD_RTL reste un paquet
-    // valide au niveau fil, mais rien ne le consomme côté state machine.
+    // Pas de RTB en V1, cf. MISSIONCONTROL.md §9.
     comp.sysState_.raiseCode(CODES::MCA003);
     break;
   }

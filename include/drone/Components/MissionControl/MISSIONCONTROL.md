@@ -156,12 +156,12 @@ transitions qui l'exigent :
 
 | Transition | Ordre poussé |
 |---|---|
-| `* → ARMED` | `MCO003` (arm) |
+| `* → ARMED` | `MCO002` (`DO_SET_MODE`/`GUIDED`) **puis** `MCO003` (arm) — `STABILIZE` (mode par défaut au sol) ne supporte pas le takeoff programmatique (`ArduCopter/takeoff.cpp::has_user_takeoff()`), `GUIDED` doit être actif avant l'arm |
 | `ARMED → IDLE` | `MCO004` (disarm) |
-| `ARMED → MISSION` | `MCO001` (takeoff, altitude = `CMD_TAKEOFF.altitude` du GCS) |
+| `ARMED → MISSION` | `MCO001` (takeoff, altitude = `plan_.header.takeoffAlt`, **pas** `CMD_TAKEOFF.altitude` du GCS — le GCS demande juste "décolle", c'est le plan qui fixe combien, cf. `sitl/SITL.md` §3) |
 | `* → LANDING` | `MCO006` (land, `MAV_CMD_DO_SET_MODE`/`COPTER_MODE_LAND`) |
 
-Aucun de ces 4 ordres n'existait avant — un bug trouvé en écrivant cette
+Aucun de ces ordres n'existait avant — un bug trouvé en écrivant cette
 doc (la state machine tournait "à vide", sans jamais réellement
 commander le FC). `mavlinkReports` (résultat ACK de chaque ordre) reste
 non consommé (cf. §9) : MC agit sur `SharedFCStatus::armed`/les codes,
@@ -178,7 +178,14 @@ pipeline) et appelle `MISSIONPLAN_CONV::parse()` (magic/version/CRC/
 segments déjà validés, cf. `MISSIONPLAN.md`/`test_missionplan.cpp`).
 Exécuté **une seule fois par entrée en `PRE_FLIGHT`** (pas à 20Hz — c'est
 de l'I/O disque), résultat mis en cache (`preflightChecked_`/
-`preflightPassed_`) jusqu'à sortie de l'état. Échec → `CODES::MCA004`.
+`preflightPassed_`) jusqu'à sortie de l'état. Échec (plan illisible) →
+`CODES::MCA004`.
+
+Avant même de lire le plan : GPS/EKF perdu (`SFS002`/`SFS005`) ou
+batterie basse **ou** critique (`FCP001`/`FCP003`) → refus d'armer,
+`CODES::MCA009` (distinct de `MCA004`). `FCP001` (seuil moins critique)
+bloque ici aussi, pas seulement `FCP003` — décision explicite, plus
+conservateur qu'un simple voyant GCS pour cette vérification précise.
 
 ### Séquencement — même pattern armé/engagé que Nav
 
@@ -282,7 +289,8 @@ SysMonitoring — `DEGRADED` (un seul hot-start) est ignoré, trop mineur.
 **MissionControl lui-même n'est pas dans cette liste** : s'il est mort,
 il n'est pas là pour se surveiller. C'est à `MavlinkInterface` de
 commander `LAND` de façon autonome dans ce cas précis (cf. SDD §4,
-"Crash MissionControl") — **pas encore construit**, cf. §9.
+"Crash MissionControl") — **résolu**, cf. §9 pour le mécanisme
+(heartbeat MC surveillé par `FSTask`).
 
 ### `obstacleActive_`
 

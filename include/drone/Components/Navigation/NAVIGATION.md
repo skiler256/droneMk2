@@ -9,9 +9,11 @@ Complète `GUIDE_COMPOSANTS.md` (générique) et le SDD (§3.4).
 **État** : V1 = un seul type de segment (`Waypoint` — cap direct sur un
 point, vitesse d'approche, altitude). Séquencement armé/engagé
 opérationnel, hold de sécurité redondant opérationnel, P-controller
-altitude migré depuis `MavlinkInterface`. Pas encore testé en SITL/HIL
-(prochaine étape). Line/Curve, la vraie reprise après panne côté
-MissionControl, et l'axe vitesse "constante" restent à faire.
+altitude migré depuis `MavlinkInterface`. **Validé en SITL réel**
+(scénarios `002_arm_waypoints_land` et `004_lidar_course`, cf.
+`sitl/SITL.md` §8 — vrais `Waypoint`, Nav pilote dessus, détection
+d'obstacle confirmée en vol). Line/Curve, la vraie reprise après panne
+côté MissionControl, et l'axe vitesse "constante" restent à faire.
 
 ## 1. Vue d'ensemble
 
@@ -181,10 +183,11 @@ edge-triggered.
 ### Fraîcheur EKF — redondante, pas une relecture du même seuil
 
 `TFS` vérifie `SharedSFMem.state.ts` avec `kEkfStaleThreshold=400ms` —
-volontairement plus large que le seuil de `EKFTask` côté SF (200ms,
-100Hz) : ce n'est pas le même check (`EKFTask` vérifie la fraîcheur des
-messages MAVLink du FC ; `TFS` vérifie que **SF elle-même** publie encore
-un état, ce qui couvre aussi un SF gelé/planté que `EKFTask` ne peut pas
+**pas une relecture du seuil `kAgeThrEKF` d'`EKFTask` côté SF** (1000ms,
+cf. `SENSORFUSION.md` §4) : ce n'est pas le même check (`EKFTask` vérifie
+la fraîcheur des messages MAVLink du FC ; `TFS` vérifie que **SF
+elle-même** publie encore un état, ce qui couvre aussi un SF gelé/planté
+que `EKFTask` ne peut pas
 détecter sur lui-même).
 
 ### Obstacle — boîte, pas cône, alignée sur la trajectoire réelle
@@ -281,5 +284,6 @@ test au total.
 - **`HomeCalibrator`** côté SF toujours à `{0,0,0}` (cf. `SENSORFUSION.md`
   §4) — `Navigation` reçoit donc une position déjà "recalée" mais qui ne
   l'est en réalité pas encore.
-- Pas encore testé en SITL/HIL — prochaine étape logique (`mv_sitl`
-  étendu à SF+Nav, ou nouveau binaire dédié).
+- **HIL** (matériel réel, pas seulement SITL) : pas encore fait pour
+  Navigation — `hil_sf_mv` couvre SensorFusion+MavlinkInterface mais pas
+  encore Nav (cf. `sitl/SITL.md` §12).

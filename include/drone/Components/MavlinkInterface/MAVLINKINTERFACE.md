@@ -107,7 +107,7 @@ un GPS "figé" au-delà de quelques centaines de ms est vu comme périmé.
 production, ce n'est pas un problème : `Navigation`/`SensorFusion`
 tournent en continu et produisent un nouveau `ts` à chaque cycle.
 
-## 5. Altitude : vitesse pure + P-controller — piège ArduCopter non documenté
+## 5. Altitude : vitesse pure sur les 3 axes — piège ArduCopter non documenté
 
 **Ce qui a été essayé et a échoué.** L'intention initiale était de
 piloter `vx`/`vy` en vitesse et `z` en position absolue dans le même
@@ -128,21 +128,16 @@ un bug côté `droneMk2`) :
 
 **Solution retenue.** `SET_POSITION_TARGET_LOCAL_NED` part en **vitesse
 pure sur les 3 axes** (x/y/z tous ignorés, `vx`/`vy`/`vz` tous actifs).
-`NavCommand.altitudeCmd` reste une altitude **absolue** côté
-`SharedNavMem` (rien ne change côté Navigation/dashboard) — c'est
-`TTxTask::loop()` qui la convertit en `vz` juste avant l'envoi, via un
-simple P-controller (`altitudeToVz()`, `Kp=0.6`, plafond `±2 m/s`) :
 
-```cpp
-vz = clamp(Kp * (altitudeCmd - pos.z_courant), -2.0f, 2.0f)
-```
-
-`pos.z_courant` vient de `SharedFCStatus::getLocalPosVel()` (donc de la
-dernière `LOCAL_POSITION_NED` reçue de la FC elle-même — boucle fermée
-sur la vraie position, pas sur une estimation locale). Sans échantillon
-de position disponible, `vz = 0` (tient l'altitude en l'état plutôt que
-d'extrapoler à l'aveugle). Validé en session : convergence propre sans
-oscillation sur ~3-5m d'écart, cohabite normalement avec `vx`/`vy`.
+**Le P-controller d'altitude ne vit plus ici.** Historiquement calculé
+par `TTxTask::loop()` (`altitudeToVz()`), il a été **migré côté
+`Navigation`** (`NAV_CONV::computeVerticalGuidance`, mêmes gains —
+`Kp=0.6`, plafond `±2 m/s`, cf. `NAVIGATION.md` §5) : Nav possède
+désormais tout le contrôle vertical, `MavlinkInterface` se contente de
+retransmettre `NavCommand::velNed.ned.z` tel quel dans `vz`.
+`NavCommand::altitudeCmd` reste dans `SharedNavMem` pour l'affichage GCS
+mais n'a plus de rôle de contrôle (cf. `NAVIGATION.md` §5, "devenu
+indicatif seulement").
 
 ## 6. Retry / échec sur commande ACK'd (`TTxACK`)
 
@@ -207,8 +202,8 @@ INTERVAL` dans `ackQueue_` :
 
 | Message demandé | Fréquence | Note |
 |---|---|---|
-| `ATTITUDE` | 10Hz | **Pas** `ATTITUDE_QUATERNION` — jamais émis par ce firmware SITL, quelle que soit la demande. `TRx` décode l'Euler et convertit via `eulerToQuat()` (§10). |
-| `LOCAL_POSITION_NED` | 10Hz | Conforme au standard. |
+| `ATTITUDE` | 20Hz | **Pas** `ATTITUDE_QUATERNION` — jamais émis par ce firmware SITL, quelle que soit la demande. `TRx` décode l'Euler et convertit via `eulerToQuat()` (§10). Monté de 10 à 20Hz : au seuil `kAgeThrEKF` d'alors (SensorFusion, 200ms — depuis élargi à 1000ms, cf. `SENSORFUSION.md` §4), 10Hz ne laissait qu'un facteur 2 de marge — le moindre jitter faisait clignoter `EKF_dead` en session SITL. |
+| `LOCAL_POSITION_NED` | 20Hz | Conforme au standard, même correctif de marge que `ATTITUDE` ci-dessus. |
 | `BATTERY_STATUS` | 1Hz | Conforme. |
 | `ESC_TELEMETRY_1_TO_4` | 2Hz | **Pas** `ESC_STATUS` générique — extension `ardupilotmega`, seule que ce firmware émet réellement (§10). |
 | `SCALED_PRESSURE` | 2Hz | Conforme. |

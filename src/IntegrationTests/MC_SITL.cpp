@@ -1,5 +1,3 @@
-// src/IntegrationTests/MC_SITL.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Binaire de dev : MissionControl SEUL, face à un plan de mission prédéfini
 // et un faux Nav minimal (pas de vol réel, pas de SITL ArduPilot) — test
 // ciblé de la state machine/séquenceur/failsafe, pas du pilotage. Le SITL

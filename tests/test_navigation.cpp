@@ -1,5 +1,3 @@
-// tests/test_navigation.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Navigation : loi de correction pure extraite d'APTask::loop() (cf.
 // Conversions.hpp) — même contrainte que test_mavlink.cpp/test_sensorfusion.cpp :
 // loop() est privée, appelée uniquement par le thread RT de la Task, donc pas

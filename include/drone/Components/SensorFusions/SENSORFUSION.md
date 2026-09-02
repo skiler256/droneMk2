@@ -141,7 +141,9 @@ de **fraîcheur**.
 (comparer à `lastHeartbeat` avec un seuil de 200ms déclenchait
 `SFS005` en continu, même en fonctionnement nominal — bug identifié et
 corrigé en revue de code). `EKFTask::loop()` compare ces deux timestamps
-à `kAgeThrEKF` (200ms) ; au-delà, `CODES::SFS005` (Emergency,
+à `kAgeThrEKF` (1000ms — élargi depuis un seuil initial de 200ms, qui
+laissait trop peu de marge au débit réduit du lien SITL, cf.
+`MAVLINKINTERFACE.md` §7) ; au-delà, `CODES::SFS005` (Emergency,
 edge-triggered) et `SharedSFMem.state` n'est pas mis à jour.
 
 `homeOffsetNed` (`Vec3`, membre de `SensorFusions`) est appliqué

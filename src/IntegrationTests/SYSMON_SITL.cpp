@@ -1,5 +1,3 @@
-// src/IntegrationTests/SYSMON_SITL.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Binaire de dev : SysMonitoring SEUL, face à des données shm injectées à la
 // main (pas de vol réel, pas des autres composants réels) — sert à observer
 // le flux de télémétrie réel sur le GCS/ (Node.js) sans faire tourner tout
@@ -21,10 +19,10 @@
 //   echo -e "CMD=CODE\ncomponent=SensorFusion\ncode=SFS004\naction=raise" | nc -u -w0 127.0.0.1 15020
 //   echo -e "CMD=CODE\ncomponent=SensorFusion\ncode=SFS004\naction=clear" | nc -u -w0 127.0.0.1 15020
 
-#include "drone/Components/System Monitoring/Driver/LinuxThermalZoneDriver.hpp"
-#include "drone/Components/System Monitoring/Driver/UdpTelemetryDriver.hpp"
-#include "drone/Components/System Monitoring/Driver/UdpVideoDriver.hpp"
-#include "drone/Components/System Monitoring/SysMonitoring.hpp"
+#include "drone/Components/SystemMonitoring/Driver/LinuxThermalZoneDriver.hpp"
+#include "drone/Components/SystemMonitoring/Driver/UdpTelemetryDriver.hpp"
+#include "drone/Components/SystemMonitoring/Driver/UdpVideoDriver.hpp"
+#include "drone/Components/SystemMonitoring/SysMonitoring.hpp"
 #include "drone/IntegrationTests/ShmPaths.hpp"
 #include "drone/generated/codes.hpp"
 #include "drone/shm.hpp"

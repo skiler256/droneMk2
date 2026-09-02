@@ -1,5 +1,3 @@
-// src/IntegrationTests/UDP_bridge.cpp
-// ─────────────────────────────────────────────────────────────────────────────
 // Pont shm <-> UDP unique pour les tests d'intégration : s'attache, de façon
 // opportuniste et indépendante, aux segments SITL::/HIL::/NAV_SITL::k*ShmPath
 // (publiés respectivement par mv_sitl, hil_sf_mv, nav_sitl), ainsi qu'aux
@@ -37,7 +35,7 @@
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
-#include "drone/Components/System Monitoring/SharedComMem.hpp"
+#include "drone/Components/SystemMonitoring/SharedComMem.hpp"
 #include "drone/IntegrationTests/ShmPaths.hpp"
 #include "drone/core/GlobalWatchdog.hpp" // chemins shm de PROD (kNavShmPath etc.), pas la classe elle-meme
 #include "drone/core/SharedSysStateMem.hpp"
