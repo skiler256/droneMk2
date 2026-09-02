@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/shm_observer.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Observabilité de la shm de prod pour l'orchestrateur — PAS de mmap/struct
 # direct (cf. discussion : 7 structs C++ imbriquées, risque réel de
 # désalignement silencieux). PAS non plus d'écoute UDP directe du flux de

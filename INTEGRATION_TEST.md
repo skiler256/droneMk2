@@ -1,8 +1,13 @@
 # Plateforme de tests d'intégration système
 
-> Statut : spécification initiale — à amender au fil de l'implémentation.
-> Portée : validation système bout-en-bout du soft drone (8 composants) contre
-> un environnement simulé complet.
+> Statut : spécification d'origine, conservée pour la numérotation de
+> section — largement citée par numéro dans les commentaires du code (C++
+> et Python) et dans les tests, donc gardée stable plutôt que renumérotée
+> ou supprimée. **L'état réellement construit et à jour vit dans
+> `sitl/SITL.md`** — ce document-ci reste la trace du plan d'origine et de
+> son raisonnement, pas la référence de ce qui tourne aujourd'hui.
+> Portée : validation système bout-en-bout du soft drone (5 composants)
+> contre un environnement simulé complet.
 
 ---
 
@@ -75,7 +80,7 @@
 
 ### 3.1 [1] Système sous test
 
-Les 8 composants, lancés comme en production (processus indépendants, binaire
+Les 5 composants, lancés comme en production (processus indépendants, binaire
 unique, dispatch argv). Seule différence : les drivers matériels sont remplacés
 par des drivers UDP via l'interface `IDriver`.
 
@@ -380,31 +385,29 @@ systématique invisible en simulation et fatale en vol.
 
 ---
 
-## 10. Décisions ouvertes
+## 10. Décisions ouvertes à l'origine — état actuel
 
-### 10.1 ⚠️ Watchdog et pannes volontaires — bloquant
+### 10.1 Watchdog et pannes volontaires — résolu
 
-`GlobalWatchdog` relance-t-il un composant tué volontairement par
-l'orchestrateur ?
+Question d'origine : `GlobalWatchdog` relance-t-il un composant tué
+volontairement par l'orchestrateur ? Si oui sans contrôle, l'injection de
+panne ne teste rien (le processus revient avant que le système ait réagi).
 
-- Si **oui** sans contrôle : l'injection de panne ne teste rien, le processus
-  revient avant que le système ait réagi.
-- Il faut soit un moyen de désactiver sélectivement le redémarrage, soit une
-  vérification que le redémarrage a bien lieu selon le scénario.
+**Résolu dans le code du watchdog, pas dans l'orchestrateur** (comme prévu
+ci-dessus) : `SharedWatchdogControl` (`include/drone/core/
+WatchdogControl.hpp`) expose `suppressRespawn[id]`, à positionner avant le
+kill pour empêcher `GlobalWatchdog` de relancer ce composant précis. Preuve
+de fonctionnement : `tests/test_global_watchdog.cpp::
+RespawnSuppressedWhenFlagSet`. Pas encore de wrapper Python dédié côté
+`sitl/procman.py` — à écrire quand un scénario en aura besoin (cf.
+`sitl/SITL.md` §5).
 
-**Décision à prendre dans le code du watchdog** (donc en prod), pas dans
-l'orchestrateur. À trancher avant le bloc [5].
+### 10.2 Choix du moteur 3D — tranché
 
-### 10.2 Choix du moteur 3D
-
-| Option | Pour | Contre |
-|---|---|---|
-| Godot | léger, scriptable, scène facile, déjà connu | pas de lockstep |
-| Gazebo + `ardupilot_gazebo` | officiel, lockstep vrai, GPU lidar, debug GDB avec temps figé | setup lourd, Ubuntu 22.04, problèmes OpenGL rapportés sous WSL2 |
-| Webots | rapide à installer, exemples multicopter | moins connu |
-
-En mode « serveur de capteurs passif », le lockstep importe peu (RTF 1 imposé de
-toute façon). **Décider à l'étape 4 de la roadmap, pas avant.**
+Godot 3.6 retenu. En mode « serveur de capteurs passif », le lockstep de
+Gazebo importe peu (RTF 1 imposé de toute façon) ; Gazebo a en plus des
+soucis OpenGL rapportés sous WSL2. Détails d'implémentation : `sitl/SITL.md`
+§9.
 
 ### 10.3 Format de monde
 
@@ -416,6 +419,9 @@ cassent un évitement réactif. Donc format éditable en données, pas scène mo
 ---
 
 ## 11. Roadmap d'implémentation
+
+> Plan d'origine ci-dessous, conservé tel quel pour le raisonnement (ordre
+> choisi et pourquoi). **État réel d'avancement à jour : `sitl/SITL.md` §8.**
 
 Ordre choisi pour minimiser le coût de rétrofit : **l'orchestrateur avant le 3D**.
 Le moteur est un module remplaçable derrière une interface ; l'orchestrateur ne
@@ -464,4 +470,5 @@ se rétrofitte pas.
 - `ardupilot_gazebo` — plugin officiel, lockstep, capteurs additionnels
 - Framework d'autotest ArduPilot (Python) — prior art pour le format de scénario
 - `SIM_STATE` / `SIMSTATE` — état vrai de simulation, hors EKF
-- Docs internes : `MAVLINKINTERFACE.md`, `SENSORFUSION.md`, `ROADMAP.md`
+- Docs internes : `MAVLINKINTERFACE.md`, `SENSORFUSION.md`, `sitl/SITL.md`
+  (état à jour de tout ce qui est construit)

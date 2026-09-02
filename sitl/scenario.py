@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/scenario.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Format de scénario (cf. INTEGRATION_TEST.md §6), allégé pour la roadmap
 # étape 2/3 : pas de `monde`/`modele_capteur` (blocs [3]/[4], pas encore
 # construits — étape 4). `graine` gardé pour quand un modèle capteur bruité

@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/mission_driver.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Envoie des commandes GCS au vrai système sous test, via le VRAI canal
 # TELEM::* (UDP loopback TelMain, cf. UdpTelemetryDriver/SysMonitoring) —
 # pas un canal MAVLink séparé : le système parle par ses interfaces externes
@@ -26,7 +24,7 @@ from telemetry_codec import load_packets, encode  # noqa: E402
 
 TELMAIN_TX_PORT = 5601
 TELSEC_TX_PORT = 5611
-TELEMETRY_CSV = Path(__file__).resolve().parent.parent / "TELEMETRY.csv"
+TELEMETRY_CSV = Path(__file__).resolve().parent.parent / "data" / "TELEMETRY.csv"
 
 _BY_ID, _BY_NAME = load_packets(TELEMETRY_CSV)
 

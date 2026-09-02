@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/procman.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Démarre/arrête les process d'un run SITL : tools/dashboard/dashboard_server.py
 # (SEUL lecteur du flux UDP de udp_bridge, cf. shm_observer.py — deux
 # lecteurs concurrents se feraient la course sur le même port), ArduPilot

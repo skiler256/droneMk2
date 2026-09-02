@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/raycast_wire.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Codec du protocole prive requete/reponse entre sensor_bridge.py (bloc [4])
 # et world_engine/LidarServer.gd (bloc [3]) -- JAMAIS vu par le systeme sous
 # test (port et format distincts de lidar_wire.py/UdpLidarDriver). Source de

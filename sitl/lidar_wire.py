@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/lidar_wire.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Codec du format UDP lidar simulé consommé par UdpLidarDriver (cf.
 # include/drone/Components/Drivers/UdpLidarDriver.hpp / src/Drivers/
 # UdpLidarDriver.cpp). Source de vérité = le .cpp.

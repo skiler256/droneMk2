@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/verdict.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Calcul du verdict pass/fail (cf. INTEGRATION_TEST.md §5/§9) à partir d'une
 # RunTrace déjà collectée -- fonction pure, testable sans lancer quoi que ce
 # soit (même esprit que MC_CONV::step() côté C++ : la logique de décision ne
@@ -13,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 from codes_common import read_csv as read_codes_csv  # noqa: E402
 
-INDEX_CSV = Path(__file__).resolve().parent.parent / "INDEX.csv"
+INDEX_CSV = Path(__file__).resolve().parent.parent / "data" / "INDEX.csv"
 
 
 def _severity_by_name() -> dict[str, str]:

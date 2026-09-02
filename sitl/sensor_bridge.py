@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/sensor_bridge.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Pont SITL_MASTER, bloc [4] "SITL nu" (INTEGRATION_TEST.md §3.4 -- pas
 # encore de bruit/biais/latence/dropout, juste un passthrough du bloc [3]).
 # Remplace gps_bridge.py : une seule lecture SIM_STATE, fusionnee pour les

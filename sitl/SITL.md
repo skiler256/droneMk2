@@ -1,8 +1,8 @@
 # SITL — plateforme de test système
 
-Documentation de référence de tout ce qui vit sous `sitl/`. Complète
-`INTEGRATION_TEST.md` (la spécification/roadmap) — ce document-ci explique
-ce qui est **construit et qui tourne**, pas ce qui est prévu.
+Documentation de référence de tout ce qui vit sous `sitl/` : ce qui est
+**construit et qui tourne**, l'architecture, comment écrire un scénario, et
+les binaires de test intermédiaires (SITL et HIL).
 
 Trois blocs, comme discuté :
 
@@ -10,10 +10,12 @@ Trois blocs, comme discuté :
 binaire (drone) <--UDP--> SITL_MASTER (sitl/, Python) <--MAVLink--> SITL_ardupilot
 ```
 
-- **binaire** : le vrai `drone` (8 process, `GlobalWatchdog` + 5 composants),
+- **binaire** : le vrai `drone` (`GlobalWatchdog` + 5 process composants),
   compilé avec des drivers UDP factices à la place du vrai matériel I2C/UART.
-  Aucune logique métier modifiée pour les besoins du test (cf.
-  `INTEGRATION_TEST.md` §1.3, "validation boîte noire").
+  Aucune logique métier modifiée pour les besoins du test — principe
+  directeur : **validation boîte noire**, les tests parlent au système par
+  ses interfaces externes (MAVLink, UDP capteur, shm en lecture), aucun
+  binding sur le code C++, le binaire testé est le binaire de production.
 - **SITL_MASTER** : les scripts Python sous `sitl/` — orchestre le run,
   relaie le GPS/lidar simulés, pilote la mission via de vraies commandes
   GCS, observe l'état système, calcule un verdict.
@@ -22,6 +24,28 @@ binaire (drone) <--UDP--> SITL_MASTER (sitl/, Python) <--MAVLink--> SITL_ardupil
   (dépendances pyserial/empy/etc.) — l'activer (`source
   ~/venv-ardupilot/bin/activate`) avant de lancer quoi que ce soit à la
   main en dehors de `sitl/run.sh`.
+
+### Ce que la plateforme valide
+
+- Boucle de guidage fermée : `Nav` → setpoints → contrôleur guided ArduPilot
+  → dynamique.
+- Chaîne capteur complète : monde 3D → mesures → `SensorFusion` →
+  `MavlinkInterface` → EKF.
+- Comportement système émergent : mission complète pilotée par
+  `MissionControl`.
+- Gestion de panne : processus mort, code de diagnostic levé, lien coupé.
+- Évitement d'obstacle géométrique (freinage, cf. §9).
+
+### Ce que la plateforme ne valide pas
+
+- Le comportement temps réel fin sur cible Pi 5 (jitter, latence RT) — banc
+  matériel séparé.
+- Les drivers matériels réels (I2C, UART) — remplacés par des drivers UDP
+  (validés séparément en HIL, cf. §12).
+- La dynamique de vol elle-même — déléguée à ArduPilot SITL, prise comme
+  référence, jamais réimplémentée.
+- Le bruit/biais/latence capteur réaliste — `sensor_bridge.py` reste un
+  passthrough idéal aujourd'hui (cf. §10).
 
 ---
 
@@ -98,10 +122,9 @@ WSL2/sandbox (pas besoin d'un noyau PREEMPT_RT pour `SCHED_FIFO`, juste de
 la permission — `CAP_SYS_NICE` la contourne entièrement).
 
 **Prérequis à poser toi-même** (pas construits dans ce fil) : cloner et
-compiler ArduPilot (`ArduPilot/ardupilot`, `Tools/autotest/sim_vehicle.py`)
-— cf. `INTEGRATION_TEST.md` §13. Tout doit tourner sur la même machine
-(WSL), tout communique en UDP loopback (cf. §8.1 — RTF 1 obligatoire, un
-seul domaine de temps cohérent).
+compiler ArduPilot (`ArduPilot/ardupilot`, `Tools/autotest/sim_vehicle.py`).
+Tout doit tourner sur la même machine (WSL), tout communique en UDP
+loopback — RTF 1 obligatoire (cf. §11), un seul domaine de temps cohérent.
 
 ### Déboguer en observant en direct, sans copier-coller
 
@@ -169,19 +192,31 @@ use` au démarrage de l'orchestrateur.
 | 15001 | `dashboard_server.py` | Statut shm depuis `udp_bridge` |
 | 8766 | `dashboard_server.py` | Page web + API JSON |
 
-**TF Luna hors chemin `UdpLidarDriver`** : contrairement au LD06, le TF Luna
-(télémètre) ne passe **pas** par notre `UDP_bridge` — il est routé comme sur
-le vrai FC, en `DISTANCE_SENSOR` MAVLink directement vers ArduPilot SITL
-(port 14551), qui le traite lui-même (EKF/rangefinder) avant qu'il
-redescende éventuellement vers `drone` par les canaux MAVLink habituels
-(cf. `INTEGRATION_TEST.md` §4, "routage des capteurs pas symétrique").
+**Le routage des capteurs n'est pas symétrique** — il reproduit
+l'architecture réelle plutôt qu'un chemin uniforme :
+
+| Capteur | Réel | En simulation |
+|---|---|---|
+| GPS (NEO-M8N) | UART → Pi | `sensor_bridge.py` → `UdpGpsDriver` (port 15100) → `SensorFusion` |
+| Magnétomètre (LIS3MDL) | I2C → FC | simulé directement par ArduPilot SITL, rien à injecter |
+| TF Luna (rangefinder) | UART → FC | `sensor_bridge.py` → `DISTANCE_SENSOR` MAVLink → ArduPilot SITL (port 14551), **pas** `UdpLidarDriver` |
+| LD06 (360°) | UART → Pi | `sensor_bridge.py` → `UdpLidarDriver` (port 15101) → `SensorFusion` |
+| IMU / Baro | FC | simulés par ArduPilot SITL |
+
+Le TF Luna, en particulier, ne passe **pas** par `UDP_bridge` : il est
+routé comme sur le vrai FC, traité par ArduPilot SITL lui-même
+(EKF/rangefinder) avant de redescendre éventuellement vers `drone` par les
+canaux MAVLink habituels.
 
 ---
 
 ## 3. Créer un scénario
 
-Format YAML (`INTEGRATION_TEST.md` §6, allégé — pas encore de
-`modele_capteur`, cf. §9 plus bas) :
+Un fichier déclaratif par scénario, versionné dans le repo — pas de
+scénario en code (sinon impossible de dire « ce commit a cassé le
+scénario 3 »). Format YAML, plus simple que ce qui était envisagé au départ
+(pas encore de `modele_capteur`/graine de bruit dédiée par scénario, cf. §10
+"pas encore fait") :
 
 ```yaml
 id: 001_arm_takeoff_wait_land
@@ -347,7 +382,7 @@ Métrique inconnue = échec explicite (pas ignorée silencieusement).
 | `tools/missionplan_wire.py` | Codec du plan de mission binaire (miroir Python de `MISSIONPLAN_CONV`, magic/version/header/segments TLV/CRC32-C) |
 | `tools/mission_compiler.py` | CLI : compile un plan de mission YAML vers le binaire lu par `MissionControl` — vise à devenir l'outil de compilation côté GCS |
 | `procman.py` | Cycle de vie des process (`dashboard`, `sim_vehicle`, `drone`, `udp_bridge`, `lidar_server`, `sensor_bridge`) — `with ProcessManager(cfg) as pm:`, arrêt garanti même sur exception |
-| `rangefinder.parm` | Params ArduPilot pour le TF Luna (`RNGFND1_TYPE=10` etc., cf. `INTEGRATION_TEST.md` §5.3) — passé via `--add-param-file` dans `procman.py`. Sans lui, `DISTANCE_SENSOR` envoyé par `sensor_bridge.py` est ignoré en silence (aucun effet sur l'EKF/altitude simulée) |
+| `rangefinder.parm` | Params ArduPilot pour le TF Luna en rangefinder MAVLink (`RNGFND1_TYPE=10 RNGFND1_ORIENT=25 RNGFND1_MIN_CM=20 RNGFND1_MAX_CM=800 EK3_RNG_USE_HGT=-1` — lidar hors fusion EKF de hauteur) — passé via `--add-param-file` dans `procman.py`. Sans lui, `DISTANCE_SENSOR` envoyé par `sensor_bridge.py` est ignoré en silence (aucun effet sur l'EKF/altitude simulée) |
 | `shm_observer.py` | Interroge `dashboard_server.py` (HTTP) en tâche de fond, expose `mission_state()`/`active_codes()`/`wait_for_mission_state()` |
 | `mission_driver.py` | Envoie les commandes GCS via le vrai canal `TELEM::*` (réutilise `tools/dashboard/telemetry_codec.py`) + heartbeat GCS 1Hz automatique |
 | `verdict.py` | Évaluation pure des critères à partir d'une `RunTrace` (même esprit que `MC_CONV::step()` côté C++ — logique testable sans rien lancer) |
@@ -378,7 +413,8 @@ légitime en vol) reste intact en dehors de cette variable.
 
 ## 5. Injection de pannes
 
-Deux domaines distincts (`INTEGRATION_TEST.md` §7 — ne pas mélanger) :
+Deux domaines distincts, jamais mélangés — l'injection de panne capteur ne
+doit jamais se faire dans le moteur 3D (§9), qui reste géométrie pure :
 
 ### Pannes système (`procman.ProcessManager.kill()`)
 
@@ -451,8 +487,6 @@ politique horloge/drivers entre unités de traduction d'un même binaire.
 
 ## 8. Roadmap — où on en est
 
-`INTEGRATION_TEST.md` §11 :
-
 | # | Étape | Statut |
 |---|---|---|
 | 0 | Abstraction d'horloge | ✅ fait (`SimClock`, `DRONE_USE_SIM_CLOCK`) |
@@ -467,9 +501,10 @@ politique horloge/drivers entre unités de traduction d'un même binaire.
 
 ## 9. Moteur 3D (`world_engine/`, roadmap étape 4)
 
-Godot 3.6 choisi (§10.2 : léger, déjà connu, le lockstep de Gazebo importe
+Godot 3.6 choisi (léger, déjà connu, le lockstep de Gazebo importe
 peu en mode "serveur de capteurs passif" — RTF1 imposé de toute façon ;
-Gazebo a des soucis OpenGL rapportés sous WSL2). Binaire officiel (pas de
+Gazebo a des soucis OpenGL rapportés sous WSL2 — alternative écartée).
+Binaire officiel (pas de
 paquet système ici), headless pour les tests automatisés/le run SITL réel,
 éditeur complet (x11) pour un visuel manuel — lancé depuis un terminal WSL
 normal, **WSLg** forward la fenêtre vers le bureau Windows automatiquement
@@ -477,8 +512,10 @@ normal, **WSLg** forward la fenêtre vers le bureau Windows automatiquement
 
 ### Bloc [3] — géométrie (`World.gd`)
 
-Charge un monde JSON (**pas** de scène modelée à la main — §10.3, format
-éditable pour les mondes adversariaux V2). Raycast 360° (`raycast_360()`,
+Charge un monde JSON (**pas** de scène modelée à la main — format éditable
+en donnée, pour pouvoir fabriquer facilement des mondes adversariaux dans
+une V2 future : impasses, passages étroits, obstacles en U/concavités — les
+minima locaux qui cassent un évitement réactif). Raycast 360° (`raycast_360()`,
 LD06) et un rayon vertical seul (`raycast_down()`, TF Luna) depuis une pose
 **et une attitude complète** (roll/pitch/yaw, pas juste le cap) : les deux
 capteurs sont montés rigides sur le châssis, leur mesure suit toute
@@ -491,8 +528,10 @@ Résultats vérifiés contre la géométrie attendue à la main (yaw, roll, pose
 au-dessus d'un obstacle connu), pas juste "ça tourne sans planter".
 
 Distances retournées en **mètres bruts** (pas mm/quantifié, pas de bruit) —
-la quantification/le bruit sont la responsabilité du bloc [4], interdits
-dans `World.gd` (§3.3).
+la quantification/le bruit sont la responsabilité du bloc [4] (`sensor_
+bridge.py`), explicitement interdits dans `World.gd` : ce bloc a une
+responsabilité unique, la géométrie, pour rester remplaçable (changement de
+moteur 3D sans impact aval).
 
 `world_engine/LidarServer.gd` : serveur headless persistant, une instance
 par run (lancée par `procman.py`, tuée à l'arrêt comme ArduPilot). Charge le
@@ -500,9 +539,9 @@ monde passé en `--world=<chemin absolu>` au démarrage, répond en UDP
 (port 15102 par défaut) aux requêtes de raycast — protocole privé
 requête/réponse synchrone documenté dans l'en-tête du fichier et mirroré
 côté Python dans `raycast_wire.py`. `--headless` **volontaire** : pas de
-rendu, pour rester déterministe sur le chemin critique du raycast (cf.
-`INTEGRATION_TEST.md` risque connu #2, "un stutter de frame ressemble à une
-panne capteur" — le rendu doit rester découplé, cf. viewer plus bas).
+rendu, pour rester déterministe sur le chemin critique du raycast — un
+stutter de frame ressemblerait à une panne capteur si le rendu partageait
+le même chemin ; le rendu reste découplé (cf. viewer plus bas).
 
 ### Bloc [4] — passthrough "SITL nu" (`sensor_bridge.py`)
 
@@ -515,7 +554,7 @@ courante :
 - **TF Luna** : requête `TFLUNA` à 100Hz (cadence usine par défaut du
   capteur réel, pas une limite artificielle) → message MAVLink
   `DISTANCE_SENSOR` → ArduPilot SITL lui-même (**pas** `UdpLidarDriver` —
-  routage non symétrique, cf. `INTEGRATION_TEST.md` §4 et le tableau des
+  routage non symétrique, cf. tableau de routage capteurs et tableau des
   ports §2 ci-dessus).
 
 **⚠️ Position NED locale — deux limites connues et documentées en dur dans
@@ -601,9 +640,9 @@ revient :
 
 ### Viewer temps réel (`world_engine/Viewer.gd`, optionnel/debug)
 
-**Process séparé de `LidarServer.gd`, jamais lancé par `procman.py`** — décision
-actée (§F du découpage roadmap étape 4) : jamais de rendu sur le chemin
-critique du raycast (cf. `INTEGRATION_TEST.md`, risque connu #2). Charge le
+**Process séparé de `LidarServer.gd`, jamais lancé par `procman.py`** — même
+raison que plus haut : jamais de rendu sur le chemin critique du raycast.
+Charge le
 même format de monde, affiche un marqueur (petit cube + "nez" rouge en
 avant) qui suit la pose/attitude complète du drone en direct, reçue en
 UDP "fire-and-forget" (pas de requête/réponse, contrairement à
@@ -732,12 +771,15 @@ plusieurs fois que les bugs listés plus haut ont été trouvés.
 
 ### Pas encore fait
 
-- Modèle capteur bruité (bloc [4] réel : bruit/biais/latence/dropout, cf.
-  `INTEGRATION_TEST.md` §3.4) — `sensor_bridge.py` reste un passthrough
-  "SITL nu" (GPS idéal fixe, distances géométriques brutes sans bruit).
-- Détection de collision géométrique (§3.3, "traverse les obstacles,
-  collision = échec de test") — hors périmètre de la boucle lidar, pas
-  commencé.
+- Modèle capteur bruité (bloc [4] réel : bruit gaussien paramétrable par
+  capteur, biais constant + dérive lente, latence configurable par flux,
+  dropout, quantification à la résolution réelle du capteur, graine de
+  bruit fixée et versionnée par scénario) — `sensor_bridge.py` reste un
+  passthrough "SITL nu" (GPS idéal fixe, distances géométriques brutes sans
+  bruit).
+- Détection de collision géométrique (le drone traverse les obstacles sans
+  qu'aucune couche ne le détecte comme un échec de test) — hors périmètre
+  de la boucle lidar, pas commencé.
 - Formes de monde au-delà de `box`/`cylinder` (`World.gd::load_from_json()`).
 - **Vrai maintien de position pendant un `Hold`** — cf. bug #5 ci-dessus
   (`HoldSegment` n'engage jamais Nav).
@@ -768,9 +810,64 @@ plusieurs fois que les bugs listés plus haut ont été trouvés.
 
 ---
 
-## 11. Références
+## 11. Contraintes structurantes
 
-- `INTEGRATION_TEST.md` — spécification/roadmap complète (blocs, formats,
-  contraintes RTF1, pièges connus).
+**RTF 1 obligatoire.** Les composants sont des process RT qui lisent
+`Clock::now()` en temps mur — un `--speedup` de SITL casserait la
+cohérence (Nav tournerait à sa fréquence réelle pendant que le monde
+avancerait N fois plus vite). Conséquence acceptée : le circuit complet
+tourne en temps réel, une suite de scénarios prend le temps qu'elle prend.
+
+**Abstraction d'horloge posée, pas encore exploitée.** `TYPES::Clock`
+devient `SimClock` avec `DRONE_USE_SIM_CLOCK` (cf. §7) — pour l'instant un
+simple relais vers `steady_clock`, sans pilotage explicite du temps. Pose
+l'infrastructure pour un futur rejeu accéléré (§10) sans avoir à re-router
+`Clock::now()` partout plus tard.
+
+**Reproductibilité du verdict, pas du run bit-exact.** Plusieurs process RT
+avec ordonnancement variable interdisent un rejeu bit-exact. Les critères de
+`verdict.py` (§3, "critères disponibles") portent donc sur des enveloppes
+(séquence d'états, plages, présence/absence), jamais sur des trajectoires
+exactes — une assertion sur des flottants comparés à l'identique serait
+rouge une fois sur trois et finirait ignorée.
+
+**Bindings Python interdits sur le code C++.** L'orchestrateur ne parle au
+système que par ses interfaces externes (MAVLink, UDP capteur, lecture shm
+directe via `mmap`+`struct`, jamais de couplage au code C++ lui-même) — cf.
+§0, principe de validation boîte noire.
+
+## 12. Binaires de test intermédiaires (SITL et HIL)
+
+Entre les tests unitaires GTest et le SITL complet (`drone` + `sim_vehicle.py`
++ moteur 3D), plusieurs binaires isolent un sous-ensemble de composants pour
+valider un maillon sans monter tout l'appareillage. Tous compilés uniquement
+avec `-DBUILD_ITESTS=ON` (cf. §7), tous dans `src/IntegrationTests/`, tous
+avec leurs propres chemins shm dédiés (`include/drone/IntegrationTests/
+ShmPaths.hpp`, namespaces `SITL::`/`HIL::`/`NAV_SITL::`/`MC_SITL::`) pour ne
+jamais entrer en collision avec un vrai `drone` (namespace `PROD`, chemins
+publiés par `GlobalWatchdog`) qui tournerait en même temps sur la même
+machine.
+
+| Binaire | Composants réels | Face à | Remplace |
+|---|---|---|---|
+| `mv_sitl` | `MavlinkInterface` seule | ArduPilot SITL (UDP) | `GlobalWatchdog` + les 4 autres composants |
+| `nav_sitl` | `Navigation` + `MavlinkInterface` | ArduPilot SITL (UDP) | `SensorFusion` (relais minimal `DynamicState`, pas de vrai GPS/lidar) |
+| `mc_sitl` | `MissionControl` seul | un plan de mission prédéfini + faux `Nav` (progression par délai fixe) | tout le reste — teste la state machine/séquenceur/failsafe, pas le pilotage |
+| `sysmon_sitl` | `SysMonitoring` seul | données shm injectées à la main (port UDP texte 15020) | tous les autres composants — sert à observer le flux télémétrie réel sur le GCS sans faire tourner le système complet |
+| `hil_sf_mv` | `SensorFusion` + `MavlinkInterface` | **vrai matériel** : GPS/LIDAR sur `/dev/ttyAMA1`/`/dev/ttyAMA2`, FC réel sur `/dev/ttyAMA0` | `GlobalWatchdog` + les 3 autres composants — seul binaire de ce tableau qui touche du matériel physique, pas de SITL ArduPilot |
+| `udp_bridge` | (aucun — outil de pont) | s'attache en lecture seule aux segments shm de n'importe lequel des binaires ci-dessus, ou aux vrais chemins `PROD` | — relaie tout en UDP texte vers `dashboard_server.py`, réessaie périodiquement si un binaire démarre après lui, plusieurs sources actives en même temps possible |
+
+`nav_sitl` est le palier "Nav sur SITL nu" (roadmap étape 3, §8) : valide le
+guidage réel sans monter le moteur 3D ni le modèle capteur. `hil_sf_mv` est
+le seul binaire de ce tableau en **hardware-in-the-loop** au sens strict —
+capteurs et FC réels, aucune simulation — utilisé pour valider la chaîne
+capteur/MAVLink indépendamment du reste du système avant intégration
+complète. Pas de magnétomètre dans `hil_sf_mv` : câblé directement sur le
+FC, hors du chemin `SensorFusion` (cf. `SENSORFUSION.md`).
+
+---
+
+## 13. Références
+
 - `tests/test_global_watchdog.cpp::RespawnSuppressedWhenFlagSet` — preuve
   que le mécanisme de panne système différée fonctionne.

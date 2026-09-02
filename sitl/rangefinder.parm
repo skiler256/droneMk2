@@ -4,8 +4,8 @@
 # rangefinder MAVLink -- sans ca, RNGFND1_TYPE reste a sa valeur par defaut
 # (desactive) et les messages DISTANCE_SENSOR envoyes par sensor_bridge.py
 # sont ignores silencieusement (aucun effet sur l'EKF/l'altitude simulee).
-# Valeurs alignees sur INTEGRATION_TEST.md §5.3 et sensor_bridge.py
-# (RNGFND_MIN_CM/RNGFND_MAX_CM) -- garder les deux cotes synchronises.
+# Valeurs alignees sur sensor_bridge.py (RNGFND_MIN_CM/RNGFND_MAX_CM) --
+# garder les deux cotes synchronises.
 
 RNGFND1_TYPE 10
 RNGFND1_ORIENT 25

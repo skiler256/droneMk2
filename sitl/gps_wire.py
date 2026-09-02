@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/gps_wire.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Codec du format UDP GPS simulé consommé par UdpGpsDriver (cf.
 # include/drone/Components/Drivers/UdpGpsDriver.hpp / src/Drivers/
 # UdpGpsDriver.cpp). Source de vérité = le .cpp — si l'un change, l'autre

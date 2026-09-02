@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# sitl/run_scenario.py
-# ─────────────────────────────────────────────────────────────────────────────
 # Point d'entrée CLI : charge un scénario, lance les process (procman),
 # joue la mission (mission_driver) en observant l'état système
 # (shm_observer), calcule un verdict (verdict.py).
