@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/sysmon_sitl.dir/link.d CMakeFiles/sysmon_sitl.dir/src/IntegrationTests/SYSMON_SITL.cpp.o -o sysmon_sitl  libdrone_lib.a

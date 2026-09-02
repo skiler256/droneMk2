@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/mc_sitl.dir/link.d CMakeFiles/mc_sitl.dir/src/IntegrationTests/MC_SITL.cpp.o -o mc_sitl  libdrone_lib.a

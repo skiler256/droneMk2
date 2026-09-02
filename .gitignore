@@ -1,0 +1,38 @@
+# Répertoires de build CMake (prod et SITL) — régénérés par `cmake -B ...`.
+build/
+build_sitl/
+
+# Index clangd (IDE local, pas de valeur versionnée) et bytecode Python
+# compilé (régénéré automatiquement à chaque exécution).
+.cache/
+**/__pycache__/
+
+# Artefacts de run ArduPilot SITL (dataflash logs, index de log,
+# EEPROM/tlog/params simulés) — régénérés à chaque run, pas du code.
+logs/*.BIN
+logs/LASTLOG.TXT
+eeprom.bin
+mav.tlog
+mav.tlog.raw
+mav.parm
+
+# Dépendances Node.js du GCS (réinstallées via `npm install`,
+# cf. package-lock.json) et build PlatformIO de l'ESP32.
+GCS/node_modules/
+GCS/ESP32/firmware/.pio/
+
+# live-build (GCS/README.md §5.2) : on garde la config écrite à la main
+# (auto/, config/, README.md), on ignore tout ce que `lb build` télécharge/
+# génère (8+ Go, chroot avec fichiers à permissions restreintes qui font
+# échouer `git add -A` dessus).
+GCS/live-image/.build/
+GCS/live-image/binary/
+GCS/live-image/binary.*
+GCS/live-image/cache/
+GCS/live-image/chroot/
+GCS/live-image/chroot.*
+GCS/live-image/build.log
+GCS/live-image/wget-log*
+# Copie rsync de l'app GCS (cf. README §1) -- source déjà suivie sous GCS/,
+# régénérée à chaque build, jamais éditée directement ici.
+GCS/live-image/config/includes.chroot/opt/gcs/

@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/nav_sitl.dir/link.d CMakeFiles/nav_sitl.dir/src/IntegrationTests/NAV_SITL.cpp.o -o nav_sitl  libdrone_lib.a
