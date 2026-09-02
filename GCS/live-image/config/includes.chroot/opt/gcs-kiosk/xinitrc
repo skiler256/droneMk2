@@ -1,0 +1,26 @@
+#!/bin/sh
+# GCS/live-image/config/includes.chroot/opt/gcs-kiosk/xinitrc
+# ─────────────────────────────────────────────────────────────────────────────
+# Lancé par gcs-kiosk.service via `startx`. matchbox-window-manager tourne
+# en tache de fond, sans barre de titre -- pas un "bureau", juste ce qu'il
+# faut pour que la demande plein-ecran de Chromium (--kiosk) soit honoree
+# (sans AUCUN WM, personne ne repond a cette demande et Chromium retombe
+# sur une taille de fenetre par defaut, bug constate en test reel).
+
+xset -dpms
+xset s off
+xset s noblank
+setxkbmap fr
+
+matchbox-window-manager -use_titlebar no &
+
+exec chromium \
+  --kiosk \
+  --noerrdialogs \
+  --disable-infobars \
+  --no-first-run \
+  --disable-session-crashed-bubble \
+  --disable-translate \
+  --autoplay-policy=no-user-gesture-required \
+  --check-for-update-interval=31536000 \
+  http://127.0.0.1:3000

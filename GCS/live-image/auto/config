@@ -1,0 +1,60 @@
+#!/bin/sh
+# GCS/live-image/auto/config
+# ─────────────────────────────────────────────────────────────────────────────
+# Invoqué par `lb config` (convention live-build : auto/config plutôt qu'une
+# ligne de commande à retaper). Régénère la config/ complète -- relancer
+# `lb config` après avoir modifié ce fichier.
+
+set -e
+
+# --isohybrid-options "-h 255 -s 63 --forcehd0" ci-dessous : isohybrid par
+# defaut (-h 64 -s 32) donne ~1 Mo/cylindre -- une image de ~2 Go depasse
+# alors 1024 cylindres ("isohybrid: Warning: more than 1024 cylinders...
+# Not all BIOSes will be able to boot this device", vu sur CHAQUE build).
+# Vieille limite d'adressage CHS qui peut vraiment bloquer un BIOS ancien
+# (HP Pavilion G7 ~2011-2012, "BOOT FAIL" reproduit sur 2 cles differentes
+# -- pas un souci de cle). -h 255 -s 63 (geometrie "large" standard,
+# ~8.2 Mo/cylindre) fait tenir notre image sous 1024 cylindres. --forcehd0 :
+# compatibilite USB-boot supplementaire pour les BIOS qui numerotent mal le
+# disque de boot.
+
+lb config noauto \
+    --mode debian \
+    --initsystem systemd \
+    --architecture amd64 \
+    --distribution bookworm \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --binary-images iso-hybrid \
+    --debian-installer false \
+    --memtest none \
+    --security false \
+    --win32-loader false \
+    --build-with-chroot false \
+    --firmware-chroot false \
+    --firmware-binary false \
+    --keyring-packages debian-archive-keyring \
+    --bootstrap-keyring debian-archive-keyring \
+    --bootappend-live "boot=live components toram quiet splash persistence consoleblank=0 noautologin" \
+    --mirror-bootstrap http://deb.debian.org/debian/ \
+    --mirror-chroot http://deb.debian.org/debian/ \
+    --mirror-chroot-security http://security.debian.org/debian-security/ \
+    --mirror-chroot-volatile http://deb.debian.org/debian/ \
+    --mirror-binary http://deb.debian.org/debian/ \
+    --mirror-binary-security http://security.debian.org/debian-security/ \
+    --mirror-binary-volatile http://deb.debian.org/debian/ \
+    --parent-mirror-bootstrap http://deb.debian.org/debian/ \
+    --parent-mirror-chroot http://deb.debian.org/debian/ \
+    --parent-mirror-chroot-security http://security.debian.org/debian-security/ \
+    --parent-mirror-chroot-volatile http://deb.debian.org/debian/ \
+    --parent-mirror-binary http://deb.debian.org/debian/ \
+    --parent-mirror-binary-security http://security.debian.org/debian-security/ \
+    --parent-mirror-binary-volatile http://deb.debian.org/debian/ \
+    "${@}"
+
+# BUG de ce fork : --isohybrid-options est bien parse par lb_config (variable
+# LB_ISOHYBRID_OPTIONS) mais jamais ecrit dans config/ -- lb_binary_iso lit
+# une variable DIFFERENTE (ISOHYBRID_OPTIONS, sans prefixe LB_) depuis
+# config/common, qui reste donc toujours vide quel que soit le flag passe.
+# On patch directement le fichier genere plutot que de compter sur le flag
+# casse (verifie : le flag seul laisse ISOHYBRID_OPTIONS="").
+sed -i 's/^ISOHYBRID_OPTIONS=.*/ISOHYBRID_OPTIONS="-h 255 -s 63 --forcehd0"/' config/common

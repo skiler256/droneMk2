@@ -1,0 +1,24 @@
+#!/bin/sh
+# GCS/live-image/config/hooks/live/0200-gcs-services.hook.chroot
+# ─────────────────────────────────────────────────────────────────────────────
+# Active les services GCS, le theme Plymouth, et corrige la propriete de
+# /opt/gcs (copie par le build AVANT `lb build`, cf. README.md -- appartient
+# a root par defaut via includes.chroot, doit tourner sous l'utilisateur gcs).
+set -e
+
+# chown en premier : critique (gcs-server.service tourne en User=gcs), ne doit
+# jamais dependre du succes d'une etape cosmetique plus bas (deja vu un cas ou
+# ce hook s'est arrete avant d'y arriver -- cause exacte non identifiee, mais
+# plus la peine si c'est fait tout de suite).
+if [ -d /opt/gcs ]; then
+  chown -R gcs:gcs /opt/gcs
+fi
+
+chmod +x /opt/gcs-kiosk/xinitrc
+
+systemctl enable gcs-server.service
+systemctl enable gcs-kiosk.service
+systemctl enable iwd.service
+systemctl enable ssh.service
+
+plymouth-set-default-theme -R gcs

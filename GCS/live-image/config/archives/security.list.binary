@@ -1,0 +1,10 @@
+# GCS/live-image/config/archives/security.list.chroot
+# ─────────────────────────────────────────────────────────────────────────────
+# Remplace la génération auto de live-build pour le dépôt de sécurité, cf.
+# auto/config (--security false). Le live-build installé ici est un vieux
+# fork Ubuntu (3.0~a57-1ubuntu54) dont le mode "debian" écrit toujours
+# l'ancienne syntaxe "<codename>/updates" pour la sécurité (convention
+# d'avant Debian 10/Buster) sans jamais vérifier la version cible -- 404
+# garanti sur bookworm. On fournit la bonne ligne nous-mêmes plutôt que de
+# dépendre d'un chemin de code cassé.
+deb http://security.debian.org/debian-security/ bookworm-security main contrib non-free non-free-firmware

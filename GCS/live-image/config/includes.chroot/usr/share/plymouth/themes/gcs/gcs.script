@@ -1,0 +1,43 @@
+# GCS/live-image/.../gcs.script
+# ─────────────────────────────────────────────────────────────────────────────
+# PLACEHOLDER texte -- pas encore teste sur materiel reel (aucun environnement
+# Plymouth/framebuffer disponible pour verifier la syntaxe ici). Pour debugger :
+# `plymouthd --debug --no-daemon` puis `plymouth --show-splash` dans une VM,
+# ou simplement observer le boot reel -- corrige la syntaxe si besoin, l'API
+# de script Plymouth est peu documentee et varie legerement selon versions.
+#
+# Pour passer a un vrai logo : remplace ce fichier par un theme "two-step"
+# standard (cf. exemples dans /usr/share/plymouth/themes/ une fois le paquet
+# plymouth-themes installe) -- copie un theme existant, remplace ses images
+# par ton logo, pointe dessus via plymouth-set-default-theme.
+
+Window.SetBackgroundTopColor(0.05, 0.06, 0.09);
+Window.SetBackgroundBottomColor(0.05, 0.06, 0.09);
+
+title_image = Image.Text("GCS", 1, 1, 1, 1, "Sans 48");
+title_sprite = Sprite(title_image);
+title_sprite.SetX(Window.GetWidth() / 2 - title_image.GetWidth() / 2);
+title_sprite.SetY(Window.GetHeight() / 2 - title_image.GetHeight() / 2 - 40);
+
+subtitle_image = Image.Text("demarrage...", 0.6, 0.65, 0.75, 1, "Sans 14");
+subtitle_sprite = Sprite(subtitle_image);
+subtitle_sprite.SetX(Window.GetWidth() / 2 - subtitle_image.GetWidth() / 2);
+subtitle_sprite.SetY(Window.GetHeight() / 2 - subtitle_image.GetHeight() / 2 + 30);
+
+bar_width = 200;
+bar_height = 4;
+bar_x = Window.GetWidth() / 2 - bar_width / 2;
+bar_y = Window.GetHeight() / 2 + 70;
+
+bar_bg_image = Rectangle(bar_width, bar_height, 0.2, 0.22, 0.28);
+bar_bg_sprite = Sprite(bar_bg_image);
+bar_bg_sprite.SetX(bar_x);
+bar_bg_sprite.SetY(bar_y);
+
+fun progress_callback(duration, progress) {
+  fill_image = Rectangle(bar_width * progress, bar_height, 0.31, 0.55, 1);
+  fill_sprite = Sprite(fill_image);
+  fill_sprite.SetX(bar_x);
+  fill_sprite.SetY(bar_y);
+}
+Plymouth.SetBootProgressFunction(progress_callback);

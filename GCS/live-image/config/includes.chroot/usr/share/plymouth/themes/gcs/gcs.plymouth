@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=GCS
+Description=Splash de demarrage droneMk2 GCS (placeholder, cf. gcs.script)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/gcs
+ScriptFile=/usr/share/plymouth/themes/gcs/gcs.script

@@ -1,0 +1,21 @@
+[Unit]
+Description=GCS kiosk (Chromium plein ecran, tty1)
+After=gcs-server.service network.target getty@tty1.service
+Wants=gcs-server.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=gcs
+Group=gcs
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=2
+ExecStart=/usr/bin/startx /opt/gcs-kiosk/xinitrc -- vt1 -noreset
+
+[Install]
+WantedBy=multi-user.target

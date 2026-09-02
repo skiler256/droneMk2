@@ -1,0 +1,85 @@
+# GCS/live-image/config/package-lists/gcs.list.chroot
+# ─────────────────────────────────────────────────────────────────────────────
+# Un paquet par ligne, live-build les installe pendant le build du chroot.
+
+# Live boot en RAM (cf. auto/config, "toram"). systemd-sysv est OBLIGATOIRE :
+# sans lui /sbin/init pointe vers sysvinit meme si systemd est installe a
+# cote -- PID 1 se retrouve "init" (sysvinit) au lieu de "systemd", et TOUS
+# les services geres par systemctl (gcs-server, gcs-kiosk, iwd, ssh...) ne
+# demarrent jamais (bug constate en test reel sur le HP Pavilion G7).
+#
+# CAUSE RACINE trouvee : live-build a sa PROPRE etape interne
+# (lb_chroot_live-packages) qui installe "live-config-${LB_INITSYSTEM}" --
+# sans --initsystem systemd explicite dans auto/config, LB_INITSYSTEM valait
+# "sysvinit" par defaut sur ce vieux fork (anterieur a l'adoption de systemd
+# par Debian en 2015), installant live-config-sysvinit APRES notre liste et
+# faisant tomber live-config-systemd/systemd-sysv en cascade (conflit
+# d'alternatives). Les lignes ci-dessous restent explicites par securite/
+# documentation, mais c'est --initsystem systemd (auto/config) qui regle le
+# probleme pour de bon.
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+
+# Serveur X minimal, PAS de bureau (kiosk pur, cf. xinitrc). matchbox-
+# window-manager : gestionnaire de fenetres minuscule (~300 Ko), strictement
+# necessaire pour que la demande plein-ecran de Chromium (--kiosk) soit
+# honoree -- sans WM du tout, personne ne repond a cette demande et
+# Chromium retombe sur une taille de fenetre par defaut (bug constate en
+# test reel : fenetre 1050x880 au lieu de 1600x900 plein ecran).
+xserver-xorg
+xinit
+x11-xserver-utils
+matchbox-window-manager
+
+# Navigateur kiosk.
+chromium
+unclutter
+
+# Son -- le materiel est bien detecte au niveau noyau (HDA Intel PCH,
+# snd_hda_intel) mais sans serveur audio userspace Chromium n'a nulle part
+# ou envoyer le son (bug constate en test reel : alarmes GCS muettes).
+pulseaudio
+alsa-utils
+
+# Ecran de demarrage custom.
+plymouth
+plymouth-themes
+
+# Bootloader BIOS pour l'ISO hybride (--binary-images iso-hybrid) -- sans ce
+# paquet, isolinux.bin est absent et l'assemblage de l'ISO echoue.
+isolinux
+
+# xterm- : exclu explicitement (syntaxe apt "paquet-") -- tire par un
+# Recommends de xserver-xorg, casse actuellement avec x11-utils sur ce
+# snapshot de bookworm/main (luit exige x11-utils >= 7.7+6, qui n'existe pas
+# encore dans l'archive). On ne se sert pas d'un terminal en kiosk pur de
+# toute facon -- inutile d'attendre que le mirroir se resynchronise.
+xterm-
+
+# Runtime GCS (server.js).
+nodejs
+npm
+
+# Debug/maintenance depuis la console (Ctrl+Alt+F2).
+usbutils
+vim
+less
+openssh-server
+
+# WiFi generique (maj/administration).
+firmware-misc-nonfree
+firmware-realtek
+firmware-iwlwifi
+firmware-atheros
+firmware-brcm80211
+iwd
+
+# Adaptateur wfb-ng (RTL8812AU) -- driver externe compile via DKMS, cf.
+# config/hooks/0300-rtl8812au-dkms.chroot. Le paquet noyau in-tree ne
+# supporte pas le mode monitor + injection necessaire a wfb-ng.
+dkms
+build-essential
+linux-headers-amd64
+git

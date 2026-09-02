@@ -1,0 +1,45 @@
+Code;Component;Category;Name;Description;Criticity;Alarm;Panel
+FCP001;Flight Controller;Power;batt_low;tension batterie faible;Critical;;
+FCP002;Flight Controller;Power;Eng_failure;Perte moteur;Emergency;fire_bell;ENG,EMG,PWR,RPM
+FCP003;Flight Controller;Power;batt_critical;tension batterie proche du seuil de coupure moteur ESC - atterrissage immédiat, pas d'attente de récupération;Emergency;;
+MCA001;Mission Control;Action;segment_type_unsupported;type de segment du plan de mission pas encore exécutable côté Nav (Corridor/Curve) ou pas encore routé (PayloadAction) - segment sauté par TMiSequencer;Warning;;
+MCA002;Mission Control;Action;gcs_command_unrouted;commande GCS reçue sans destination implémentée (CMD_WAYPOINT - pilotage manuel Nav pas encore construit) - commande abandonnée par TGCSCmdRouter;Warning;;
+MCA003;Mission Control;Action;rtb_not_implemented_v1;CMD_RTL reçu - pas de RTB en V1 (décidé explicitement) - commande abandonnée par TGCSCmdRouter;Warning;;
+MCA004;Mission Control;Action;mission_plan_load_failed;échec chargement/parsing du plan de mission au PRE_FLIGHT (fichier absent, illisible ou corrompu) - retour à IDLE;Warning;;
+MCA005;Mission Control;Action;nav_stale_while_sequencing;Nav ne publie plus de NavCommand frais (ou santé dégradée) alors qu'un segment est en cours d'exécution - pas un simple timeout sur la durée du segment;Critical;;
+MCA007;Mission Control;Action;nav_volume_breached;drone hors du volume de vol autorisé (rayon/plafond du plan de mission) - HOLD déclenché;Critical;;
+MCA008;Mission Control;Action;crash_suspected;désarmé pendant LANDING mais vitesse encore significative - pas un atterrissage normal;Emergency;;
+MCA009;Mission Control;Action;prearm_health_check_failed;GPS/EKF perdu ou tension batterie sous le seuil bas au PRE_FLIGHT - retour à IDLE, distinct d'un plan de mission illisible (MCA004);Warning;;
+MCO001;Mission Control;Command;takeoff;ordre de décollage vers MavlinkInterface (payload: altitude cible en cm);Info;;
+MCO002;Mission Control;Command;set_mode_guided;ordre de passage en mode GUIDED vers MavlinkInterface;Info;;
+MCO003;Mission Control;Command;arm;ordre d'armement vers MavlinkInterface (payload ignoré);Info;;
+MCO004;Mission Control;Command;disarm;ordre de désarmement vers MavlinkInterface (payload ignoré);Info;;
+MCO005;Mission Control;Command;start_segment;ordre d'amorçage vers Nav (payload ignoré) - promeut armedSegment en engagedSegment si sécurité OK;Info;;
+MCO006;Mission Control;Command;land;ordre d'atterrissage vers MavlinkInterface (payload ignoré);Info;;
+MVC001;Mavlink Interface;Communication;unexpected_ack;ACK reçu (COMMAND_ACK/PARAM_VALUE) ne correspond à aucune commande TTxACK en attente;Warning;;
+MVC002;Mavlink Interface;Communication;command_rejected;COMMAND_ACK != ACCEPTED ou timeout épuisé sur une commande interne sans origine MissionControl (ex: requestInitStreams) - pour un ordre MC voir SharedCmdMem::CommandReport - séquence abandonnée (ackQueue_ vidée);Critical;;
+MVC003;Mavlink Interface;Communication;queue_full;push échoué sur ackQueue_, ackFifo_ ou mavlinkReports (pleine), commande/ACK/report perdu;Warning;;
+MVC004;Mavlink Interface;Communication;fc_link_lost;plus de HEARTBEAT du FC depuis le seuil FSTask;Critical;;
+MVC005;Mavlink Interface;Communication;mc_heartbeat_lost;plus de heartbeat MissionControl depuis le seuil FSTask - LAND autonome déclenché (MC ne fait jamais de cold-start, aucun autre filet);Emergency;;
+MVC006;Mavlink Interface;Communication;gcs_double_link_lost_failsafe;perte simultanée wfb-ng+433MHz vue indépendamment par MavlinkInterface (défense en profondeur, pas juste SysMonitoring/MissionControl) - LAND autonome déclenché;Emergency;;
+MVP001;Mavlink Interface;Power;rpm_too_low;RPM moteur sous le seuil ou donnée ESC_STATUS absente/aberrante alors que le FC est armé - probable panne mécanique/électrique;Critical;;
+MVP002;Mavlink Interface;Power;rpm_too_high;RPM moteur au-dessus du seuil attendu alors que le FC est armé - voyant GCS, pas une panne bloquante en soi;Warning;;
+NVA001;Navigation;Action;landing_cat_1;atterissage d'urgence, FC autonome;Critical;;
+NVA002;Navigation;Action;landing_cat_2;atterissage assité par LIDAR;Info;;
+NVA003;Navigation;Action;landing_cat_3;atterissage guidé;Info;;
+NVA004;Navigation;Action;hold_obstacle;TFS - obstacle détecté dans la zone de sécurité devant le drone - hold déclenché;Critical;obstacle;OBS
+NVA005;Navigation;Action;hold_ekf_stale;TFS - DynamicState SF périmé (redondant au check EKFTask de SF) - hold déclenché;Critical;;
+NVA006;Navigation;Action;lateral_waypoint;FMA axe latéral - segment de type Waypoint armé ou engagé;Info;;
+NVA007;Navigation;Action;vertical_hold;FMA axe vertical - maintien d'altitude;Info;;
+NVA008;Navigation;Action;vertical_climb;FMA axe vertical - montée;Info;;
+NVA009;Navigation;Action;vertical_descend;FMA axe vertical - descente;Info;;
+NVA010;Navigation;Action;speed_proportional;FMA axe vitesse - loi P saturée (cf. computeWaypointGuidance);Info;;
+SFS001;Sensor Fusion;Sensor;GPS_lock;signal gps vérouillé;Info;;
+SFS002;Sensor Fusion;Sensor;GPS_lost;signal gps perdu ou aberrant;Emergency;airbus_caution;GPS,EKF,EMG
+SFS003;Sensor Fusion;Sensor;Mag_lost;lecture magnétomètre en échec ou aberrante;Emergency;airbus_caution;MAG,EMG
+SFS004;Sensor Fusion;Sensor;Lidar_lost;lecture LIDAR en échec (driver);Critical;;
+SFS005;Sensor Fusion;Sensor;EKF_dead;Plus de maj. de l'EKF;Emergency;airbus_caution;EKF,EMG
+SMC001;Sys Monitoring;Communication;gcs_cmd_queue_full;push échoué sur gcsCmds (pleine) - commande GCS perdue;Warning;;
+SMC002;Sys Monitoring;Communication;gcs_main_link_lost;plus de HEARTBEAT_GCS sur le lien principal (wfb-ng) depuis le seuil GCSRxTask;Critical;;
+SMC003;Sys Monitoring;Communication;gcs_sec_link_lost;plus de HEARTBEAT_GCS sur le lien secondaire (433MHz) depuis le seuil GCSRxTask;Critical;;
+SMO001;Sys Monitoring;Command;emergency_stop_requested;E-stop reçu du GCS (wfb-ng ou 433MHz) - signalé directement, sans passer par le FIFO gcsCmds (pas de latence de dépilement);Emergency;;

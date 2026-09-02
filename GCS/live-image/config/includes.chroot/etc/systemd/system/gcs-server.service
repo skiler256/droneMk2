@@ -1,0 +1,16 @@
+[Unit]
+Description=GCS Node.js server (dashboard + pont ESP32)
+After=network.target
+
+[Service]
+Type=simple
+User=gcs
+Group=gcs
+WorkingDirectory=/opt/gcs
+ExecStart=/usr/bin/node /opt/gcs/server.js
+Restart=always
+RestartSec=2
+Environment=GCS_ESP32_PORT=/dev/ttyUSB0
+
+[Install]
+WantedBy=multi-user.target

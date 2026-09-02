@@ -1,0 +1,18 @@
+#!/bin/sh
+# GCS/live-image/config/hooks/live/0100-gcs-user.hook.chroot
+# ─────────────────────────────────────────────────────────────────────────────
+# Utilisateur dedie pour le serveur Node et le kiosk (jamais root pour les
+# SERVICES gcs-server/gcs-kiosk -- ceux-la restent User=gcs sans sudo) :
+# - dialout : acces /dev/ttyUSB0 (ESP32, cf. serial-bridge.js)
+# - video/input : Xorg a besoin d'acceder a la carte graphique/aux peripheriques
+# - audio : acces ALSA/PulseAudio (sinon Chromium reste muet)
+# - sudo : uniquement pour le bring-up/debug console physique (systemctl,
+#   journalctl...) -- les services eux-memes ne l'utilisent jamais.
+set -e
+
+useradd -m -s /bin/bash -G dialout,video,input,audio,sudo gcs || true
+
+# Mot de passe temporaire pour le bring-up (acces console physique le temps
+# de debugger gcs-kiosk.service) -- a remplacer par une cle SSH une fois le
+# systeme stable, cf. README.md.
+echo 'gcs:Lego2409' | chpasswd

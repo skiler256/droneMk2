@@ -1,0 +1,49 @@
+#!/bin/sh
+# GCS/live-image/config/hooks/live/0300-rtl8812au-dkms.hook.chroot
+# ─────────────────────────────────────────────────────────────────────────────
+# Driver RTL8812AU pour l'adaptateur wfb-ng (mode monitor + injection --
+# PAS supporte par le driver in-tree du noyau Debian). Source recommandee
+# par le projet wfb-ng lui-meme : https://github.com/svpcom/rtl8812au,
+# branche v5.2.20 -- verifie le 2026-08-29 via la doc wfb-ng, revalider si
+# ce hook est reutilise bien plus tard (le fork/la version recommandee peut
+# changer).
+#
+# On n'utilise PAS le dkms-install.sh du depot : il pilote dkms via
+# `uname -r`, qui dans un chroot live-build renvoie le noyau de LA MACHINE
+# DE BUILD, pas celui installe dans le chroot -- le module serait construit
+# pour le mauvais noyau (ou echouerait, faute des bons headers). On boucle
+# nous-memes sur les noyaux reellement presents dans /lib/modules du chroot.
+set -e
+
+RTL_REPO_TAG=v5.2.20
+# Valeurs exactes lues dans dkms.conf du depot (NE PAS deviner si tu changes
+# de tag -- reverifie dkms.conf, PACKAGE_NAME/PACKAGE_VERSION peuvent differer).
+RTL_PKG_NAME=realtek-rtl88xxau
+RTL_PKG_VERSION="5.2.20.2~20190429"
+RTL_SRC_DIR="/usr/src/${RTL_PKG_NAME}-${RTL_PKG_VERSION}"
+
+git clone -b "${RTL_REPO_TAG}" https://github.com/svpcom/rtl8812au.git "${RTL_SRC_DIR}"
+
+dkms add "${RTL_PKG_NAME}/${RTL_PKG_VERSION}"
+
+if [ -z "$(ls -A /lib/modules 2>/dev/null)" ]; then
+  echo "erreur: /lib/modules vide dans le chroot -- linux-image-amd64 pas installe ?" >&2
+  exit 1
+fi
+
+for kdir in /lib/modules/*/; do
+  kver=$(basename "${kdir}")
+  echo "=== RTL8812AU DKMS : build pour le noyau ${kver} ==="
+  dkms build -m "${RTL_PKG_NAME}" -v "${RTL_PKG_VERSION}" -k "${kver}"
+  dkms install -m "${RTL_PKG_NAME}" -v "${RTL_PKG_VERSION}" -k "${kver}"
+done
+
+# Recommandation du projet (cf. leur dkms-install.sh) : IPv6 interfere avec
+# le mode monitor/multicast utilise par wfb-ng sur certaines cartes.
+# Applique explicitement ici plutot que d'heriter silencieusement de leur
+# script -- a retirer si ca pose souci ailleurs sur la machine.
+cat >> /etc/sysctl.conf <<'EOF'
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+EOF
