@@ -20,6 +20,36 @@ unitaires, puis intégration SITL.
   un simulateur que j'ai fourni. Je ne touche pas à son code sauf demande
   explicite.
 
+## RÈGLE DURE — matériel réel : demander avant d'exécuter
+
+S'applique dès qu'une session a un accès (SSH ou local) au Raspberry Pi du
+drone. Le Pi est relié au FC par UART et aux périphériques par SPI/I2C/UART :
+une commande n'y a pas seulement des effets logiciels, elle peut faire
+tourner des moteurs.
+
+**Demander l'accord explicite avant chaque exécution** de :
+
+- `build/drone` et tout binaire du logiciel de vol — démarrer le lien MAVLink
+  suffit à lancer la machine à états de `MissionControl` ;
+- les bancs `bench_gps` / `bench_lidar` / `bench_mag` et tout ce qui ouvre un
+  port série, SPI ou I2C vers un périphérique ;
+- toute commande MAVLink vers le FC, armement et changement de mode en
+  particulier ;
+- toute manipulation des liens radio (wfb-ng, CC1101) : une coupure de lien
+  déclenche les procédures d'urgence ;
+- tout ce qui touche aux paramètres du FC.
+
+Ne nécessitent pas de demande : lecture de fichiers, `git`, `cmake`, `ctest`,
+inspection système (`ss`, `systemctl status`, `dmesg`, `lsmod`), et
+l'édition de fichiers du dépôt.
+
+En cas de doute sur la catégorie, demander. Une question de trop coûte dix
+secondes ; une hélice qui part en coûte beaucoup plus.
+
+Indiquer aussi, avant une séance de travail sur le matériel, l'état attendu
+du drone (hélices démontées, batterie débranchée des ESC) plutôt que de le
+supposer.
+
 ## Philosophie d'ingénierie
 
 Standards inspirés NASA JPL / Airbus autopilot design patterns :

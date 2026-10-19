@@ -26,20 +26,38 @@ de bascule.
 Deux liens de télémétrie, dimensionnés en primaire/secours — désignés
 **PDL** (Primary Data Link) et **SDL** (Secondary Data Link) :
 
-- **Primaire — wfb-ng, 433MHz — PDL** (`WFB_NG_Driver`,
+- **Primaire — wfb-ng, 2,4 / 5 GHz — PDL** (`WFB_NG_Driver`,
   `include/drone/Components/SystemMonitoring/Driver/WFB_NG_Driver.hpp`) :
   wifi broadcast longue portée, porte la télémétrie complète + la vidéo.
-  **Squelette d'interface seulement — pas encore implémenté** (pas de
-  `.cpp`, câblage hardware SPI/socket RF pas encore fait).
+  Driver écrit : il hérite du transport UDP, wfb-ng étant lui-même un
+  transport UDP, et ajoute la lecture des statistiques du lien
+  (cf. `SYSMONITORING.md` §15). Reste à installer et configurer wfb-ng de
+  part et d'autre.
+
+  *(Correction : ce lien a longtemps été décrit ici comme étant en
+  433 MHz. C'est faux — le RTL8812AU est une puce 802.11a/b/g/n/ac, qui
+  n'émet qu'en 2,4 et 5 GHz ; 42 canaux relevés sur le matériel réel. Le
+  433 MHz est la bande du CC1101, c'est-à-dire du lien de secours. Canal
+  exact du PDL encore à arrêter.)*
 - **Secondaire — CC1101, sub-GHz SPI — SDL** (`CC1101_Driver.hpp`) :
   liaison de secours bas débit, ne porte que le sous-ensemble léger de
   `TELEMETRY.csv` (`Links=BOTH`). **Pas encore implémenté** non plus —
   script de banc `tools/hw_debug/CC1101_test.py` (SPI bus 0/CE0, 500kHz,
   mode 0) confirme l'interface mais pas de driver de prod.
-- **Côté GCS** : adaptateur WiFi RTL8812AU dédié (DKMS
-  `svpcom/rtl8812au` v5.2.20) prévu pour recevoir wfb-ng, séparé du WiFi
-  générique de la malette (cf. `GCS/README.md` §5.2) — matériel présent
-  mais pas encore le chemin logiciel principal actif.
+- **Adaptateurs RTL8812AU : un à chaque bout.** wfb-ng exige une puce
+  capable de mode monitor et d'injection des deux côtés de la liaison. Un
+  adaptateur est branché sur le Pi, un autre sur la malette — ce document
+  ne mentionnait auparavant que celui de la station sol.
+
+  Sur la malette, le pilote `svpcom/rtl8812au` est **compilé et chargé**
+  (DKMS, module `88XXau_wfb`, noyau 6.12.107) : l'interface apparaît et
+  annonce le mode monitor. Sur le Pi, il reste à compiler — l'arbre du
+  noyau PREEMPT_RT ayant été supprimé, un noyau doit d'abord être
+  reconstruit.
+
+  Dans les deux cas l'adaptateur wfb-ng est distinct du wifi interne, qui
+  porte l'accès réseau d'administration : une bascule en mode monitor ne
+  coupe donc pas l'accès à la machine.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/radio-antennes-dark.svg">

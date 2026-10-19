@@ -39,3 +39,6 @@ GCS/live-image/config/includes.chroot/opt/gcs/
 
 # Headers générés par tools/gen_*.py au build (cf. ARCHITECTURE_IPC.md)
 include/drone/generated/
+
+# Reglages Claude Code personnels (permissions, hotes SSH) -- jamais commites
+.claude/settings.local.json

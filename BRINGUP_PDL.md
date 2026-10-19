@@ -198,3 +198,102 @@ Repris de `CLAUDE.md`, parce qu'ils comptent particulièrement ici :
 - Diffs petits et relisibles, une pause entre chaque morceau.
 - Commentaires courts : une à deux lignes, le raisonnement va dans le `.md`.
 - Documentation au registre impersonnel, sans « tu » ni « on ».
+
+---
+
+## 10. Journal de bring-up — 19 octobre 2026
+
+Première session de mise en service des liaisons. Les acquis sont réels, le
+lien n'est pas encore opérationnel. Ce qui suit évite de refaire le chemin.
+
+### Acquis
+
+**Noyau du Pi reconstruit en 6.12.113 PREEMPT_RT.** L'arbre du noyau RT
+précédent (6.6.78-rt52) avait été supprimé, rendant toute compilation de
+module impossible. Depuis Linux 6.12, `PREEMPT_RT` est dans mainline :
+aucun correctif externe n'est nécessaire, c'est une simple option de
+configuration. L'arbre est conservé sur la machine de développement, où la
+place ne manque pas — le Pi n'a que 3,4 Go libres, ce qui interdit d'y
+garder un arbre de compilation.
+
+`CONFIG_IKCONFIG_PROC` est désormais activé : `/proc/config.gz` existe, la
+configuration du noyau ne peut plus être perdue.
+
+Tous les périphériques sont opérationnels sur ce noyau, le logiciel de vol
+compile sans erreur, et la suite passe à 12/12 avec **18/18 tests temps
+réel exécutés, aucun ignoré**.
+
+### Bug du pilote RTL8812AU — corrigé
+
+`os_dep/linux/ioctl_cfg80211.c`, fonction
+`cfg80211_rtw_set_monitor_channel` : la garde de version déclare le
+paramètre `struct net_device *dev` à partir de 6.13, alors que le noyau
+l'a introduit en **6.12**. Sur tout noyau 6.12, le pilote lit `dev` comme
+s'il s'agissait de `chandef`, déréférence un pointeur aberrant et provoque
+un *Oops* qui laisse le verrou `RTNL` pris — la machine répond encore au
+ping mais plus aux connexions SSH.
+
+Correctif : remplacer `KERNEL_VERSION(6, 13, 0)` par
+`KERNEL_VERSION(6, 12, 0)`. **À remonter au dépôt amont**, tout noyau 6.12
+est concerné.
+
+### Puissance d'émission — paramètre indispensable
+
+Le module expose `rtw_tx_pwr_idx_override` (0–63). **Sa valeur par défaut
+de 0 laisse l'étage radio muet** : la couche logicielle compte les paquets
+émis, le matériel ne transmet rien. Symptôme trompeur — les compteurs
+`TX_ANT` de `wfb_tx` montent normalement.
+
+```
+modprobe 88XXau_wfb rtw_tx_pwr_idx_override=30
+```
+
+Avec ce paramètre, les trames ont été capturées côté station sol à
+-36 dBm, signature `57:42:75` (« WBu ») et `link_id` encodé dans l'adresse
+MAC. **L'émission radio est donc prouvée.**
+
+Attention : `iw` affiche alors `txpower -30 dBm`, et `-63 dBm` si l'indice
+vaut 63. Ce n'est pas une mesure de puissance mais l'indice brut recopié
+dans le champ. Ne pas en tirer de conclusion.
+
+### Point bloquant restant
+
+La liaison est **intermittente**. La même configuration capture les trames
+à un essai et rien au suivant, et le récepteur de la station sol a fini par
+ne plus capturer même le trafic ambiant après un rechargement du module.
+`wfb_rx` n'a jamais pu établir de session, ce qui est cohérent : sans flux
+continu, l'échange de clés de session n'aboutit pas.
+
+Deux causes possibles, non départagées :
+
+- **dégradation du pilote après un temps en mode monitor** — la seule
+  liaison réussie a eu lieu immédiatement après un rechargement des deux
+  modules ;
+- **canal non appliqué** : un rechargement détaché a laissé le Pi sur le
+  canal 116 en 5 GHz alors que la commande demandait le canal 11. Toujours
+  vérifier le canal des deux côtés **juste avant** le test, jamais le
+  supposer.
+
+### Pistes non explorées
+
+- `-M 0` : indice MCS d'injection, le défaut `-M 1` peut être refusé.
+- `-f rts` : type de trame, prévu par wfb-ng pour les puces récalcitrantes.
+- Rendre le paramètre persistant via `/etc/modprobe.d/` plutôt que de le
+  passer à la main à chaque chargement.
+
+### Méthode
+
+Deux pièges rencontrés, à ne pas refaire :
+
+- **`shutdown -r +N` est un mauvais filet de sécurité** : il crée
+  `/run/nologin` et interdit toute connexion non-root pendant le décompte.
+  Utiliser `systemd-run --on-active=N systemctl reboot`, qui ne bloque
+  rien et s'annule proprement.
+- **Un module installé en deux exemplaires** (`.ko` et `.ko.xz`) fait
+  charger le mauvais : le noyau préfère la version compressée. Supprimer
+  l'ancienne avant `depmod`.
+
+Le journal persistant (`Storage=persistent` dans
+`/etc/systemd/journald.conf.d/`) a été activé sur les deux machines. C'est
+lui qui a permis de lire la trace de l'*Oops* et d'identifier la fonction
+fautive ; sans lui, le diagnostic serait resté une conjecture.
