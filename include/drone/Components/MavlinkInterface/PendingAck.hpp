@@ -5,9 +5,8 @@
 #include <cstddef>
 #include <mavlink.h>
 
-// État de la commande ACK'd actuellement en vol côté TTxACK — une seule à
-// la fois (cf. ackQueue_ pour la file d'attente). Garde la trame déjà
-// packée pour la retransmettre telle quelle sur retry.
+// Commande ACK'd en vol côté TTxACK, une seule à la fois. Garde la trame
+// packée pour la retransmettre telle quelle sur retry — cf. §6 du .md.
 enum class PendingKind : uint8_t { None, Command, Param };
 
 struct PendingAck {
@@ -22,8 +21,7 @@ struct PendingAck {
   std::array<std::byte, 64> frame{}; // plus gros message ACK'd (CMD_LONG) < 64 octets
   size_t frameLen{0};
 
-  // Corrélation vers SharedCmdMem::CommandReport — vrai seulement pour un
-  // ordre MissionControl (via TCmd), pas pour une commande interne.
+  // Vrai seulement pour un ordre MissionControl, pas une commande interne.
   bool fromMissionControl{false};
   uint32_t cmdSeq{0};
   CODES::Code cmdCode{};

@@ -23,15 +23,16 @@ de bascule.
 
 ## 2. Radio / communication
 
-Deux liens de télémétrie, dimensionnés en primaire/secours :
+Deux liens de télémétrie, dimensionnés en primaire/secours — désignés
+**PDL** (Primary Data Link) et **SDL** (Secondary Data Link) :
 
-- **Primaire — wfb-ng, 433MHz** (`WFB_NG_Driver`,
+- **Primaire — wfb-ng, 433MHz — PDL** (`WFB_NG_Driver`,
   `include/drone/Components/SystemMonitoring/Driver/WFB_NG_Driver.hpp`) :
   wifi broadcast longue portée, porte la télémétrie complète + la vidéo.
   **Squelette d'interface seulement — pas encore implémenté** (pas de
   `.cpp`, câblage hardware SPI/socket RF pas encore fait).
-- **Secondaire — CC1101, sub-GHz SPI** (`CC1101_Driver.hpp`) : liaison de
-  secours bas débit, ne porte que le sous-ensemble léger de
+- **Secondaire — CC1101, sub-GHz SPI — SDL** (`CC1101_Driver.hpp`) :
+  liaison de secours bas débit, ne porte que le sous-ensemble léger de
   `TELEMETRY.csv` (`Links=BOTH`). **Pas encore implémenté** non plus —
   script de banc `tools/hw_debug/CC1101_test.py` (SPI bus 0/CE0, 500kHz,
   mode 0) confirme l'interface mais pas de driver de prod.
@@ -49,15 +50,20 @@ Deux liens de télémétrie, dimensionnés en primaire/secours :
 
 ## 3. LIDAR
 
-Deux capteurs de portée, rôles différents :
+Deux capteurs de portée, rôles différents — désignés **OCAS** (évitement
+horizontal) et **LADALT** (sonde verticale), à la manière des systèmes
+TCAS/RADALT en aviation habitée (LADALT plutôt que RADALT : le TF Luna
+est un lidar temps-de-vol, pas un radar électromagnétique) :
 
-- **LD06** (360°, évitement d'obstacle horizontal) — `src/Drivers/LD06.cpp`,
+- **LD06 — OCAS** (Obstacle Collision Avoidance System, 360°, évitement
+  d'obstacle horizontal) — `src/Drivers/LD06.cpp`,
   UART `/dev/ttyAMA2` par défaut, 230400 bauds, protocole LDROBOT LD06/LD19
   (paquets 47 octets, CRC8 poly `0x4D`, 12 points/paquet). **Monté sous le
   nez, devant la batterie**, champ ~200° (non mesuré précisément — cf.
   `NAVIGATION.md` §6, angle mort à l'arrière, la détection d'obstacle
   suppose que le nez pointe à peu près dans le sens de déplacement).
-- **TF Luna** (portée verticale unique, rangefinder) — câblé sur le **FC**,
+- **TF Luna — LADALT** (Laser Altimeter, portée verticale unique,
+  rangefinder) — câblé sur le **FC**,
   pas sur le Pi (`DISTANCE_SENSOR` MAVLink, orientation `RNGFND1_ORIENT=25`
   = vers le bas, portée 0.2–8m). Pas de driver C++ Pi puisqu'il ne parle
   jamais directement au Pi.

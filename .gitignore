@@ -36,3 +36,6 @@ GCS/live-image/wget-log*
 # Copie rsync de l'app GCS (cf. README §1) -- source déjà suivie sous GCS/,
 # régénérée à chaque build, jamais éditée directement ici.
 GCS/live-image/config/includes.chroot/opt/gcs/
+
+# Headers générés par tools/gen_*.py au build (cf. ARCHITECTURE_IPC.md)
+include/drone/generated/

@@ -4,16 +4,9 @@
 
 namespace TYPES {
 
-// Horloge simulée — satisfait TrivialClock, interchangeable avec
-// std::chrono::steady_clock via TYPES::Clock (types.hpp, option CMake
-// DRONE_USE_SIM_CLOCK). Résolue à la compilation, pas de dispatch virtuel
-// (contrainte JPL -fno-rtti) -- cf. sitl/SITL.md §11.
-//
-// Pour l'instant : relais vers steady_clock::now(), décalable via
-// setOffset(). Pilotage explicite du temps pour le rejeu accéléré pas
-// encore construit (cf. sitl/SITL.md §10) -- ce point d'extension est posé
-// maintenant plutôt qu'après, pendant que le rétrofit ne touche que les 5
-// composants existants.
+// TrivialClock interchangeable avec steady_clock — cf. sitl/SITL.md §10-11.
+// Relais vers steady_clock::now() décalable ; le rejeu accéléré n'est pas
+// encore construit, seul le point d'extension est posé.
 struct SimClock {
   using rep = std::chrono::steady_clock::rep;
   using period = std::chrono::steady_clock::period;
@@ -26,9 +19,7 @@ struct SimClock {
     return time_point(real + offset_.load(std::memory_order_relaxed));
   }
 
-  // Décale le temps observé par TOUT le process (tous les composants d'un
-  // même binaire partagent ce décalage, pas de coordination inter-process
-  // ici) — no-op tant qu'aucun outil de rejeu ne l'appelle.
+  // Décale TOUT le process, aucune coordination inter-process.
   static void setOffset(duration offset) noexcept {
     offset_.store(offset, std::memory_order_relaxed);
   }

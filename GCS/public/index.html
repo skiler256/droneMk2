@@ -72,29 +72,140 @@
       </div>
     </section>
 
-    <!-- Batterie -->
-    <section class="panel" data-bind="panelBattery">
-      <header class="panel__head">
-        <div class="t-title">Battery</div>
-        <div class="t-badge" data-bind="battRemaining">-- MIN LEFT</div>
-      </header>
-      <div class="batt__row">
-        <div class="batt__shell">
-          <div class="batt__case"><div class="batt__fill" data-bind="battFill"></div></div>
-          <div class="batt__nub"></div>
-        </div>
-        <div class="t-num-xl" data-bind="battPctWrap"><span data-bind="battPct">--</span><span class="batt__pct-unit">%</span></div>
-        <div class="batt__cells" data-list="cellBars"></div>
+    <!-- Schema drone + autonomie -->
+<!-- Bloc « Schéma drone » — remplace les panneaux Batterie (col. gauche) et CPU Temp (col. droite).
+     Styles : scheme-block.css. Contrat : SCHEMA_BINDINGS.md.
+     État initial de toutes les formes : is-nodata (aucune donnée reçue = inconnu, jamais « bon »). -->
+<section class="panel scheme">
+  <header class="panel__head">
+    <div class="t-title">Drone · état HW</div>
+    <div class="t-badge scheme__badge is-nodata" data-bind="scheme_badge">SANS DONNÉE</div>
+  </header>
+
+  <div class="scheme__stage">
+    <svg class="scheme__svg" viewBox="0 0 380 176" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Schéma du drone, vue de côté, avant à gauche">
+      <defs>
+        <pattern id="scheme-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line class="scheme__hatch" x1="0" y1="0" x2="0" y2="4"></line>
+        </pattern>
+      </defs>
+
+      <g class="scheme__body">
+        <path d="M4 86 Q38 82.5 72 86 Q38 89.5 4 86 Z"></path>
+        <path d="M302 86 Q336 82.5 370 86 Q336 89.5 302 86 Z"></path>
+        <line x1="38" y1="86" x2="38" y2="92"></line>
+        <line x1="336" y1="86" x2="336" y2="92"></line>
+        <rect x="18" y="112" width="340" height="6" rx="1"></rect>
+        <path d="M58 106 L58 68 Q62 58 80 54 Q150 34 230 28 Q266 24 284 36 Q304 52 308 80 Q310 98 304 106 Z"></path>
+        <line x1="124" y1="118" x2="124" y2="124"></line>
+        <line x1="83" y1="118" x2="83" y2="121"></line>
+        <line x1="252" y1="118" x2="252" y2="124"></line>
+        <path d="M132 158 L122 172 M110 172 H134"></path>
+        <path d="M244 158 L254 172 M242 172 H266"></path>
+      </g>
+
+      <!-- Batterie : sous le ventre, centrée. Jauge = --fill (0–1) posée sur le groupe. -->
+      <g class="scheme__part scheme__part--batt is-nodata" data-bind="batt">
+        <rect class="scheme__shape" x="108" y="124" width="160" height="34" rx="3"></rect>
+        <rect class="scheme__batt-fill" x="111" y="127" width="154" height="28" rx="1.5"></rect>
+        <path class="scheme__tick" d="M126.4 127v3M141.8 127v3M157.2 127v3M172.6 127v3M188 127v5M203.4 127v3M218.8 127v3M234.2 127v3M249.6 127v3M126.4 155v-3M141.8 155v-3M157.2 155v-3M172.6 155v-3M188 155v-5M203.4 155v-3M218.8 155v-3M234.2 155v-3M249.6 155v-3"></path>
+        <text class="scheme__tag" x="188" y="145" text-anchor="middle">BATT</text>
+      </g>
+
+      <!-- LIDAR rotatif : sous le nez, devant la batterie. -->
+      <g class="scheme__part is-nodata" data-bind="lidar">
+        <rect class="scheme__shape" x="64" y="121" width="38" height="34" rx="2"></rect>
+        <text class="scheme__tag" x="83" y="142" text-anchor="middle">LIDAR</text>
+      </g>
+
+      <!-- Moteurs : 1 forme = 2 moteurs. Regroupement AV/AR laissé au câblage. -->
+      <g class="scheme__part scheme__part--motor is-nodata" data-bind="motor_front">
+        <rect class="scheme__shape" x="20" y="92" width="36" height="20" rx="2"></rect>
+        <text class="scheme__val scheme__val--in" x="38" y="105.5" text-anchor="middle" data-bind="motor_front_dev">--</text>
+      </g>
+      <g class="scheme__part scheme__part--motor is-nodata" data-bind="motor_rear">
+        <rect class="scheme__shape" x="318" y="92" width="36" height="20" rx="2"></rect>
+        <text class="scheme__val scheme__val--in" x="336" y="105.5" text-anchor="middle" data-bind="motor_rear_dev">--</text>
+      </g>
+
+      <g class="scheme__part is-nodata" data-bind="cpu">
+        <rect class="scheme__shape" x="104" y="80" width="86" height="24" rx="1.5"></rect>
+        <text class="scheme__tag" x="110" y="96">CPU</text>
+        <text class="scheme__val scheme__val--in" x="184" y="96" text-anchor="end" data-bind="cpu_temp">--</text>
+      </g>
+
+      <g class="scheme__part is-nodata" data-bind="fc">
+        <rect class="scheme__shape" x="196" y="80" width="42" height="24" rx="1.5"></rect>
+        <text class="scheme__tag" x="217" y="96" text-anchor="middle">FC</text>
+      </g>
+
+      <!-- ESC : forme globale + 4 témoins (un par ESC, température). -->
+      <g class="scheme__part is-nodata" data-bind="esc">
+        <rect class="scheme__shape" x="244" y="80" width="56" height="24" rx="1.5"></rect>
+        <text class="scheme__tag" x="249" y="96">ESC</text>
+      </g>
+      <rect class="scheme__pip is-nodata" data-bind="esc_1" x="272" y="86" width="5" height="12"></rect>
+      <rect class="scheme__pip is-nodata" data-bind="esc_2" x="278.5" y="86" width="5" height="12"></rect>
+      <rect class="scheme__pip is-nodata" data-bind="esc_3" x="285" y="86" width="5" height="12"></rect>
+      <rect class="scheme__pip is-nodata" data-bind="esc_4" x="291.5" y="86" width="5" height="12"></rect>
+
+      <g class="scheme__part is-nodata" data-bind="mag">
+        <rect class="scheme__shape" x="170" y="44" width="42" height="18" rx="1.5"></rect>
+        <text class="scheme__tag" x="191" y="57" text-anchor="middle">MAG</text>
+      </g>
+
+      <g class="scheme__part is-nodata" data-bind="gps">
+        <rect class="scheme__shape" x="224" y="38" width="44" height="18" rx="5"></rect>
+        <text class="scheme__tag" x="246" y="51" text-anchor="middle">GPS</text>
+      </g>
+
+      <g class="scheme__part scheme__part--ant is-nodata" data-bind="ant_main">
+        <line class="scheme__shape" x1="150" y1="39" x2="192" y2="5"></line>
+      </g>
+      <text class="scheme__lbl" x="198" y="10">ANT PRI</text>
+
+      <g class="scheme__part scheme__part--ant is-nodata" data-bind="ant_backup">
+        <line class="scheme__shape" x1="102" y1="48" x2="114" y2="24"></line>
+      </g>
+      <text class="scheme__lbl" x="108" y="19" text-anchor="end">ANT SEC</text>
+    </svg>
+  </div>
+
+  <div class="scheme__legend">
+    <span class="scheme__key is-ok"><i></i>NOMINAL</span>
+    <span class="scheme__key is-warn"><i></i>ATTENTION</span>
+    <span class="scheme__key is-crit"><i></i>DÉFAUT</span>
+    <span class="scheme__key is-nodata"><i></i>SANS DONNÉE</span>
+  </div>
+</section>
+
+<!-- Autonomie : la donnée la plus importante de l'écran, donc un encadré
+     chiffré propre et pas seulement la jauge du schéma. -->
+<section class="panel endur">
+  <div class="endur__top">
+    <div class="endur__charge">
+      <div class="t-label-s">Charge</div>
+      <div class="endur__pct"><span data-bind="endurPct">--</span><span class="endur__unit">%</span></div>
+    </div>
+    <div class="endur__est">
+      <div class="t-label-s endur__esthead">≈ Estimations</div>
+      <div class="endur__row">
+        <div class="t-label">Autonomie</div>
+        <div class="endur__val"><span data-bind="endurTime">--</span><span class="endur__unit">min</span></div>
       </div>
-      <div class="batt__grid">
-        <div><div class="t-label">Voltage</div><div class="t-num-sm" data-bind="battVoltage">-- V</div></div>
-        <div><div class="t-label">Current</div><div class="t-num-sm" data-bind="battCurrent">-- A</div></div>
-        <div><div class="t-label">Consumed</div><div class="t-num-sm" data-bind="battUsed">-- mAh</div></div>
-        <div><div class="t-label">RTL Need</div><div class="t-num-sm" data-bind="rtlNeed">-- %</div></div>
-        <div><div class="t-label">Cycles</div><div class="t-num-sm" data-bind="battCycles">--</div></div>
-        <div><div class="t-label">Temp</div><div class="t-num-sm" data-bind="battTemp">-- °C</div></div>
+      <div class="endur__row">
+        <div class="t-label">Distance</div>
+        <div class="endur__val"><span data-bind="endurDist">--</span><span class="endur__unit">km</span></div>
       </div>
-    </section>
+    </div>
+  </div>
+  <div class="endur__foot">
+    <span class="t-label">Pack 6S</span>
+    <span class="endur__raw" data-bind="endurVolt">-- V</span>
+    <span class="endur__raw" data-bind="endurAmp">-- A</span>
+  </div>
+</section>
+
 
     <!-- Actions -->
     <section class="panel panel--grow">
@@ -235,22 +346,6 @@
   <!-- ══════════════ COLONNE DROITE ══════════════ -->
   <div class="col col--right">
 
-    <!-- Thermique -->
-    <section class="panel" data-bind="panelSys">
-      <div class="therm">
-        <div>
-          <div class="t-label-s">CPU Temp</div>
-          <div class="t-num-lg" data-bind="cpuTemp">--°C</div>
-        </div>
-        <div class="therm__gauge-wrap">
-          <div class="therm__gauge"><div class="therm__cursor" data-bind="cpuCursor"></div></div>
-          <div class="therm__scale">
-            <span>30</span><span data-bind="thermLimit">THERMAL LIMIT 85 °C</span><span>90</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Journal -->
     <section class="panel panel--grow">
       <header class="panel__head">
@@ -267,6 +362,20 @@
 </div>
 </div>
 
+<!-- Deblocage audio au demarrage. Le navigateur refuse toute lecture avant
+     une interaction utilisateur : ce clic est cette interaction. -->
+<div class="audiogate" data-bind="audioGate">
+  <div class="audiogate__card">
+    <div class="audiogate__title">Alarmes sonores</div>
+    <p class="audiogate__text">
+      Le navigateur bloque le son jusqu'a une interaction. Sans activation,
+      les alarmes resteront <strong>visuelles uniquement</strong>.
+    </p>
+    <button type="button" class="audiogate__btn" data-bind="audioGateBtn">ACTIVER LE SON</button>
+    <button type="button" class="audiogate__skip" data-bind="audioGateSkip">continuer sans son</button>
+  </div>
+</div>
+
 <!-- three.js : dependance du viewport 3D uniquement.
      En vol reel (pas d'internet), vendorise ce fichier en local. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.150.1/three.min.js"></script>
@@ -276,7 +385,6 @@
 <script src="./js/dom.js"></script>
 <script src="./js/render.js"></script>
 <script src="./js/alarm.js"></script>
-<script src="./js/volume.js"></script>
 <script src="./js/link.js"></script>
 <script src="./js/sim.js"></script>
 <script src="./js/main.js"></script>

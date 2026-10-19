@@ -192,6 +192,9 @@ détecter sur lui-même).
 
 ### Obstacle — boîte, pas cône, alignée sur la trajectoire réelle
 
+Ce check consomme le LIDAR **OCAS** (LD06, cf. `HARDWARE.md` §3) — c'est
+la fonction d'évitement horizontal, l'équivalent embarqué d'un TCAS.
+
 **Contrainte matérielle** : le LIDAR est monté sous le nez, devant la
 batterie, champ ~200° (non mesuré précisément) — angle mort à l'arrière.
 Pour que la détection reste dans ce champ, `TFS` calcule sa propre
@@ -202,6 +205,21 @@ la cible (il faut toujours une direction à observer). Ce choix suppose
 que le nez pointe à peu près où le drone va (marge ±50° avec le champ
 LIDAR ~200°) — cohérent avec la loi de correction latérale, qui commande
 justement un cap = direction de déplacement.
+
+**`travelDirection()` n'utilise que la vitesse HORIZONTALE**, jamais
+`state.velNed.norm()` (la norme 3D). Bug réel constaté en SITL avant
+correction : en montée quasi verticale, la norme 3D est dominée par `vz`,
+donc `speed` franchit le seuil alors que `vx`/`vy` sont quasi nuls. Le
+vecteur retourné `(vx/speed, vy/speed, 0)` n'est alors plus unitaire — sa
+norme tend vers 0. Or `obstacleInBox()` **suppose `forward` unitaire** pour
+projeter les points LIDAR : avec un vecteur écrasé, un obstacle réel à
+plusieurs mètres se projette à quelques centimètres et tombe faussement dans
+la boîte de sécurité. Symptôme observé : `NVA004` (`hold_obstacle`) se
+déclenchait en pleine montée, sans aucun obstacle à proximité.
+
+Toute modification de `travelDirection()` doit donc préserver deux
+invariants : composante verticale exclue du calcul de `speed`, et vecteur de
+sortie unitaire.
 
 Zone de détection : **carré** 2×2m devant le drone (`kObstacleBoxForwardM`,
 `kObstacleBoxLateralM`), pas un cône — projection de chaque point LIDAR
@@ -278,7 +296,7 @@ test au total.
   `speedEngaged` affiche toujours `NVA010` (Proportional).
 - **Reprise après panne** (MC → Nav, après un hold) : rôle de MC réduit
   à l'amorçage initial + une future reprise, cette dernière différée
-  ("on verra ça avec MissionControl").
+  (reportée au chantier MissionControl).
 - **`verticalArmed`** : jamais écrit (§7) — pas de notion de mode
   vertical futur en attente tant qu'il n'y a qu'une loi immédiate.
 - **`HomeCalibrator`** côté SF toujours à `{0,0,0}` (cf. `SENSORFUSION.md`

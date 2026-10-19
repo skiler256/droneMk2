@@ -1,13 +1,7 @@
-// Binaire de dev : fait tourner MavlinkInterface seule face à ArduPilot
-// SITL, sans GlobalWatchdog. Publie ses propres segments shm (dédiés SITL,
-// cf. drone/IntegrationTests/ShmPaths.hpp) — c'est lui le propriétaire ici, contrairement
-// à runMavlinkInterface() de main.cpp qui s'attache à des segments publiés
-// par GlobalWatchdog.
-//
-// Usage : ./mv_sitl
-// Prérequis : SITL doit pousser son flux vers ce Pi, cf. MAVLINKINTERFACE.md
-// et la doc de session — sim_vehicle.py ... --out=udp:<IP_PI>:14550, ou
-// "output add <IP_PI>:14550" dans la console MAVProxy.
+// Test : MavlinkInterface seule face à ArduPilot SITL, sans GlobalWatchdog.
+// Propriétaire de ses propres segments shm, contrairement à
+// runMavlinkInterface() de main.cpp qui s'y attache — cf. ShmPaths.hpp.
+// Usage : ./mv_sitl (SITL doit pousser vers ce Pi, cf. sitl/SITL.md §1)
 
 #include "drone/Components/MavlinkInterface/Driver/UdpMavlinkLink.hpp"
 #include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"

@@ -75,7 +75,10 @@ rôle : il construit un `ComponentBase<N>` dérivé, qui possède ses `Task` et
 son `ComponentWatchdog` local.
 
 Trois niveaux de supervision, chacun avec une responsabilité précise et
-**aucun recouvrement** :
+**aucun recouvrement** — l'ensemble joue le rôle d'un **CBIT** (Continuous
+Built-In Test), le terme avionique pour une auto-surveillance qui tourne en
+continu pendant le vol plutôt qu'au sol avant démarrage (par opposition à
+un PBIT/Power-on BIT) :
 
 | Niveau | Surveille | Détecte | Action |
 |---|---|---|---|
@@ -111,6 +114,28 @@ l'accès. Deux familles de segments concrets :
   composants y écrivent, un slot par `ComponentID` (santé + codes de
   diagnostic — voir §5).
 
+**Contrainte sur les payloads : POD uniquement.** Un segment est partagé
+entre process via `mmap`, donc le payload traverse la frontière par copie
+mémoire brute et doit être hashé par `crc32<T>()` — deux opérations qui
+exigent `trivially_copyable` et `standard_layout`. **Eigen ne garantit ni
+l'un ni l'autre** (alignement/vectorisation, et `Eigen::Quaternionf` est
+même non-initialisé par défaut), d'où l'interdiction d'un type Eigen dans
+un payload. Les types de `types.hpp` (`Vec3`, `Quat`) sont donc des floats
+bruts, et exposent `asEigen()` qui rend une vue `Eigen::Map` *à la demande*
+pour le calcul — sans jamais stocker le type Eigen lui-même, ce qui laisse
+la struct POD.
+
+**`RingBuffer<T, N>` : refuse plutôt qu'écrase.** Les files en shm
+(`SharedMemory.hpp`) sont des POD sans mutex propre, manipulées uniquement
+par `pushFifo()`/`popFifo()` sous le verrou CAS. Quand la file est pleine,
+`pushFifo()` **échoue et retourne `false`** au lieu d'écraser le plus ancien
+élément : sur un canal qui porte des ordres (un `PendingCommand` de
+`MissionControl`, par exemple), perdre un élément silencieusement est pire
+qu'un refus explicite que l'appelant peut constater et remonter. C'est le
+même principe que « erreurs typées, jamais silencieuses » appliqué à l'IPC.
+À noter que le ring des codes **mineurs** suit la règle inverse (écrasement
+FIFO assumé, voir §5) — c'est un journal, pas un canal d'ordres.
+
 ### 2.2 Le verrou : un seul atomic, pas un mutex
 
 Pas de `std::mutex` (ne fonctionne pas entre process), pas de futex custom.
@@ -143,7 +168,7 @@ Distinction qui revient partout dans le code, à bien comprendre :
 
 - **`id` passé à `getData`/`setData`/`lockedAccess`** = l'identité **réelle
   de l'appelant**, utilisée uniquement comme jeton de verrouillage.
-- **Le "sujet"** (quel composant on lit/modifie) peut être complètement
+- **Le "sujet"** (le composant lu/modifié) peut être complètement
   différent — ex. `getHealth(ComponentID sujet)` : n'importe quel composant
   peut consulter la santé d'un autre.
 
@@ -175,6 +200,31 @@ override donc `checksumValid`/`updateChecksum` pour maintenir un tableau
 `state_.checksums[id]` — un checksum **par composant**, indépendant. Un
 writer ne peut jamais revalider que son propre slot.
 
+**Choix du CRC32 : CRC-32C (Castagnoli), pas le CRC-32 classique.** Polynôme
+`0x1EDC6F41` (réfléchi `0x82F63B78`) — celui qu'implémente nativement
+l'extension CRC32 d'ARMv8. Conséquences :
+
+- Sur la cible (Pi 5, Cortex-A76) : instruction machine dédiée
+  (`__crc32d`/`__crc32b`), quasi gratuite en cycles.
+- En dev x86_64 : repli logiciel par table de lookup, portable, ~1 cycle/octet.
+  Le choix est fait **à la compilation**, sans branche à l'exécution.
+- Les deux chemins produisent le **même** résultat, ce qui permet de comparer
+  un checksum calculé en dev à un checksum calculé sur cible (logs, tests
+  golden).
+
+À réserver à l'intégrité d'un payload shm : un CRC32 **ne résiste pas** à une
+falsification volontaire, ce n'est pas une primitive cryptographique.
+
+**`repairOnCorrupt` : qui a le droit de réparer.** `lockedAccess()` prend un
+flag qui décide si une corruption détectée déclenche `reset(id)` ou non. Il
+est à `true` uniquement pour les accès qui sont déjà un read-modify-write
+dans le cadre d'une **écriture** (`setData`, `pushFifo`, `popFifo`,
+`setArrayElement`) et à `false` pour une **lecture pure** (`getData`). La
+raison : une lecture qui réparerait le segment effacerait la preuve de la
+corruption avant que quiconque l'ait constatée, et ferait d'un lecteur
+passif un mutateur silencieux. Un lecteur remonte donc `shmError::corrupt`
+et laisse le prochain writer réparer.
+
 ### 2.5 Récupération sur crash
 
 `GlobalWatchdog::monitorLoop()` bloque sur `waitpid(-1, ..., 0)` — pas de
@@ -196,6 +246,25 @@ void resetWriterFlag(ComponentID id) {
 CAS conditionnel : ne libère que si `id` détenait *vraiment* le verrou. Si
 un autre writer (vivant) le détient au même instant, le CAS échoue et ne
 touche rien — impossible de voler le verrou d'un composant qui tourne.
+
+**Pourquoi `keepRunning_` est un `static`.** Le drapeau d'arrêt de
+`monitorLoop()` est un `static inline std::atomic<bool>`, ce qui ressemble à un
+défaut mais découle de l'API POSIX : un handler de signal a la signature
+`void(int)` et ne reçoit aucun `this`. Le drapeau qu'il touche doit donc être
+atteignable statiquement, et un `std::atomic<bool>` lock-free est l'une des
+rares écritures autorisées depuis un handler.
+
+Il sert à deux choses : sortir de la boucle (le signal interrompt `waitpid()`
+avec `EINTR`, la boucle revérifie le drapeau et part vers `shutdown()`), et
+distinguer un enfant mort *parce qu'on s'arrête* — qu'on ne respawne pas — d'un
+enfant qui a crashé.
+
+Conséquence acceptée : une seconde instance de `GlobalWatchdog` dans le même
+process verrait le drapeau déjà à `false` et sa boucle ne tournerait jamais.
+Invisible en production (une instance pour toute la vie du process), et le
+contourner demanderait un `static GlobalWatchdog*` — on déplacerait le `static`
+sans le supprimer. Décision : laisser en l'état. `tests/test_global_watchdog.cpp`
+forke chaque scénario pour obtenir un drapeau frais.
 
 ## 3. Task : la boucle temps réel
 
@@ -219,7 +288,7 @@ Points structurels :
 - `RTpriority` doit être **≥ 1** — `SCHED_FIFO` avec priorité 0 est
   rejeté par le kernel (`EINVAL`), et `pthread_create` échoue
   *silencieusement* (pas d'exception, `-fno-exceptions`) : la Task ne
-  tourne juste jamais, sans erreur visible si on ne vérifie pas le retour.
+  tourne juste jamais, sans erreur visible si le retour n'est pas vérifié.
 - `start()`/`stop()` sont idempotents (`threadValid_` gardé en interne) —
   nécessaire puisque `ComponentWatchdog::handleDeadTask` peut les rappeler
   à chaque cycle de restart, et le destructeur de `Task` appelle `stop()`
@@ -231,12 +300,92 @@ Points structurels :
   thread juste après un `join()`, deux incarnations successives peuvent
   avoir le même id.
 
+### État partagé entre les `Task` d'un même composant
+
+La couche shm protège les échanges **entre process** (verrou CAS + checksum,
+§2). À l'intérieur d'un process, les `Task` sont des threads distincts et
+plusieurs membres du composant sont écrits par l'une, lus par l'autre — il faut
+donc aussi synchroniser là, conformément à la règle « `std::mutex` local pour
+les races intra-process » de `CLAUDE.md`.
+
+Deux outils selon la nature de la donnée :
+
+| Donnée | Mécanisme | Pourquoi |
+|---|---|---|
+| Scalaire (bool, enum, `uint32_t`, float) | `std::atomic` | lecture/écriture indivisible, sans verrou sur le chemin RT |
+| Struct multi-champs, conteneur | `std::mutex` + copie locale | un atomique ne couvre pas plusieurs champs ; sans verrou le lecteur voit un état mi-ancien mi-neuf |
+
+Appliqué à :
+
+- **`Navigation`** — `engagedSegment_`/`armedSegment_` (`NavSegment`) sous
+  `segmentsMutex_`, chaque lecteur en prenant une copie ; `lastSegmentSeq_`,
+  `newSegment_` et `holdActive_` en atomiques.
+- **`MissionControl`** — `plan_` sous `planMutex_` (il contient un
+  `std::vector` : une réallocation pendant que `TMiSequencer` l'indexe libère le
+  tampon sous le lecteur) ; `state_`, `missionComplete_`, `takeoffComplete_`,
+  `takeoffTargetAlt_` et les cinq drapeaux de panne en atomiques.
+- **`MavlinkInterface`** — déjà conforme avant : `AckFifo` et `PendingAckQueue`
+  portent leur propre mutex. Idem `StateMachineOrderQueue` côté
+  `MissionControl`.
+- **`SysMonitoring`** — rien à faire : son état de défilement et ses snapshots
+  de codes sont des membres **par `Task`**, jamais partagés (cf.
+  `SYSMONITORING.md` §6).
+
+**`newSegment_` se consomme par `exchange()`**, pas par un `store(false)` :
+`TSeq` le pose et `TAP` le consomme, donc un simple store écraserait un drapeau
+posé entre la lecture et l'écriture, et le changement de segment serait perdu.
+
+Les lectures déchirées que §2 interdit entre process étaient donc possibles
+entre threads du même composant — `TAP` pouvait calculer un guidage vers un
+waypoint à moitié mis à jour (nouveau `seq`, ancienne cible).
+
 ## 4. Les trois niveaux de watchdog, en détail
 
 ### 4.1 `ComponentWatchdog` — heartbeat des Task
 
-Thread unique par composant (lancé par `ComponentBase`), poll à 100Hz max
-(`sleep_until`, pas de busy-wait). Pour chaque `Task` enregistrée :
+Thread unique par composant, poll à 100Hz max (`sleep_until`, pas de
+busy-wait).
+
+**Lancé par `start()`, jamais par le constructeur.** Deux raisons, qui étaient
+deux anomalies :
+
+1. Les `Task` s'enregistrent (`tasks_.push_back`) *après* la construction du
+   watchdog. Un thread démarré dans le constructeur itérait donc `tasks_`
+   pendant que le vecteur se remplissait — réallocation possible sous les pieds
+   d'un autre thread, comportement indéfini.
+2. Un constructeur ne peut pas échouer proprement. `launchRTThread` qui échoue
+   laissait `started_` à `false` et **plus aucune `Task` n'était surveillée**,
+   sans trace. `start()` renvoie un `std::expected<void, int>` porteur de
+   l'`errno`.
+
+`ComponentBase::activate()` appelle donc `localWD.start()` **avant** de démarrer
+les `Task` — personne n'émet de heartbeat avant qu'il y ait quelqu'un pour
+l'observer. En cas d'échec, `startupError()` porte l'`errno` ; le rôle appelant
+(`src/main.cpp`) sort en code 1, `GlobalWatchdog` constate la mort de l'enfant
+et applique l'escalade normale (§4.3). Aucun code de diagnostic dédié n'est
+nécessaire : un composant dont le thread temps réel ne démarre pas est
+inutilisable, et mourir est l'information la plus honnête. C'est aussi ce qui
+rend visible l'oubli de `setcap cap_sys_nice+ep` après un rebuild
+(cf. `sitl/SITL.md` §1) — auparavant le process tournait sans rien exécuter.
+
+**Priorité 90, cœur dédié.** `RT_PRIORITY_COMPONENT_WATCHDOG` est fixé
+strictement au-dessus de la `Task` la plus prioritaire du système
+(`TSafetyMonitor`, 85). Sans cette marge, un watchdog partageant un cœur avec la
+`Task` qu'il surveille pourrait en être affamé : en `SCHED_FIFO`, une priorité
+simplement *égale* ne préempte pas. Le cas s'est présenté — `Navigation::TFS`
+est à 80, soit l'ancienne priorité du watchdog.
+
+`CORE_COMPONENT_WATCHDOG` (cœur 3) est volontairement **distinct** de
+`ComponenConfig::CompCore`, qui épingle les `Task` du composant : les watchdogs
+vivent groupés hors des cœurs de calcul. Avec la priorité 90, ce placement
+redevient un choix de performance et non plus une condition de correction.
+
+**`lastHeartbeat` : accès par `std::atomic_ref`.** Écrit par les threads de
+`Task`, lu par celui du watchdog. Un membre `std::atomic` rendrait `TaskHandle`
+non copiable et donc inutilisable dans un `std::vector` ; `std::atomic_ref`
+(C++20) donne l'accès atomique sans toucher au type.
+
+Pour chaque `Task` enregistrée :
 
 ```cpp
 if (msBetween(t.lastHeartbeat, now) > t.timeout)
@@ -260,8 +409,8 @@ else
 ```
 
 Escalade volontaire : au-delà de `maxRestart` redémarrages dans
-`restartWindow`, on ne relance plus la `Task` seule — on tue le process
-entier. C'est `GlobalWatchdog` qui le respawn, et `ComponentBase` (niveau
+`restartWindow`, la `Task` n'est plus relancée seule — c'est le process
+entier qui est tué. C'est `GlobalWatchdog` qui le respawn, et `ComponentBase` (niveau
 au-dessus) qui décide l'escalade finale (hot-start / cold-start / DEAD) à
 partir de l'historique *persisté en shm*, qui survit au crash du process
 contrairement au ring buffer en RAM du `ComponentWatchdog`.
@@ -271,10 +420,19 @@ enregistrés (`registerShmSource`), pour ne pas en rater une écrasée entre
 deux accès du composant lui-même (`lastError_` côté `SharedMemoryHandler`
 est *sticky* — un succès ne l'efface pas, seule la consommation le fait).
 
+Troisième rôle, en plus de la surveillance et du poll d'erreurs : il mesure la
+fréquence réelle de chaque `Task`. Les `Task` ne font qu'incrémenter un
+compteur ; le watchdog tient le compteur précédent et l'instant du dernier
+échantillon, calcule la cadence sur une fenêtre d'une seconde et la publie dans
+`SharedSysStateMem`. Le choix de mettre le calcul ici — et non dans la `Task` —
+garde la boucle de vol à un `fetch_add` relaxed, et rend l'arithmétique
+mono-thread donc sans synchronisation. Détail et transport :
+`SYSMONITORING.md` §13.
+
 ### 4.2 `GlobalWatchdog` — PID des process
 
 Voir §2.5 pour le mécanisme de détection/récupération. Un détail de
-robustesse à connaître si tu modifies `monitorLoop()` : un vrai Ctrl+C
+robustesse à connaître avant toute modification de `monitorLoop()` : un vrai Ctrl+C
 envoie `SIGINT`/`SIGTERM` à **tout le groupe de process**, pas seulement à
 `GlobalWatchdog` — donc les enfants meurent en même temps que la décision
 d'arrêt est prise. Sans précaution, une mort d'enfant détectée juste après
@@ -291,15 +449,79 @@ l'historique persisté dans `SharedCompMem` :
 ```
 lastCold récent (< max_cold_start_interval) ?  → DEAD, arrêt (rien d'autre ne s'exécute)
 sinon lastHot × max_hot_start récent ?          → cold-start : SICK, enregistre un cold-start
-sinon au moins un hot-start déjà enregistré ?   → hot-start : DEGRADED
+sinon pas un premier démarrage ?                → hot-start : DEGRADED, enregistre un hot-start
 sinon                                            → NOMINAL, premier démarrage
 ```
 
-Piège déjà rencontré : `getHotStartTs(i)`/`getColdtStartTs(i)` renvoient un
-`optional` qui **réussit toujours** dès que l'index existe dans le tableau
-à taille fixe — un slot jamais écrit vaut `TimePoint{}` (epoch), pas
-"vide". Sans vérifier explicitement `!= TimePoint{}`, un composant tout
-neuf serait vu comme DEGRADED en permanence (bug réel, corrigé).
+**« Suis-je un redémarrage ? » est transmis, jamais déduit.** Un composant qui
+vient de naître n'a aucun moyen de le savoir : il n'a pas de mémoire, et
+l'historique shm ne peut pas servir d'indice puisque c'est lui-même qui
+l'alimente. Seul `GlobalWatchdog` le sait — il vient de récolter le PID mort et
+de décider le respawn. L'information descend donc par `argv` :
+
+```cpp
+// GlobalWatchdog::spawn(), chemin respawn uniquement
+execl(binaryPath_, binaryPath_, role, "respawn", nullptr);
+
+// src/main.cpp
+const bool firstBoot = !(argc > 2 && std::string_view(argv[2]) == "respawn");
+```
+
+puis par `ComponenConfig::firstBoot` jusqu'au constructeur. L'absence de cet
+argv vaut premier démarrage : `./drone navigation` lancé à la main pour
+déboguer se comporte comme un système neuf, et les binaires SITL autonomes
+(`mc_sitl`, `mv_sitl`, `sysmon_sitl`) n'ont rien à renseigner.
+
+**Les deux sources ne peuvent pas se contredire** : `publishSharedMemory()`
+ouvre avec `O_CREAT` puis fait un `new (mem) T{}`, donc chaque démarrage de
+`GlobalWatchdog` re-zéroe les segments — que le précédent se soit arrêté
+proprement (`shm_unlink`) ou qu'il ait été tué brutalement. Au début de chaque
+vie de GW, l'historique est toujours vierge, ce qui coïncide exactement avec le
+`firstBoot=true` de `forkChildren()`.
+
+Corollaire à connaître : **l'échelle d'escalade est bornée à une vie de GW.** Un
+composant qui crashe trois fois, puis un redémarrage de GW, repart de
+`NOMINAL`. Défendable — un redémarrage système complet *est* un départ neuf —
+mais ce n'est pas une propriété évidente à la lecture.
+
+**`MissionControl` ne cold-start jamais.** La règle de `CLAUDE.md` est
+désormais dans le code : partout où l'escalade mènerait à un cold-start, MC
+passe directement `DEAD`. Sa state machine ne peut pas être resetée en
+sécurité, donc un redémarrage à froid vaudrait moins qu'un arrêt franc.
+
+Conséquence à connaître : cela vaut aussi pour le chemin « lecture d'historique
+échouée », qui est pessimiste (cf. ci-dessous). Un timeout sur le verrou shm au
+moment de la construction de MC le déclare donc `DEAD`.
+
+**Sémantique de `max_hot_start`** : la branche lit
+`getHotStartTs(max_hot_start - 1)`, soit le N-ième hot-start le plus récent. Il
+faut donc N hot-starts **déjà enregistrés** pour escalader : avec la valeur par
+défaut 3, trois respawns sont tolérés (`DEGRADED`) et le quatrième bascule en
+cold-start (`SICK`). Même lecture pour `max_cold_start`.
+
+### Deux pièges historiques de cette branche
+
+Le test de « suis-je un redémarrage ? » a été faux deux fois de suite, dans les
+deux sens — à connaître avant d'y retoucher.
+
+1. **Toujours DEGRADED.** La condition était `if (getHotStartTs(0))`, or cet
+   `optional` **réussit toujours** dès que l'index existe dans le tableau à
+   taille fixe : un slot jamais écrit vaut `TimePoint{}` (epoch), pas "vide".
+   Tout composant neuf était donc vu comme redémarré, en permanence.
+2. **Jamais DEGRADED.** Le correctif a ajouté un test `!= TimePoint{}`
+   (`isRecorded`), ce qui a surcorrigé : la branche était alors gardée par sa
+   propre conséquence — seule elle écrivait l'historique qu'elle exigeait de
+   trouver. Aucun redémarrage n'était plus jamais détecté, et `DEGRADED`,
+   `SICK` et `DEAD` devenaient inatteignables en production. Les tests ne le
+   voyaient pas parce qu'ils pré-remplissaient l'historique à la main.
+
+D'où la forme actuelle, qui ne sonde plus rien. `isRecorded` reste utilisé pour
+les fenêtres `lastCold`/`lastHot`, où le piège n°1 s'applique toujours.
+
+Note : `getStart()` renvoie `{}` aussi bien sur slot vide que sur échec de
+lecture shm, et `isRecorded()` écrase les deux en `false` — un timeout sur le
+verrou CAS peut donc faire rater une escalade `SICK`/`DEAD`. Limite connue, cf.
+`AUDIT.md` §1.
 
 `ComponentBase<MaxTasks>` est templaté sur le nombre de `Task` du
 composant dérivé (connu à la compilation). Contrainte C++ incontournable :
@@ -308,7 +530,7 @@ composant dérivé (connu à la compilation). Contrainte C++ incontournable :
 constructeur — elles n'existent pas encore. D'où le pattern
 `registerTask(task_); activate();` explicite en fin de constructeur du
 composant dérivé (voir `GUIDE_COMPOSANTS.md` §4) : c'est le minimum
-irréductible qu'on ne peut pas automatiser plus loin côté base.
+irréductible, non automatisable plus loin côté base.
 
 ## 5. Système de codes de diagnostic (`CODES::`)
 
@@ -346,6 +568,14 @@ codes OBD2 automobile : `FCP001` = Flight Controller / Power / 001.
   children_` est un `std::array<ChildProc, 5>`, les 5 domaines sont forkés
   — voir §1.1), seule la règle de non-cold-start n'a pas encore de
   traitement différencié.
+- **Saturation des slots de codes majeurs** : `raiseMajor()` dispose de
+  `kMajorCodeSlots` (8) emplacements par composant. Si les 8 sont déjà
+  occupés par des codes distincts encore actifs, le 9e code majeur est
+  **perdu** — pas de repli, pas d'écrasement (contrairement au ring des
+  mineurs). Choix assumé : un composant qui accumule plus de 8 pannes
+  critiques simultanées a un problème plus grave que la perte du 9e code, et
+  tout repli "élégant" (écraser le plus ancien, compteur de débordement)
+  revient à masquer l'une des 8 pannes déjà présentes.
 - La bande passante réseau (codes courts 1 octet pour la télémétrie
   wfb-ng) n'a pas de mécanisme dédié — c'est un problème de sérialisation
   côté `Monitoring`→GCS, pas de l'IPC, volontairement pas traité ici.

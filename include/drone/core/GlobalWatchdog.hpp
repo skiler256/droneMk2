@@ -11,6 +11,7 @@
 
 #include <array>
 #include <atomic>
+#include <cerrno>
 #include <csignal>
 #include <iostream>
 #include <optional>
@@ -20,7 +21,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// Noms des segments shm — un seul endroit pour les faire evoluer
 inline constexpr std::string_view kNavShmPath = "/drone_nav";
 inline constexpr std::string_view kSFShmPath = "/drone_sf";
 inline constexpr std::string_view kSysShmPath = "/drone_sysstate";
@@ -30,6 +30,9 @@ inline constexpr std::string_view kCmdShmPath = "/drone_cmd";
 
 class GlobalWatchdog {
 public:
+  static constexpr int kForkMaxAttempts = 3;
+  static constexpr useconds_t kForkRetryDelayUs = 50'000; // 50ms
+
   explicit GlobalWatchdog(std::string binaryPath)
       : binaryPath_(std::move(binaryPath)) {}
     
@@ -116,10 +119,7 @@ private:
     if (!wdc) return false;
     watchdogControlShm_ = wdc.value();
 
-    // GlobalWatchdog s'enregistre lui meme comme "writer" ID pour ces
-    // handlers : il ne fait qu'appeler resetWriterFlag() dessus, jamais
-    // getData/setData, donc l'id passe ici ne sert qu'a satisfaire les
-    // constructeurs de SharedCompMemHandler.
+    // L'id ne sert qu'aux ctors : seul resetWriterFlag() est appele dessus.
     navHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
                         *navShm_.ptr);
     sfHandler_.emplace(TYPES::ComponentID::GlobalWatchdog, TYPES::Us(2000),
@@ -137,21 +137,52 @@ private:
   }
 
   void forkChildren() {
-    children_[0] = spawn(TYPES::ComponentID::Navigation, "navigation");
-    children_[1] = spawn(TYPES::ComponentID::SensorFusion, "sensorfusion");
-    children_[2] = spawn(TYPES::ComponentID::SysMonitoring, "sysmonitoring");
-    children_[3] = spawn(TYPES::ComponentID::MavlinkInterface, "mavlinkinterface");
-    children_[4] = spawn(TYPES::ComponentID::MissionControl, "missioncontrol");
+    children_[0] = spawnWithRetry(TYPES::ComponentID::Navigation, "navigation", false);
+    children_[1] = spawnWithRetry(TYPES::ComponentID::SensorFusion, "sensorfusion", false);
+    children_[2] = spawnWithRetry(TYPES::ComponentID::SysMonitoring, "sysmonitoring", false);
+    children_[3] = spawnWithRetry(TYPES::ComponentID::MavlinkInterface, "mavlinkinterface", false);
+    children_[4] = spawnWithRetry(TYPES::ComponentID::MissionControl, "missioncontrol", false);
   }
 
-  ChildProc spawn(TYPES::ComponentID id, const char *role) {
+  // Seul GW sait si c'est un redémarrage ; l'absence d'argv vaut premier
+  // démarrage — cf. ARCHITECTURE_IPC.md §4.3.
+  ChildProc spawn(TYPES::ComponentID id, const char *role, bool respawn) {
     pid_t pid = fork();
     if (pid == 0) {
-      execl(binaryPath_.c_str(), binaryPath_.c_str(), role, nullptr);
+      if (respawn)
+        execl(binaryPath_.c_str(), binaryPath_.c_str(), role, "respawn",
+              nullptr);
+      else
+        execl(binaryPath_.c_str(), binaryPath_.c_str(), role, nullptr);
       std::cerr << "GlobalWatchdog: execl a echoue pour " << role << "\n";
       _exit(127);
     }
+    if (pid < 0) {
+      std::cerr << "GlobalWatchdog: fork a echoue pour " << role << " (errno "
+                << errno << ")\n";
+    }
     return ChildProc{pid, id, role};
+  }
+
+  // Un fork qui échoue est presque toujours transitoire (RLIMIT_NPROC, mémoire
+  // momentanément indisponible) : on réessaie avant d'abandonner, sinon le
+  // composant resterait absent pour tout le vol. cf. ARCHITECTURE_IPC.md §4.2.
+  ChildProc spawnWithRetry(TYPES::ComponentID id, const char *role,
+                           bool respawn) {
+    for (int attempt = 0; attempt < kForkMaxAttempts; ++attempt) {
+      auto child = spawn(id, role, respawn);
+      if (child.pid > 0)
+        return child;
+      if (attempt + 1 < kForkMaxAttempts)
+        usleep(kForkRetryDelayUs);
+    }
+
+    // Épuisé. Pas de santé écrite ici : setHealth() est self-report only
+    // (§2.3), GW ne peut pas marquer DEAD le slot d'un autre composant. Rendre
+    // l'absence observable dans le système demande un code GW — cf. AUDIT.md §3.
+    std::cerr << "GlobalWatchdog: " << role << " INDISPONIBLE apres "
+              << kForkMaxAttempts << " tentatives\n";
+    return ChildProc{-1, id, role};
   }
 
   void monitorLoop() {
@@ -169,9 +200,7 @@ private:
             // Double détection Ctrl+C, cf. ARCHITECTURE_IPC.md §4.2.
             child.pid = -1;
           } else if (respawnSuppressed(child.id)) {
-            // Panne système différée déclenchée par un outil de test avant
-            // le kill (SharedWatchdogControl::suppressRespawn), cf.
-            // sitl/SITL.md §5.
+            // Respawn suspendu par un outil de test, cf. sitl/SITL.md §5.
             std::cerr << "GlobalWatchdog: " << child.role
                       << " est mort, respawn suspendu (SharedWatchdogControl)\n";
             resetAll(child.id);
@@ -180,7 +209,7 @@ private:
             std::cerr << "GlobalWatchdog: " << child.role
                       << " est mort, reset writer flags + respawn\n";
             resetAll(child.id);
-            child = spawn(child.id, child.role);
+            child = spawnWithRetry(child.id, child.role, /*respawn=*/true);
           }
           break;
         }

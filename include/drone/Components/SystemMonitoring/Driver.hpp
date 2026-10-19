@@ -6,19 +6,10 @@
 #include <optional>
 #include <span>
 
-// Interfaces des liens de communication de SysMonitoring — un rôle = une
-// interface, pas d'interface unique pour tout (vidéo/télémétrie/commandes
-// ont des besoins trop différents). Comme IDriver (SensorFusions), aucun
-// driver concret ne possède de thread : il est purement I/O passif, appelé
-// depuis la boucle RT de la Task qui le possède (TelMainTask/TelSecTask/
-// VideoTask/GCSRxTask).
-//
-// Pensées pour être portables d'un véhicule à l'autre : ce qui change entre
-// projets, c'est l'implémentation concrète (WFB_NG_Driver, CC1101_Driver,
-// ...), jamais ces interfaces.
+// Un rôle = une interface ; drivers purement I/O, sans thread propre —
+// cf. SYSMONITORING.md §7.
 
-// Lien télémétrie bidirectionnel générique (metric + commandes, format
-// TELEM::* packé — voir include/drone/generated/telemetry.hpp).
+// Lien bidirectionnel, format TELEM::* packé (generated/telemetry.hpp).
 class ITelemetryLink {
 public:
   ITelemetryLink() = default;
@@ -45,9 +36,8 @@ private:
   TYPES::DriverHealth health_{TYPES::DriverHealth::Unconnected};
 };
 
-// Source vidéo : uniquement descendant, une frame déjà décapsulée (JPEG
-// brut) — le driver concret cache le protocole de transport (RTP, ou UDP
-// brut pour le driver factice de dev) derrière cette seule méthode.
+// Descendant seul, frame déjà décapsulée (JPEG brut) : le transport (RTP
+// ou UDP de dev) reste caché derrière cette méthode.
 class IVideoSource {
 public:
   IVideoSource() = default;
@@ -70,9 +60,8 @@ private:
   TYPES::DriverHealth health_{TYPES::DriverHealth::Unconnected};
 };
 
-// Température CPU (paquet CPU_TEMP) — une seule méthode, pas de connexion
-// à maintenir (lecture fichier ponctuelle), donc pas de getHealth() ici :
-// un échec de lecture est juste DriverError, pas un état de lien à suivre.
+// Pas de getHealth() : lecture fichier ponctuelle, aucun lien à suivre —
+// un échec est un DriverError, pas un état. Cf. SYSMONITORING.md §12.
 class ISystemTempSource {
 public:
   ISystemTempSource() = default;

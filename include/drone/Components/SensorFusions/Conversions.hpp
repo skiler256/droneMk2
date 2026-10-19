@@ -5,14 +5,12 @@
 #include <cstdint>
 #include <numbers>
 
-// Conversions pures extraites de GPSTask/LidarTask::loop() pour être
-// testables sans passer par les Tasks (loop() est privée, appelée
-// uniquement par le thread RT de la Task) — même principe que
-// MavlinkInterface/Conversions.hpp.
+// Conversions pures extraites des Tasks pour être testables — cf.
+// SENSORFUSION.md §6.
 namespace SF_CONV {
 
-// UBX NAV-STATUS.gpsFix -> code approximatif MAVLink GPS_FIX_TYPE (seuls
-// 0/2/3 se recoupent, le reste dégradé en NO_FIX par prudence).
+// UBX gpsFix -> MAVLink GPS_FIX_TYPE : seuls 0/2/3 se recoupent, le reste
+// dégradé en NO_FIX par prudence.
 [[nodiscard]] constexpr std::uint8_t mapUbxFixType(std::uint8_t ubx) noexcept {
   switch (ubx) {
   case 0:
@@ -26,9 +24,8 @@ namespace SF_CONV {
   }
 }
 
-// Numéro de semaine GPS (époque 1980-01-06) depuis une date calendaire UBX
-// (year/month/day). Le nombre de ms DANS la semaine vient séparément de
-// GPSData::iTowMs (NAV-PVT) — pas besoin de l'heure ici, iTOW l'encode déjà.
+// Semaine GPS (époque 1980-01-06) depuis la date UBX ; les ms dans la
+// semaine viennent séparément d'iTowMs — cf. SENSORFUSION.md §3.
 [[nodiscard]] inline std::uint16_t gpsWeekFromUbxDate(const int (&timeArray)[6]) noexcept {
   using namespace std::chrono;
   year_month_day ymd{year{timeArray[0]}, month{static_cast<unsigned>(timeArray[1])},
@@ -55,9 +52,8 @@ namespace SF_CONV {
   return pAccMm <= maxHAccMm && sAccMmS <= maxSAccMmS;
 }
 
-// Projette une mesure LIDAR (distance, angle en degrés) en point NED
-// relatif au drone via l'attitude courante — repère capteur/corps : x=avant,
-// y=droite, z=0 (scan 2D horizontal).
+// Projette (distance, angle°) en NED relatif au drone via l'attitude.
+// Repère capteur : x=avant, y=droite, z=0 (scan 2D horizontal).
 [[nodiscard]] inline TYPES::Vec3 lidarPointNed(float distanceM, float angleDeg,
                                                const Eigen::Quaternionf &attitudeQ) noexcept {
   float theta = angleDeg * (std::numbers::pi_v<float> / 180.0f);

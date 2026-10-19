@@ -8,11 +8,8 @@
 // Segments Line/Curve ajoutés seulement quand ils existeront réellement.
 enum class SegmentType : uint8_t { Waypoint };
 
-// États du système — cf. SDD §3.6.2 (noms des états uniquement, le graphe
-// de transitions n'est pas encore implémenté). Défini ici (pas dans
-// MissionControl.hpp) pour que SysMonitoring puisse lire l'état courant
-// via cmd_ sans dépendre du header du composant MissionControl lui-même.
-// Pas de RTB en V1 (décidé explicitement) — cf. MC_CONV::step().
+// Défini ici et non dans MissionControl.hpp : SysMonitoring lit l'état via
+// cmd_ sans dépendre du header du composant. Pas de RTB en V1.
 enum class MissionState : uint8_t {
   Idle,
   PreFlight,
@@ -24,8 +21,8 @@ enum class MissionState : uint8_t {
   Emergency
 };
 
-// Question active posée au GCS (cf. MC_QUERY dans TELEMETRY.csv) — pas un
-// paquet par question, un type + un seq de corrélation avec CMD_ANSWER.
+// Un type + un seq de corrélation avec CMD_ANSWER, pas un paquet par
+// question — cf. MC_QUERY dans TELEMETRY.csv.
 enum class QueryType : uint8_t {
   None,                     // aucune question active
   ObstacleNonContournable,  // choice: 0=RTB, 1=MANUAL
@@ -38,23 +35,15 @@ struct PendingQuery {
   QueryType type{QueryType::None};
 };
 
-// Cible continue que TAP poursuit jusqu'à complétion — pas un ordre
-// ponctuel comme PendingCommand, donc valeur unique (pas de FIFO). MC
-// écrit armedSegment (le suivant, en attente) ; TSeq promeut armedSegment
-// en engagedSegment quand ce dernier est Atteint (ou sur ordre d'amorçage
-// initial via navCmds), après vérification de sécurité — jamais MC
-// n'écrit directement engagedSegment. `seq` permet de détecter un
-// changement (reset des états internes du PID) plutôt qu'un timestamp,
-// puisqu'un segment ne change pas à chaque tick comme un échantillon
-// capteur.
+// Cible continue, pas un ordre ponctuel : valeur unique, pas de FIFO. La
+// promotion armé->engagé appartient à TSeq, jamais à MC — cf.
+// NAVIGATION.md §3-4. `seq` (et non un timestamp) sert à détecter un
+// changement de segment, qui ne survient pas à chaque tick.
 struct NavSegment {
-  // Assigné par setArmedSegment(), jamais par l'appelant (même raison que
-  // PendingCommand::seq) — seq=0 sert de sentinel "rien d'armé" côté TSeq.
+  // Assigné par setArmedSegment() ; seq=0 = sentinel "rien d'armé".
   uint32_t seq{0};
   SegmentType type{SegmentType::Waypoint};
-  // Position attendue du drone au début du segment (pour tous les types,
-  // pas seulement Line/Curve) — c'est contre ce point que TSeq vérifie la
-  // sécurité avant de promouvoir armé->engagé (cf. NAV_CONV::canEngage).
+  // Vérifié par TSeq avant promotion, tous types — NAV_CONV::canEngage.
   TYPES::Position entryWp{};
   TYPES::Position exitWp{}; // Waypoint : le point cible
   TYPES::MetersPerSec speed{0.0f};
@@ -63,9 +52,8 @@ struct NavSegment {
 
 enum class SegmentStatus : uint8_t { EnCours, Atteint, Hold };
 
-// Écrit par TAP à chaque tick — `seq` reprend celui du NavSegment concerné
-// pour que MC sache à quoi l'avancement se rapporte (utile si MC pousse un
-// nouveau segment avant que Nav ait fini de traiter l'ancien).
+// Écrit par TAP à chaque tick ; `seq` reprend celui du NavSegment concerné,
+// pour rester interprétable si MC en pousse un nouveau entre-temps.
 struct SegmentProgress {
   uint32_t seq{0};
   SegmentStatus status{SegmentStatus::EnCours};
@@ -73,10 +61,8 @@ struct SegmentProgress {
   TYPES::TimePoint ts{};
 };
 
-// Une paire de CommandFifo (ordres + reports) par composant subordonné —
-// MavlinkInterface et Nav pour l'instant, SF ajoutée quand elle en aura
-// besoin (cf. discussion architecture, pas de FIFO fantôme construit par
-// anticipation).
+// Une paire (ordres + reports) par subordonné : MavlinkInterface et Nav.
+// SF sera ajoutée le jour où elle en aura besoin, pas par anticipation.
 struct SharedCmdMem {
   SharedCompMem compMem;
 
@@ -85,8 +71,7 @@ struct SharedCmdMem {
     RingBuffer<CommandReport, 8> mavlinkReports{};
     uint32_t nextMavlinkSeq{0};
 
-    // Ordres ponctuels pour Nav (FIFO "classique", contenu à définir à
-    // l'usage) — distinct de NavSegment/SegmentProgress ci-dessous.
+    // Ordres ponctuels, distincts de NavSegment/SegmentProgress ci-dessous.
     RingBuffer<PendingCommand, 8> navCmds{};
     RingBuffer<CommandReport, 8> navReports{};
     uint32_t nextNavSeq{0};
@@ -96,20 +81,17 @@ struct SharedCmdMem {
     SegmentProgress segmentProgress{};
     uint32_t nextSegmentSeq{1}; // commence à 1, 0 = sentinel "rien d'armé"
 
-    // État système courant — écrit par TStateMachine (MC), lu par
-    // SysMonitoring pour MISSION_STATE. Pas encore écrit (TStateMachine
-    // n'a pas de logique, cf. MissionControl.hpp) : reste à Idle jusque-là.
+    // Écrit par TStateMachine, lu par SysMonitoring (MISSION_STATE).
+    // Reste à Idle tant que TStateMachine n'a pas de logique.
     MissionState state{MissionState::Idle};
 
-    // Question active posée au GCS — écrit par MC, lu par SysMonitoring
-    // pour MC_QUERY. La réponse (CMD_ANSWER) revient via SharedComMem::gcsCmds.
+    // Écrit par MC, lu par SysMonitoring (MC_QUERY) ; la réponse revient
+    // via SharedComMem::gcsCmds.
     PendingQuery query{};
     uint32_t nextQuerySeq{1}; // commence à 1, 0 = sentinel côté seq initial
 
-    // Preuve de vie de TStateMachine — lu par MavlinkInterface (FSTask)
-    // avec son propre timeout, pour un fallback autonome (LAND) si MC ne
-    // répond plus. Personne d'autre ne redémarre MC en sécurité (cf.
-    // CLAUDE.md, jamais de cold-start), donc c'est le seul filet.
+    // Preuve de vie lue par FSTask, seul filet puisque MC ne peut pas être
+    // cold-starté — cf. MAVLINKINTERFACE.md §9.
     TYPES::TimePoint lastHeartbeat{};
   };
   payload data;
@@ -121,8 +103,7 @@ public:
                                SharedCmdMem &cmd)
       : SharedCompMemHandler(cmd.compMem, id, timeout), cmd_(cmd) {};
 
-  // seq assigné ici, jamais par l'appelant — élimine toute possibilité de
-  // collision/oubli côté MissionControl.
+  // seq assigné ici : pas de collision/oubli possible côté appelant.
   [[nodiscard]] bool pushMavlinkCommand(CODES::Code code, uint32_t payload) {
     auto seq = getData(id_, timeout_, cmd_.data.nextMavlinkSeq).value_or(0);
     auto next = seq + 1;
@@ -135,8 +116,7 @@ public:
     return popFifo(id_, timeout_, cmd_.data.mavlinkCmds);
   }
 
-  // Appelé par le composant subordonné (ex: MavlinkInterface) une fois un
-  // PendingCommand résolu — succès ou échec, cf. CommandReport.
+  // Appelé par le subordonné une fois le PendingCommand résolu.
   [[nodiscard]] bool pushMavlinkReport(uint32_t seq, CODES::Code code, bool success) {
     CommandReport r{.seq = seq, .code = code, .success = success, .ts = TYPES::Clock::now()};
     return pushFifo(id_, timeout_, cmd_.data.mavlinkReports, r);
@@ -168,8 +148,7 @@ public:
     return popFifo(id_, timeout_, cmd_.data.navReports);
   }
 
-  // Segment armé — écrit par MC, lu par TSeq. seq assigné ici (jamais par
-  // l'appelant), même raison que pushMavlinkCommand.
+  // Écrit par MC, lu par TSeq ; seq assigné ici.
   void setArmedSegment(NavSegment s) {
     auto seq = getData(id_, timeout_, cmd_.data.nextSegmentSeq).value_or(1);
     auto next = seq + 1;
@@ -182,8 +161,7 @@ public:
     return getData(id_, timeout_, cmd_.data.armedSegment);
   }
 
-  // Segment engagé — écrit par TSeq (jamais MC directement, cf. NavSegment),
-  // lu par TAP et par MC (pour savoir si armedSegment a été consommé).
+  // Écrit par TSeq (jamais MC), lu par TAP et MC.
   void setEngagedSegment(NavSegment s) {
     setData(id_, timeout_, cmd_.data.engagedSegment, s);
   }
@@ -208,8 +186,7 @@ public:
     return getData(id_, timeout_, cmd_.data.state);
   }
 
-  // Question au GCS — seq assigné ici (même raison que setArmedSegment),
-  // jamais par l'appelant.
+  // Question au GCS ; seq assigné ici.
   void setPendingQuery(QueryType type) {
     auto seq = getData(id_, timeout_, cmd_.data.nextQuerySeq).value_or(1);
     auto next = seq + 1;
@@ -222,8 +199,7 @@ public:
     return getData(id_, timeout_, cmd_.data.query);
   }
 
-  // Heartbeat MC — écrit par TStateMachine à chaque cycle, lu par
-  // MavlinkInterface (FSTask) pour détecter un MC mort.
+  // Écrit par TStateMachine à chaque cycle, lu par FSTask.
   void setHeartbeat(TYPES::TimePoint t) { setData(id_, timeout_, cmd_.data.lastHeartbeat, t); }
 
   [[nodiscard]] std::optional<TYPES::TimePoint> getHeartbeat() {

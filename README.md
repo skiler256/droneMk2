@@ -1,4 +1,7 @@
-# droneMk2
+# MERLIN (droneMk2)
+
+**M**odular **E**mbedded **R**otorcraft with **L**ayered **I**ntelligence
+& **N**avigation — nom de code interne du dépôt : `droneMk2`.
 
 Drone autonome à voilure tournante, développement solo. Compute embarqué
 Raspberry Pi 5 (kernel PREEMPT_RT) piloté par un logiciel de vol C++23 en

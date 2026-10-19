@@ -12,7 +12,7 @@
 
 class MavlinkInterface;
 
-// Flux routine : HEARTBEAT périodique + GPS_INPUT/SET_POSITION_TARGET_LOCAL_NED événementiels.
+// Flux routine : HEARTBEAT périodique, le reste événementiel (§4).
 class TTxTask : public Task {
 public:
   explicit TTxTask(MavlinkInterface &component, TaskConfig config,
@@ -60,8 +60,7 @@ private:
   void loop() override;
 };
 
-// Surveille la fraîcheur du HEARTBEAT FC (code MVC004) — pas d'action
-// autonome ici, le failsafe GCS d'ArduPilot gère déjà le LAND (SDD §4).
+// Fraîcheur du HEARTBEAT FC (MVC004) + fallback autonome — cf. §9.
 class FSTask : public Task {
 public:
   explicit FSTask(MavlinkInterface &component, TaskConfig config,
@@ -72,6 +71,9 @@ private:
   MavlinkInterface &comp;
   void loop() override;
   bool linkLostActive_{false};
+  bool fcUnreadableActive_{false};
+  TYPES::TimePoint battLowSince_{};
+  TYPES::TimePoint battCriticalSince_{};
   bool rpmLowActive_{false};
   bool rpmHighActive_{false};
   bool battLowActive_{false};
@@ -90,9 +92,8 @@ public:
                             SharedSFMemHandler &sf, SharedCmdMemHandler &cmd,
                             SharedComMemHandler &com, IMavlinkLink &link);
 
-  // Empile un MAV_CMD_SET_MESSAGE_INTERVAL par message d'intérêt. Déclenchée
-  // par TRx au premier HEARTBEAT du FC (cf. initStreamsRequested_), jamais
-  // à la construction (lien pas forcément prêt, cf. §7 du .md).
+  // Déclenchée au premier HEARTBEAT du FC, jamais à la construction : le
+  // lien n'est pas forcément prêt — cf. MAVLINKINTERFACE.md §7.
   void requestInitStreams();
 
   SharedFCStatusHandler &fc_;
@@ -103,18 +104,18 @@ public:
   SharedComMemHandler &com_;           // heartbeat GCS, lu indépendamment par FSTask (fallback autonome)
   IMavlinkLink &link_;
 
-  // Garde requestInitStreams() : déclenchée une seule fois, au premier
-  // HEARTBEAT reçu du FC (cf. TRxTask::loop()).
+  // Garde : requestInitStreams() ne doit partir qu'une fois.
   bool initStreamsRequested_{false};
 
-  // TRx est seule à lire link_ — unique canal par lequel TTxACK apprend qu'un ACK est arrivé.
+  // TRx est seule à lire link_ — cf. AckFifo.hpp.
   AckFifo ackFifo_;
 
   PendingAck pendingAck_;   // commande ACK'd en vol (TTxACK)
   PendingAckQueue ackQueue_; // commandes ACK'd en attente d'envoi
   TYPES::TimePoint lastHeartbeatSent_{};
 
-  // Horodatage de l'échantillon (pas de l'envoi) déjà transmis — détecte une donnée neuve, pas de renvoi périodique.
+  // Horodatage de l'échantillon transmis, pas de l'envoi : détecte une
+  // donnée neuve plutôt qu'un renvoi périodique.
   TYPES::TimePoint lastGpsMagSampleTs_{};
   TYPES::TimePoint lastNavCmdSampleTs_{};
 

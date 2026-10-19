@@ -34,7 +34,6 @@
   var CAP = {
     satBars:      32,
     lidarPoints: 256,
-    cellBars:     12,
     componentCells: 8,
     ribbon:        8,
     pitchLadder:   8,
@@ -78,13 +77,6 @@
     return m + ':' + pad(s, 2);
   }
 
-  function hhmmss(sec) {
-    if (!isFinite(sec) || sec < 0) return '--:--:--';
-    return pad(Math.floor(sec / 3600), 2) + ':' +
-           pad(Math.floor(sec / 60) % 60, 2) + ':' +
-           pad(Math.floor(sec % 60), 2);
-  }
-
   function latStr(v) { return Math.abs(v).toFixed(4) + '°' + (v >= 0 ? 'N' : 'S'); }
   function lonStr(v) { return Math.abs(v).toFixed(4) + '°' + (v >= 0 ? 'E' : 'W'); }
 
@@ -96,10 +88,9 @@
   var C_OK = 'var(--ok)', C_WARN = 'var(--warn)', C_CRIT = 'var(--crit)';
   var C_ACCENT = 'var(--accent)', C_FG = 'var(--fg-hi)', C_DIM = 'var(--fg-dim)';
 
-  function battColor(pct)  { return pct > 40 ? C_OK : pct > 22 ? C_WARN : C_CRIT; }
-  function tempColor(c, limit) {
-    var r = c / limit;
-    return r < 0.7 ? C_OK : r < 0.88 ? C_WARN : C_CRIT;
+  function battColor(pct) {
+    if (pct == null || !isFinite(pct)) return C_DIM;
+    return pct >= 30 ? C_OK : pct >= 10 ? C_WARN : C_CRIT;
   }
   function healthColor(h) {
     return h === 'NOMINAL' ? C_OK
@@ -169,14 +160,6 @@
 
     P.lidarPoints = D.pool('lidarPoints', CAP.lidarPoints, function () {
       return D.make('div', 'lidar__pt');
-    });
-
-    P.cellBars = D.pool('cellBars', CAP.cellBars, function () {
-      var cell = D.make('div', 'batt__cell');
-      var fill = D.make('div', 'batt__cell-fill');
-      cell.appendChild(fill);
-      cell.__fill = fill;
-      return cell;
     });
 
     P.componentCells = D.pool('componentCells', CAP.componentCells, function () {
@@ -383,30 +366,158 @@
     });
   }
 
-  function renderBattery(s) {
+  function renderEndurance(s) {
     var b = s.battery;
-    var col = battColor(b.pct);
-    D.cls('panelBattery', 'is-stale', s.stale.battery);
+    D.cls('endur', 'is-stale', s.stale.battery);
 
-    D.text('battRemaining', Math.max(0, Math.floor(b.secondsRemaining / 60)) + ' MIN LEFT');
-    D.style('battRemaining', 'color', col);
-    D.style('battFill', 'width', clamp(b.pct, 0, 100).toFixed(0) + '%');
-    D.style('battFill', 'background', col);
-    D.text('battPct', fx(b.pct, 0));
-    D.style('battPctWrap', 'color', col);
+    D.text('endurPct', fx(b.pct, 0));
+    D.style('endurPct', 'color', battColor(b.pct));
 
-    D.text('battVoltage', fx(b.voltage, 1) + ' V');
-    D.text('battCurrent', fx(b.current, 1) + ' A');
-    D.text('battUsed', fx(b.consumed_mAh, 0) + ' mAh');
-    D.text('rtlNeed', fx(b.rtlNeedPct, 0) + ' %');
-    D.style('rtlNeed', 'color', b.rtlNeedPct < b.pct ? C_OK : C_CRIT);
-    D.text('battCycles', String(b.cycles));
-    D.text('battTemp', fx(b.tempC, 0) + ' °C');
+    // Deux estimations non cablees : affichees '--' tant que le calcul n'est
+    // pas tranche (capacite du pack, reserve de retour) -- cf. §5 du
+    // cahier des charges. Jamais 0, qui se lirait comme une mesure.
+    D.text('endurTime', fx(b.minutesRemaining, 0));
+    D.text('endurDist', fx(b.kmRemaining, 1));
 
-    D.applyPool(P.cellBars, b.cells, function (el, pct) {
-      D.nodeStyle(el.__fill, 'height', clamp(pct, 0, 100).toFixed(0) + '%');
-      D.nodeStyle(el.__fill, 'background', col);
-    });
+    D.text('endurVolt', fx(b.voltage, 1) + ' V');
+    D.text('endurAmp', fx(b.current, 1) + ' A');
+  }
+
+  /* ── Schema drone ──────────────────────────────────────────────────────
+     Deux sources par forme : une panne (code de diagnostic, colonne
+     Schematic d'INDEX.csv) ou une mesure continue. La panne l'emporte
+     toujours -- une batterie a 80 % reste en defaut si un code le dit.
+     Toute forme part de 'nodata' : sans donnee, jamais 'bon'. */
+
+  var SCHEME_PARTS = ['batt', 'gps', 'cpu', 'fc', 'lidar', 'mag', 'esc',
+                      'ant_main', 'ant_backup', 'motor_front', 'motor_rear'];
+  var SCHEME_CLASSES = ['is-ok', 'is-warn', 'is-crit', 'is-nodata', 'is-cont'];
+
+  // Seuils CPU : le Pi 5 commence a se brider vers 80-85 degres.
+  var CPU_WARN = 72, CPU_CRIT = 82;
+  // Ecart au regime moyen au-dela duquel --dev vaut 1.
+  var MOTOR_DEV_MAX = 0.12;
+
+  function setPart(name, level, blink) {
+    var el = D.el(name);
+    if (!el) return;
+    for (var i = 0; i < SCHEME_CLASSES.length; i++) {
+      var want = SCHEME_CLASSES[i] === ('is-' + level);
+      D.nodeClass(el, SCHEME_CLASSES[i], want);
+    }
+    D.nodeClass(el, 'is-blink', !!blink);
+  }
+
+  // La panne ecrase la mesure, sauf si la mesure est elle-meme plus grave.
+  function merge(fault, measured) {
+    if (fault === 'crit') return 'crit';
+    if (measured === 'crit') return 'crit';
+    if (fault === 'warn' || measured === 'warn') return 'warn';
+    return measured || (fault ? 'warn' : 'nodata');
+  }
+
+  function byThreshold(v, warnAt, critAt) {
+    if (v == null || !isFinite(v)) return null;
+    return v >= critAt ? 'crit' : v >= warnAt ? 'warn' : 'ok';
+  }
+
+  function renderScheme(s) {
+    var f = s.hw.faults || {};
+    var worst = 'ok', nodata = 0;
+
+    // Batterie : seuils du cahier des charges (>30 / 10-30 / <10).
+    var pct = s.battery.pct;
+    var battM = (pct == null) ? null : (pct < 10 ? 'crit' : pct < 30 ? 'warn' : 'ok');
+    var battLvl = merge(f.BATTERY, battM);
+    setPart('batt', battLvl, battLvl === 'crit');
+    D.style('batt', '--fill', (pct == null ? 0 : clamp(pct, 0, 100) / 100).toFixed(3));
+
+    // GPS : un fix 3D ne suffit pas, le HDOP decide du degrade.
+    var g = s.gnss;
+    var gpsM = (g.fixType == null || s.stale.gnss) ? null
+             : g.fixType < 3 ? 'crit'
+             : (g.hdop > 2.0 || g.satUsed < 7) ? 'warn' : 'ok';
+    setPart('gps', merge(f.GPS, gpsM), false);
+
+    var cpuM = s.stale.sys ? null : byThreshold(s.sys.cpuTempC, CPU_WARN, CPU_CRIT);
+    setPart('cpu', merge(f.CPU, cpuM), false);
+    D.text('cpu_temp', s.sys.cpuTempC == null ? '--' : fx(s.sys.cpuTempC, 0) + ' °C');
+
+    // FC : sante du composant MavlinkInterface, seule fenetre sur le FC.
+    var mv = null;
+    for (var i = 0; i < s.components.length; i++) {
+      if (s.components[i].name === 'MAVLINK IF') { mv = s.components[i].health; break; }
+    }
+    var fcM = (mv == null || mv === 'IDLE') ? null
+            : mv === 'NOMINAL' ? 'ok' : mv === 'DEGRADED' ? 'warn' : 'crit';
+    setPart('fc', merge(f.FC, fcM), mv === 'DEAD');
+
+    var lidarM = s.stale.lidar ? null : 'ok';
+    setPart('lidar', merge(f.LIDAR, lidarM), false);
+
+    setPart('mag', merge(f.MAG, null), false);
+
+    // ESC : pas de temperature transmise, donc seuls les codes parlent.
+    setPart('esc', merge(f.ESC, null), false);
+    for (var e = 1; e <= 4; e++) setPart('esc_' + e, 'nodata', false);
+
+    setPart('ant_main', merge(f.ANT_PDL, null), false);
+    setPart('ant_backup', merge(f.ANT_SDL, null), false);
+
+    renderMotors(s, f);
+
+    // Synthese : le pire etat de toutes les formes, et le compte des inconnues.
+    for (var k = 0; k < SCHEME_PARTS.length; k++) {
+      var el = D.el(SCHEME_PARTS[k]);
+      if (!el) continue;
+      if (el.classList.contains('is-crit')) worst = 'crit';
+      else if (el.classList.contains('is-warn') && worst !== 'crit') worst = 'warn';
+      if (el.classList.contains('is-nodata')) nodata++;
+    }
+
+    var label = nodata === SCHEME_PARTS.length ? 'SANS DONNÉE'
+              : worst === 'crit' ? 'DÉFAUT'
+              : worst === 'warn' ? 'ATTENTION'
+              : nodata > 0 ? nodata + ' SANS DONNÉE' : 'NOMINAL';
+    var badgeLvl = nodata === SCHEME_PARTS.length ? 'nodata' : worst;
+    setPart('scheme_badge', badgeLvl, false);
+    D.text('scheme_badge', label);
+  }
+
+  // Le regime absolu suit les gaz : ce qui informe est l'ecart au regime
+  // moyen des quatre, cf. SYSMONITORING.md §14.
+  function renderMotors(s, f) {
+    var rpm = s.hw.rpm;
+    var pairs = [['motor_front', 'motor_front_dev'], ['motor_rear', 'motor_rear_dev']];
+
+    if (!rpm || s.stale.hw) {
+      for (var i = 0; i < 2; i++) {
+        setPart(pairs[i][0], merge(f[i ? 'MOTOR_REAR' : 'MOTOR_FRONT'], null), false);
+        D.text(pairs[i][1], '--');
+      }
+      return;
+    }
+
+    var mean = (rpm[0] + rpm[1] + rpm[2] + rpm[3]) / 4;
+    // Regroupement AV/AR des 4 sorties FC : quad en X, sorties 1 et 3 a
+    // l'avant, 2 et 4 a l'arriere (numerotation ArduPilot, a confirmer au banc).
+    var group = [(rpm[0] + rpm[2]) / 2, (rpm[1] + rpm[3]) / 2];
+
+    for (var m = 0; m < 2; m++) {
+      var dev = mean > 0 ? (group[m] - mean) / mean : 0;
+      var fault = f[m ? 'MOTOR_REAR' : 'MOTOR_FRONT'];
+      var el = D.el(pairs[m][0]);
+
+      if (fault) {
+        setPart(pairs[m][0], fault, fault === 'crit');
+      } else {
+        setPart(pairs[m][0], 'cont', false);
+        if (el) D.nodeStyle(el, '--dev',
+          Math.min(1, Math.abs(dev) / MOTOR_DEV_MAX).toFixed(3));
+      }
+      D.text(pairs[m][1], (dev >= 0 ? '+' : '\u2212') +
+                          Math.abs(dev * 100).toFixed(1) + ' %');
+    }
   }
 
   function renderActions(s) {
@@ -588,16 +699,6 @@
     }
   }
 
-  function renderSys(s) {
-    var y = s.sys;
-    D.cls('panelSys', 'is-stale', s.stale.sys);
-    D.text('cpuTemp', fx(y.cpuTempC, 0) + '°C');
-    D.style('cpuTemp', 'color', tempColor(y.cpuTempC, y.thermalLimitC));
-    D.style('cpuCursor', 'left', clamp((y.cpuTempC - 30) / 60 * 100, 0, 100).toFixed(1) + '%');
-    D.text('thermLimit', 'THERMAL LIMIT ' + y.thermalLimitC + ' °C · LOAD ' +
-                          fx(y.cpuLoadPct, 0) + '% · UP ' + hhmmss(y.uptimeSec));
-  }
-
   function renderEvents(s) {
     D.text('pinnedHeader', s.pinned.length
       ? s.pinned.length + ' ACTIVE CRITICAL'
@@ -625,12 +726,12 @@
     renderStage(state);
     renderGnss(state);
     renderLidar(state);
-    renderBattery(state);
+    renderEndurance(state);
+    renderScheme(state);
     renderActions(state);
     renderComponents(state);
     renderTabs(state);
     renderRadio(state);
-    renderSys(state);
     renderEvents(state);
 
     /* Les deux vues centrales sont exclusives : on ne calcule que celle qui

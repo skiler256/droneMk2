@@ -39,6 +39,14 @@ MavlinkInterface) : `TStateMachine` (décision), `TMiSequencer`
 (exécution du plan), `TSafetyMonitor` (surveillance), `TGCSCmdRouter`
 (routage). Cf. §2.
 
+**MC détient un handler sur tous les segments**, contrairement aux autres
+composants qui n'en voient qu'un ou deux : séquencement, RTB, décisions
+hors-plan et routage GCS lisent ou écrivent chacun un sous-ensemble
+*différent* de `SharedFCStatus`/`SharedNavMem`/`SharedSFMem`/
+`SharedComMem`/`SharedCmdMem`, et leur union couvre l'ensemble. Les
+handlers sont construits par l'appelant avec `id=MissionControl` — même
+pattern de relais cross-composant que `NAV_SITL.cpp`.
+
 ## 2. Les 4 Tasks
 
 | Task | Rôle | Fréquence | RT priority |
@@ -91,7 +99,7 @@ EMERGENCY ──réponse "land" (CMD_ANSWER) ou timeout 30s──► LANDING
 ```
 
 `previous` : dernier `MissionState` stable (`Mission` ou `Manual`) avant
-la bascule courante — maintenu par `TStateMachine`, mis à jour
+la bascule courante — porté par `TStateMachine::previousFlightMode_`, mis à jour
 **uniquement** en quittant `Mission`/`Manual` eux-mêmes (jamais en
 quittant `Hold`/`Emergency`), pour qu'une reprise depuis l'un de ces
 états retombe toujours sur le vrai mode de vol d'origine, pas sur un
@@ -135,6 +143,37 @@ Deux causes indépendantes, valides seulement pendant `ARMED` :
   (`FSTask`, cf. `MAVLINKINTERFACE.md`), pas par MC — `TStateMachine` ne
   fait que lire le code. Décision explicite : le check vit là où la
   donnée ESC arrive, et sert aussi de voyant GCS indépendamment de MC.
+
+### Commande FC refusée — blocage sélectif
+
+`pushMavlinkCommand()` **refuse** quand `mavlinkCmds` est pleine (8 slots),
+plutôt que d'écraser — cf. `ARCHITECTURE_IPC.md` §2.1. Cela n'arrive que si
+`TCmd` est en retard : `MavlinkInterface` redémarré, lien FC en retry,
+contention shm. C'est-à-dire précisément le scénario dégradé où l'on commande
+un atterrissage.
+
+Tout refus lève `CODES::MCA010` (`fc_command_dropped`, Critical). Pour les
+commandes **sans rattrapage**, la transition d'état est en plus **bloquée** :
+`TStateMachine` sort du cycle sans écrire `comp.state_`, et réessaie au cycle
+suivant (20Hz).
+
+| Code | Commande | Transition bloquée ? | Rattrapage |
+|---|---|---|---|
+| `MCO006` | LAND | **oui** | aucun |
+| `MCO004` | disarm | **oui** | aucun |
+| `MCO002` | set mode | **oui** | aucun |
+| `MCO003` | arm | non | `armError` sur `kArmTimeout` (5 s) |
+| `MCO001` | takeoff | non | `takeoffComplete_` reste `false`, le plan ne démarre pas |
+
+**Pourquoi bloquer plutôt qu'avancer** : sans ce garde, un `LAND` perdu faisait
+passer MC en `Landing` et le publier. GCS et télémétrie `MISSION_STATE`
+affichaient LANDING pendant que le FC, n'ayant rien reçu, poursuivait son mode
+précédent — et `FSTask` ne rattrapait pas, son filet se déclenchant sur perte du
+heartbeat MC, or MC était bien vivant. Un état qui ne reflète pas la réalité est
+pire qu'une transition qui n'a pas lieu.
+
+`MCA010` ne sature pas le journal : étant majeur, un code déjà actif ne fait que
+rafraîchir son horodatage (§5 d'`ARCHITECTURE_IPC.md`).
 
 ### `landed` — vérifié, pas juste `armed==false`
 
@@ -199,6 +238,27 @@ acté côté Nav, cf. `NAVIGATION.md` §3-4).
 `HOLD` (segment du plan, pause temporisée) ≠ `MissionState::Hold`
 (système) : ne touche pas Nav, le drone reste sur la dernière cible
 atteinte pendant `duration` secondes.
+
+**Parsing TLV du plan — deux cas à ne pas confondre.** `MISSIONPLAN_CONV::parse()`
+avance segment par segment tant que `offset < crcOffset` :
+
+- un **`kind` inconnu** n'est pas une erreur : le segment est simplement ignoré
+  (un binaire plus ancien doit pouvoir lire un plan contenant des types qu'il
+  ne connaît pas) ;
+- une **longueur incohérente** avec les octets restants l'est
+  (`consumed == 0`) : sans progression possible, le parsing s'arrête sur
+  `ParseError::MalformedSegment` au lieu de boucler indéfiniment.
+
+**`takeoffComplete_` — le premier segment attend la fin de la montée.**
+Aucun segment du plan n'est armé tant que la montée post-armement n'est pas
+terminée. `TStateMachine` réinitialise le drapeau à chaque entrée
+`Armed`→`Mission` et fixe la cible (`plan_.header.takeoffAlt`) ;
+`TMiSequencer` l'observe et le met à jour, étant la seule Task à lire déjà
+`DynamicState` pour l'armement des Waypoint. Raison (**constatée en session
+SITL**, pas théorique) : armer le premier segment plus tôt fait entrer en
+collision le `NAV_TAKEOFF` exécuté par ArduPilot et les commandes `velNED`
+que Nav commence à émettre — deux sources de consigne simultanées sur le
+même axe vertical.
 
 `CORRIDOR`/`CURVE` (pas de `SegmentType` équivalent côté Nav) et
 `PAYLOAD_ACTION` (pas encore routé) : segment sauté, `CODES::MCA001`
@@ -297,6 +357,27 @@ commander `LAND` de façon autonome dans ce cas précis (cf. SDD §4,
 Un seul code : `NVA004` (Navigation) — obstacle détecté par `TFS` côté
 Nav dans la zone de sécurité devant le drone.
 
+### `LidarLost` — la question au GCS a un timeout
+
+Sans réponse, `HOLD` ne se maintient pas indéfiniment : au-delà de
+`kEmergencyTimeout` (30 s, le même que l'EMERGENCY), la state machine passe en
+`LANDING`. Une réponse explicite du GCS prime toujours sur le timeout —
+l'ordre des tests dans `step()` le garantit.
+
+Le chronomètre part de la **publication** de la question
+(`StateMachineTask::holdQueryAt_`), pas de l'entrée en `HOLD`, et se remet à
+zéro quand la question est retirée.
+
+Deux sources alimentent `lidarLost_`, volontairement redondantes :
+
+- **`SFS004`**, levé par `SensorFusion` — y compris quand `LidarTask` n'arrive
+  plus à projeter faute d'attitude fraîche, cas qui laissait auparavant la carte
+  se figer sans rien signaler ;
+- **`NVA011`**, levé par `TFS` qui vérifie lui-même l'âge du nuage (400 ms).
+  C'est la ceinture-bretelles : `TFS` ne fait confiance à aucune donnée sans en
+  contrôler la fraîcheur, et une carte figée ferait conclure « pas d'obstacle »
+  indéfiniment.
+
 ### `lidarLost_` — ni recoverable ni unrecoverable
 
 **Point à retenir** : `SFS004` (Lidar_lost) ne rentre dans **aucun** des
@@ -366,6 +447,30 @@ nécessitent une validation opérateur (SDD §4, "Reprise après EMERGENCY") :
   `StateMachineOrderQueue`. `MC_CONV::step()` vérifie que `seq` correspond
   au `pendingQuerySeq` courant avant d'agir — une réponse à une question
   déjà périmée est ignorée.
+
+### Rapports de commande — drainés, échecs signalés
+
+`MavlinkInterface` et `Navigation` poussent un `CommandReport` corrélé par
+`seq` pour chaque ordre résolu. `TStateMachine` vide les deux FIFO à chaque
+cycle et lève `MCA011` (`fc_command_rejected`) si l'un rapporte un échec.
+
+Deux raisons de vider même sans rien en faire : une FIFO de 8 slots qui se
+remplit fait ensuite échouer tous les `push`, et `MavlinkInterface` lève alors
+`MVC003` en continu pour un problème qui n'est pas le sien.
+
+`MCA011` est distinct de `MCA010` : le premier dit « le FC a répondu
+DENIED/FAILED/UNSUPPORTED », le second « la commande n'est jamais partie faute
+de place dans la FIFO ». Confondre les deux dans un seul code ferait perdre la
+distinction la plus utile au diagnostic.
+
+**Portée volontairement limitée à l'observabilité.** L'état n'est pas modifié
+sur un rapport d'échec, et aucun suivi des `seq` en attente n'est tenu : un
+ordre qui ne reçoit *jamais* de rapport reste donc invisible ici. Les cas
+critiques ont leurs propres filets — `armError` à `kArmTimeout` si le FC ne
+confirme pas l'armement, `takeoffComplete_` qui reste faux si la montée ne
+démarre pas — et un `MavlinkInterface` mort ou bloqué est couvert par le
+`ComponentWatchdog` puis par l'escalade de santé (`anySick`/`anyDead`). Fermer
+complètement la boucle demanderait une table d'attente dans MC, différé.
 
 ## 9. Ce qui n'est PAS encore fait / tranché
 

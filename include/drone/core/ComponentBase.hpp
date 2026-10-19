@@ -7,8 +7,14 @@
 #include <cstddef>
 #include <ctime>
 #include <expected>
+#include <optional>
 
-#define RT_PRIORITY_COMPONENT_WATCHDOG 80
+// 90 : strictement au-dessus de la Task la plus prioritaire du système
+// (TSafetyMonitor, 85). Sans cette marge, un watchdog partageant un cœur avec
+// la Task qu'il surveille pourrait en être affamé. cf. ARCHITECTURE_IPC.md §4.1.
+#define RT_PRIORITY_COMPONENT_WATCHDOG 90
+// Cœur dédié, volontairement distinct de ComponenConfig::CompCore (qui épingle
+// les Task du composant).
 #define CORE_COMPONENT_WATCHDOG 3
 
 struct TaskConfig {
@@ -28,8 +34,9 @@ public:
   explicit Task(TaskConfig config, ComponentWatchdog &WD)
       : Tconfig(config), TlocalWD(WD) {
     WD.registerTask(
-        Tconfig.id, [this] { start(); }, [this] { stop(); }, Tconfig.timeout,
-        Tconfig.maxRestart, Tconfig.restartWindow);
+        Tconfig.id, [this] { (void)start(); }, [this] { stop(); },
+        [this] { return loopCount_.load(std::memory_order_relaxed); },
+        Tconfig.loopFrequency.v, Tconfig.timeout, Tconfig.maxRestart, Tconfig.restartWindow);
   };
 
   // Preuve externe de restart, PAS pthread_self() -- cf. ARCHITECTURE_IPC.md §3.
@@ -37,22 +44,20 @@ public:
     return generation_.load(std::memory_order_acquire);
   }
 
-  void start() {
+  [[nodiscard]] std::expected<void, int> start() {
     generation_.fetch_add(1, std::memory_order_acq_rel);
     running_.store(true, std::memory_order_release);
 
-    auto result =
-        UTILITIES::launchRTThread([this] { run(); }, Tconfig.RTpriority,
-                                  Tconfig.core // à ajouter dans TaskConfig
-        );
+    auto result = UTILITIES::launchRTThread(
+        [this] { run(); }, Tconfig.RTpriority, Tconfig.core);
 
     if (!result) {
-      // errno dans result.error()
       running_.store(false, std::memory_order_release);
-    } else {
-      thread_ = result.value();
-      threadValid_ = true;
+      return std::unexpected(result.error());
     }
+    thread_ = result.value();
+    threadValid_ = true;
+    return {};
   }
 
   // Idempotent (cf. ARCHITECTURE_IPC.md §3).
@@ -87,6 +92,7 @@ private:
 
     while (running_.load(std::memory_order_acquire)) {
       loop();
+      loopCount_.fetch_add(1, std::memory_order_relaxed);
       TlocalWD.heartbeat(Tconfig.id);
 
       next_time += period;
@@ -98,6 +104,7 @@ private:
   std::atomic<bool> running_{false};
   bool threadValid_{false};
   std::atomic<size_t> generation_{0};
+  std::atomic<uint32_t> loopCount_{0};
 };
 
 // Décision hot/cold/DEAD à la construction : cf. ARCHITECTURE_IPC.md §4.3.
@@ -106,15 +113,14 @@ struct ComponenConfig {
   TYPES::Ms max_cold_start_interval{60000};
   size_t max_hot_start = 3;
   TYPES::Ms max_hot_start_interval{60000};
-  TYPES::Us shm_timeout{2000};
 
   TYPES::ComponentID id;
   int CompCore;
+
+  // Transmis par GlobalWatchdog, jamais déduit — cf. ARCHITECTURE_IPC.md §4.3.
+  bool firstBoot = true;
 };
 
-// MaxTasks : nombre de Task du composant dérivé, connu à la compilation
-// (varie d'un composant à l'autre — Navigation en a 1, un futur composant
-// plus riche pourra en avoir plus).
 template <size_t MaxTasks>
 class ComponentBase {
 public:
@@ -124,75 +130,108 @@ public:
         config_(config), compMem_(compMem), sysState_(sysState) {
     localWD.registerShmSource(compMem_);
     localWD.registerShmSource(sysState_);
+    localWD.setRatePublisher(sysState_);
 
-    auto lastCold = compMem_.getColdtStartTs(config_.max_cold_start - 1);
+    auto lastCold = compMem_.getColdStartTs(config_.max_cold_start - 1);
     auto lastHot = compMem_.getHotStartTs(config_.max_hot_start - 1);
 
-    // has_value() seul ne suffit pas ici, cf. piège documenté ARCHITECTURE_IPC.md §4.3.
-    auto isRecorded = [](const std::optional<TYPES::TimePoint> &ts) {
-      return ts.has_value() && ts.value() != TYPES::TimePoint{};
+    // Lecture shm échouée : on suppose le pire plutôt que de rater une
+    // escalade — perdre un cran est plus grave qu'un diagnostic pessimiste.
+    // cf. ARCHITECTURE_IPC.md §4.3.
+    // MissionControl ne cold-start jamais : sa state machine ne peut pas être
+    // resetée en sécurité (CLAUDE.md) — cf. ARCHITECTURE_IPC.md §4.3.
+    const bool coldStartForbidden =
+        config_.id == TYPES::ComponentID::MissionControl;
+    auto escalateToColdStart = [&] {
+      if (coldStartForbidden) {
+        sysState_.setHealth(TYPES::ComponentHealth::DEAD);
+        return;
+      }
+      compMem_.recordColdStart(TYPES::Clock::now());
+      sysState_.setHealth(TYPES::ComponentHealth::SICK);
+      coldstart = true;
     };
 
-    // Trop de cold-starts dans la fenêtre → DEAD
+    auto readFailed = [](const auto &r) { return !r.has_value(); };
+    if (readFailed(lastCold) || readFailed(lastHot)) {
+      escalateToColdStart();
+      return;
+    }
+
+    // Slot porteur d'un horodatage réel (la sentinelle est filtrée par le
+    // handler, qui seul connaît la convention).
+    auto isRecorded = [](const auto &r) { return r->has_value(); };
+
     if (isRecorded(lastCold)) {
-      if (UTILITIES::msBetween(lastCold.value(), TYPES::Clock::now()) <
+      if (UTILITIES::msBetween(lastCold->value(), TYPES::Clock::now()) <
           config_.max_cold_start_interval) {
         sysState_.setHealth(TYPES::ComponentHealth::DEAD);
         return;
       }
     }
 
-    // Trop de hot-starts dans la fenêtre → cold-start
     if (isRecorded(lastHot)) {
-      if (UTILITIES::msBetween(lastHot.value(), TYPES::Clock::now()) <
+      if (UTILITIES::msBetween(lastHot->value(), TYPES::Clock::now()) <
           config_.max_hot_start_interval) {
-        compMem_.recordColdStart(TYPES::Clock::now());
-        sysState_.setHealth(TYPES::ComponentHealth::SICK);
-        coldstart = true;
+        escalateToColdStart();
         return;
       }
     }
 
-    // Hot-start si au moins un redémarrage existe
-    if (isRecorded(compMem_.getHotStartTs(0))) {
+    // Pas un premier démarrage = hot-start par définition (§4.3).
+    if (!config_.firstBoot) {
       compMem_.recordHotStart(TYPES::Clock::now());
       sysState_.setHealth(TYPES::ComponentHealth::DEGRADED);
       hotstart = true;
       return;
     }
 
-    // Premier démarrage nominal
     sysState_.setHealth(TYPES::ComponentHealth::NOMINAL);
     coldstart = true;
   };
 
   virtual ~ComponentBase() = default;
 
+  // errno du thread RT qui n'a pas démarré. Un constructeur ne peut pas
+  // échouer, donc le rôle appelant doit tester ceci et sortir en erreur :
+  // GlobalWatchdog verra l'enfant mourir et déclenchera l'escalade normale.
+  // cf. AUDIT.md §5.
+  [[nodiscard]] std::optional<int> startupError() const { return startupError_; }
+
 protected:
   ComponentWatchdog localWD;
 
   bool hotstart{false};
-  bool coldstart{false}; // séquence de démarrage du composant
+  bool coldstart{false};
 
-  // registerTask() puis activate(), en fin de ctor du composant dérivé --
-  // pourquoi ComponentBase ne peut pas le faire lui-même : ARCHITECTURE_IPC.md §4.3.
+  // À appeler en fin de ctor du dérivé, cf. ARCHITECTURE_IPC.md §4.3.
   void registerTask(Task &t) {
     if (taskCount_ < tasks_.size())
       tasks_[taskCount_++] = &t;
   }
 
+  // Démarre le watchdog AVANT les Task, pour qu'aucun heartbeat ne parte avant
+  // qu'il y ait quelqu'un pour l'observer.
   void activate() {
     if (!hotstart && !coldstart)
       return; // DEAD : rien à démarrer
+
+    if (auto r = localWD.start(); !r) {
+      startupError_ = r.error();
+      return;
+    }
     if (hotstart)
       restore();
-    init();
+    if (auto r = init(); !r)
+      startupError_ = r.error();
   }
 
-  virtual void restore() {} // no-op par défaut, override si état à réhydrater
-  virtual void init() {     // défaut : démarre toutes les tasks enregistrées
+  virtual void restore() {} // override si un état est à réhydrater
+  virtual std::expected<void, int> init() {
     for (size_t i = 0; i < taskCount_; ++i)
-      tasks_[i]->start();
+      if (auto r = tasks_[i]->start(); !r)
+        return r;
+    return {};
   }
 
 private:
@@ -202,4 +241,5 @@ private:
 
   std::array<Task *, MaxTasks> tasks_{};
   size_t taskCount_ = 0;
+  std::optional<int> startupError_{};
 };

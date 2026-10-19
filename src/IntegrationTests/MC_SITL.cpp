@@ -1,17 +1,9 @@
-// Binaire de dev : MissionControl SEUL, face à un plan de mission prédéfini
-// et un faux Nav minimal (pas de vol réel, pas de SITL ArduPilot) — test
-// ciblé de la state machine/séquenceur/failsafe, pas du pilotage. Le SITL
-// général avec moteur 3D viendra après (cf. INTEGRATION_TEST.md).
-//
-// Le "faux Nav" ci-dessous simule uniquement la progression des segments
-// (arme -> engage -> Atteint après un délai fixe) — jamais dans le code de
-// prod. La santé de Nav (ComponentHealth) et l'armement FC
-// (SharedFCStatus::armed) sont initialisés une seule fois au démarrage puis
-// laissés à la main du dashboard (UDP_bridge, namespace MC_SITL) : les
-// re-écrire en boucle ici empêcherait toute injection de panne de tenir.
-//
-// Usage : ./mc_sitl
-// Injection : via UDP_bridge (CMD=GCSCMD/CODE/HEALTH/FCARMED, namespace MC_SITL).
+// Test ciblé : MissionControl seul, face à un plan prédéfini et un faux Nav
+// minimal — state machine/séquenceur/failsafe, pas de pilotage réel.
+// Le faux Nav ne simule que la progression des segments, et n'initialise
+// santé/armement qu'une fois : les réécrire en boucle empêcherait toute
+// injection de panne de tenir.
+// Usage : ./mc_sitl — injection via udp_bridge (namespace MC_SITL).
 
 #include "drone/Components/MissionControl/MissionControl.hpp"
 #include "drone/IntegrationTests/ShmPaths.hpp"

@@ -70,6 +70,7 @@ void GPSTask::loop() {
   if (UTILITIES::msBetween(lastGoodGpsTs_, now) > kMaxGpsAge && !gpsFaultActive_) {
     comp.sysState_.raiseCode(SFS002);
     gpsFaultActive_ = true;
+    gpsLockActive_ = false;
   }
 
   if (gpsHasNoNewData)
@@ -97,12 +98,14 @@ void GPSTask::loop() {
       sample.hdop = d.hdop;
       sample.vdop = d.vdop;
       sample.fixType = SF_CONV::mapUbxFixType(d.fixType);
-      sample.satellitesVisible = static_cast<std::uint8_t>(d.sats.size());
+      // Canaux suivis, non plafonnés — distinct du détail recopié ci-dessous.
+      sample.satellitesVisible = d.satellitesTracked;
 
       sample.satId.fill(0);
       sample.satStrength.fill(0);
       sample.satQuality.fill(0);
-      std::size_t n = std::min(d.sats.size(), GpsMagSample::kMaxSatellites);
+      std::size_t n = std::min(static_cast<std::size_t>(d.satDetailCount),
+                               GpsMagSample::kMaxSatellites);
       for (std::size_t i = 0; i < n; ++i) {
         sample.satId[i] = d.sats[i].id;
         sample.satStrength[i] = d.sats[i].strength;
@@ -118,15 +121,22 @@ void GPSTask::loop() {
         comp.sysState_.clearCode(SFS002);
         gpsFaultActive_ = false;
       }
-      comp.sysState_.raiseCode(SFS001); // Info, mineur : pas de spam à craindre
+      // Sur front : à chaque échantillon, SFS001 remplissait le ring des
+      // mineurs en ~1,6s (cf. SENSORFUSION.md §3).
+      if (!gpsLockActive_) {
+        comp.sysState_.raiseCode(SFS001);
+        gpsLockActive_ = true;
+      }
     } else if (!gpsFaultActive_) {
       comp.sysState_.raiseCode(SFS002);
       gpsFaultActive_ = true;
+      gpsLockActive_ = false;
     }
-  } else if (!gpsHasNoNewData && !gpsFaultActive_) {
-    // Erreur driver réelle (pas juste NoNewData) -> traitée comme perte GPS.
+  } else if (!gpsFaultActive_) {
+    // Erreur driver réelle (NoNewData a déjà fait sortir plus haut).
     comp.sysState_.raiseCode(SFS002);
     gpsFaultActive_ = true;
+    gpsLockActive_ = false;
   }
 
   comp.SF_.setGpsMag(sample);
@@ -152,6 +162,13 @@ void EKFTask::loop() {
     }
     return;
   }
+
+  // Origine NED = point de décollage : capturée sur le front d'armement du FC
+  // (cf. SENSORFUSION.md §4). Avant le premier armement l'offset reste nul.
+  bool armed = comp.fc_.getArmed().value_or(false);
+  if (armed && !wasArmed_)
+    comp.homeOffsetNed = posVel->pos.ned;
+  wasArmed_ = armed;
 
   DynamicState state{};
   state.ts = now;
@@ -188,9 +205,16 @@ void LidarTask::loop() {
     lidarFaultActive_ = false;
   }
 
+  // Sans attitude fraîche, pas de projection possible : la carte cesserait de
+  // se rafraîchir en silence (cf. SENSORFUSION.md §5).
   auto state = comp.SF_.getDynamicState();
-  if (!state || UTILITIES::msBetween(state->ts, now) > kAgeThrEKF)
-    return; // attitude absente ou périmée, impossible de compenser fiablement
+  if (!state || UTILITIES::msBetween(state->ts, now) > kAgeThrEKF) {
+    if (!lidarFaultActive_) {
+      comp.sysState_.raiseCode(SFS004);
+      lidarFaultActive_ = true;
+    }
+    return;
+  }
 
   Eigen::Quaternionf q = state->attitude.q.asEigen();
 

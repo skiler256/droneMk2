@@ -24,11 +24,8 @@ struct ShmPublisher {
   T *ptr = nullptr;
 };
 
-// ─────────────────────────────────────────────────────────────────────────
-// publishSharedMemory : crée le segment + construit l'objet T dedans.
-// Appelé UNIQUEMENT par le process propriétaire (GlobalWatchdog), une
-// seule fois par segment, au démarrage.
-// ─────────────────────────────────────────────────────────────────────────
+// Crée le segment + construit l'objet T dedans. Propriétaire
+// (GlobalWatchdog) uniquement, une fois par segment au démarrage.
 template <typename T>
 std::expected<ShmPublisher<T>, ShmError>
 publishSharedMemory(std::string_view path) {
@@ -57,12 +54,8 @@ publishSharedMemory(std::string_view path) {
   return shm;
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// attachSharedMemory : se connecte à un segment déjà publié par le
-// propriétaire. PAS de O_CREAT, PAS de placement-new (l'objet existe déjà
-// et est géré ailleurs). Utilisé par les process enfants (Navigation,
-// SensorFusion, etc).
-// ─────────────────────────────────────────────────────────────────────────
+// Se connecte à un segment déjà publié : ni O_CREAT, ni placement-new.
+// Utilisé par les process enfants.
 template <typename T>
 std::expected<ShmPublisher<T>, ShmError>
 attachSharedMemory(std::string_view path) {
@@ -84,10 +77,7 @@ attachSharedMemory(std::string_view path) {
   return shm;
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// destroySharedMemory : détruit l'objet, unmap, close, ET unlink le nom.
-// Appelé UNIQUEMENT par le propriétaire (GlobalWatchdog) à l'arrêt propre.
-// ─────────────────────────────────────────────────────────────────────────
+// Détruit l'objet, unmap, close ET unlink. Propriétaire uniquement.
 template <typename T>
 std::expected<void, ShmError>
 destroySharedMemory(std::string_view path, ShmPublisher<T> &shm) {
@@ -113,11 +103,8 @@ destroySharedMemory(std::string_view path, ShmPublisher<T> &shm) {
   return {};
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// detachSharedMemory : unmap + close SANS unlink. Appelé par un process
-// non-propriétaire (enfant) qui veut se détacher proprement sans supprimer
-// le segment pour les autres.
-// ─────────────────────────────────────────────────────────────────────────
+// unmap + close SANS unlink : pour un enfant qui se détache sans supprimer
+// le segment des autres.
 template <typename T>
 std::expected<void, ShmError> detachSharedMemory(ShmPublisher<T> &shm) {
   if (shm.ptr) {

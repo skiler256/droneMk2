@@ -1,22 +1,31 @@
 #pragma once
 #include "drone/core/SharedMemory.hpp"
+#include "drone/core/SharedSysStateMem.hpp"
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
+#include <atomic>
 #include <deque>
+#include <expected>
 #include <functional>
 #include <vector>
 
 class ComponentWatchdog {
 public:
   explicit ComponentWatchdog(int RTpriority, int core)
-      : rt_priority_(RTpriority), core_(core) {
+      : rt_priority_(RTpriority), core_(core) {}
+
+  // Lancé hors du constructeur : sinon le thread itérerait tasks_ pendant que
+  // les Task s'y enregistrent, et l'échec ne serait pas remontable.
+  // cf. ARCHITECTURE_IPC.md §4.1.
+  [[nodiscard]] std::expected<void, int> start() {
     auto result =
         UTILITIES::launchRTThread([this] { run(); }, rt_priority_, core_);
+    if (!result)
+      return std::unexpected(result.error());
 
-    if (result) {
-      thread_ = result.value();
-      started_ = true;
-    }
+    thread_ = result.value();
+    started_ = true;
+    return {};
   }
 
   ~ComponentWatchdog() { stop(); } // RAII, cf. ARCHITECTURE_IPC.md §3
@@ -32,11 +41,21 @@ public:
     size_t maxRestart;
     TYPES::Ms restartWindow;
     std::deque<TYPES::TimePoint> restartHistory;
+
+    // Mesure de fréquence : la Task ne fait qu'incrémenter, toute
+    // l'arithmétique vit ici (mono-thread). cf. SYSMONITORING.md §13.
+    std::function<uint32_t()> loopCount;
+    float targetHz{0.0f};
+    bool targetPublished{false};
+    uint32_t lastCount{0};
+    TYPES::TimePoint lastRateSample{};
   };
 
   void registerTask(TYPES::TaskID id, std::function<void()> start,
-                    std::function<void()> stop, TYPES::Ms timeout,
-                    size_t maxRestart, TYPES::Ms restartWindow) {
+                    std::function<void()> stop,
+                    std::function<uint32_t()> loopCount, float targetHz,
+                    TYPES::Ms timeout, size_t maxRestart,
+                    TYPES::Ms restartWindow) {
     tasks_.push_back({
         .stop = std::move(stop),
         .start = std::move(start),
@@ -46,17 +65,26 @@ public:
         .maxRestart = maxRestart,
         .restartWindow = restartWindow,
         .restartHistory = {},
+        .loopCount = std::move(loopCount),
+        .targetHz = targetHz,
+        .lastRateSample = TYPES::Clock::now(),
     });
   }
 
+  // atomic_ref et non un membre atomic : TaskHandle doit rester copiable pour
+  // vivre dans un std::vector.
   void heartbeat(TYPES::TaskID id) {
     for (auto &t : tasks_) {
       if (t.id == id) {
-        t.lastHeartbeat = TYPES::Clock::now();
+        std::atomic_ref<TYPES::TimePoint>(t.lastHeartbeat)
+            .store(TYPES::Clock::now(), std::memory_order_release);
         return;
       }
     }
   }
+
+  // Destinataire des fréquences mesurées, posé par ComponentBase.
+  void setRatePublisher(SharedSysStateMemHandler &h) { ratePublisher_ = &h; }
 
   // Erreur sticky consommée par loop(), cf. ARCHITECTURE_IPC.md §4.1.
   void registerShmSource(SharedMemoryHandler &handler) {
@@ -83,10 +111,13 @@ public:
     auto now = TYPES::Clock::now();
 
     for (auto &t : tasks_) {
-      TYPES::Ms elapsed = UTILITIES::msBetween(t.lastHeartbeat, now);
-      if (elapsed > t.timeout)
+      auto last = std::atomic_ref<TYPES::TimePoint>(t.lastHeartbeat)
+                      .load(std::memory_order_acquire);
+      if (UTILITIES::msBetween(last, now) > t.timeout)
         handleDeadTask(t);
     }
+
+    publishRates(now);
 
     for (auto *src : shmSources_) {
       auto err = src->consumeError();
@@ -111,6 +142,31 @@ private:
     }
   }
 
+  // Fenêtre d'une seconde : assez longue pour une moyenne stable, assez
+  // courte pour voir un décrochage.
+  void publishRates(TYPES::TimePoint now) {
+    if (ratePublisher_ == nullptr)
+      return;
+    for (auto &t : tasks_) {
+      if (!t.loopCount)
+        continue;
+      auto elapsed = UTILITIES::msBetween(t.lastRateSample, now);
+      if (elapsed < TYPES::Ms{1000})
+        continue;
+      if (!t.targetPublished) {
+        ratePublisher_->setTaskTargetHz(t.id, t.targetHz);
+        t.targetPublished = true;
+      }
+
+      const uint32_t count = t.loopCount();
+      const auto delta = static_cast<float>(count - t.lastCount);
+      ratePublisher_->setTaskHz(
+          t.id, delta * 1000.0f / static_cast<float>(elapsed.count()));
+      t.lastCount = count;
+      t.lastRateSample = now;
+    }
+  }
+
   void handleDeadTask(TaskHandle &t) {
     auto now = TYPES::Clock::now();
 
@@ -129,8 +185,11 @@ private:
     // stop() ici uniquement dans le cas restart simple : shutdown() stoppe
     // déjà toutes les tasks lui-même (double pthread_join serait UB).
     t.stop();
+    // Échec de relance non remonté ici : l'absence de heartbeat ramènera la
+    // Task dans handleDeadTask, jusqu'à l'escalade vers le process entier.
     t.start();
-    t.lastHeartbeat = now;
+    std::atomic_ref<TYPES::TimePoint>(t.lastHeartbeat)
+        .store(now, std::memory_order_release);
   }
 
   void shutdown() {
@@ -141,6 +200,7 @@ private:
 
   std::vector<TaskHandle> tasks_;
   std::vector<SharedMemoryHandler *> shmSources_;
+  SharedSysStateMemHandler *ratePublisher_{nullptr};
   std::atomic<TYPES::shmError> lastShmError_{TYPES::shmError::None};
   std::atomic<uint32_t> shmErrorCount_{0};
   pthread_t thread_{};

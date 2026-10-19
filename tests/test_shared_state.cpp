@@ -95,13 +95,9 @@ TEST(SharedMemoryConcurrencyTest, ConcurrentSetHealthDoesNotLoseUpdates) {
 }
 
 TEST(SharedMemoryConcurrencyTest, ConcurrentReadersNeverSeeCorruption) {
-  // Avant le fix : les lectures (getHealth/getData) passaient par
-  // nonLockedAccess, qui ne tenait aucun verrou — un writer pouvait muter
-  // compHealth pendant qu'un lecteur le copiait (torn read), ou juste
-  // laisser une lecture racer avec l'écriture du checksum. Avec la voie
-  // d'accès unifiée (lockedAccess pour tout le monde), lecteurs et writer
-  // s'excluent mutuellement : aucune lecture ne doit jamais renvoyer
-  // `corrupt`, quel que soit l'entrelacement des threads.
+  // Non-régression du retrait de nonLockedAccess (torn read possible) : avec
+  // le verrou unique, aucune lecture ne doit renvoyer `corrupt`, quel que
+  // soit l'entrelacement — cf. ARCHITECTURE_IPC.md §2.2.
   SharedSysStateMem mem{};
   SharedSysStateMemHandler writer(mem, ComponentID::Navigation, Us(50000));
 
@@ -185,8 +181,10 @@ TEST(SharedCompMemHistoryTest, RecordStartSelfHealsOnCorruption) {
   EXPECT_EQ(h.consumeError(), shmError::corrupt);
 
   auto sanitized = h.getHotStartTs(1);
-  ASSERT_TRUE(sanitized.has_value());
-  EXPECT_EQ(*sanitized, TYPES::TimePoint{});
+  ASSERT_TRUE(sanitized.has_value()) << "la lecture elle-même doit réussir";
+  EXPECT_FALSE(sanitized->has_value())
+      << "slot assaini = pas d'horodatage ; la sentinelle TimePoint{} ne doit "
+         "plus remonter jusqu'à l'appelant";
 
   auto now = TYPES::Clock::now();
   h.recordHotStart(now);

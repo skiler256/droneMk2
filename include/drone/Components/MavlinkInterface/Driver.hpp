@@ -5,12 +5,8 @@
 #include <optional>
 #include <span>
 
-// Interface du lien MAVLink (UART vers le FC) — driver purement I/O, pas
-// de thread (même principe que ITelemetryLink de SysMonitoring), appelé
-// depuis les Tasks (TTx/TTxACK/TRx/FSTask) qui possèdent leur propre
-// boucle RT. Injectée par référence dans MavlinkInterface, jamais un type
-// concret : permet de brancher un driver simulé (SITL) sans toucher au
-// composant.
+// Lien MAVLink vers le FC : purement I/O, sans thread propre. Injecté par
+// interface pour pouvoir brancher un driver SITL sans toucher au composant.
 class IMavlinkLink {
 public:
   IMavlinkLink() = default;
@@ -30,9 +26,8 @@ public:
   [[nodiscard]] virtual std::optional<TYPES::DriverError>
   send(std::span<const std::byte> frame) = 0;
 
-  // Envoi prioritaire : contourne volontairement tout ordonnancement,
-  // réservé à FSTask (cf. MAVLINKINTERFACE.md §8). Protégé par le même
-  // verrou interne que send() — thread-safe, mais aucune mise en attente.
+  // Réservé à FSTask : contourne la file d'attente, pas le verrou d'écriture
+  // — priorité procédurale, cf. MAVLINKINTERFACE.md §9.
   [[nodiscard]] virtual std::optional<TYPES::DriverError>
   sendUrgent(std::span<const std::byte> frame) = 0;
 

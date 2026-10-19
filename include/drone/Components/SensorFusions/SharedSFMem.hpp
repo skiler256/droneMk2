@@ -5,11 +5,8 @@
 #include <array>
 #include <cstdint>
 
-// Échantillon GPS. Nommé GpsMagSample par héritage (le cap magnétique y
-// était bundlé, envoyé dans GPS_INPUT.yaw) — le magnétomètre est câblé
-// directement sur le FC depuis la bascule d'archi (cf. SENSORFUSION.md),
-// donc plus de champ heading ici : GPS_INPUT.yaw part à 0 ("inconnu" selon
-// la spec MAVLink), l'EKF3 du FC utilise son propre compas.
+// Nom hérité de l'époque où le cap magnétique y était bundlé ; plus de
+// champ heading depuis la bascule du magnéto vers le FC (§3.5 du .md).
 struct GpsMagSample {
   TYPES::TimePoint ts{};
   double latitude{0.0};     // degrés WGS84
@@ -24,29 +21,22 @@ struct GpsMagSample {
   uint8_t fixType{0};
   uint8_t satellitesVisible{0};
 
-  // Détail par satellite (id/force du signal/qualité), cf. GPSData::sats —
-  // capé à 16 (largement suffisant, une constellation visible dépasse
-  // rarement ça) pour rester une struct POD taille fixe en shm. Seuls les
-  // `satellitesVisible` premiers slots (borné à 16) sont significatifs.
+  // Capé à 16 pour rester POD taille fixe ; seuls les satellitesVisible
+  // premiers slots sont significatifs — cf. SENSORFUSION.md §3.
   static constexpr std::size_t kMaxSatellites = 16;
   std::array<uint8_t, kMaxSatellites> satId{};
   std::array<uint8_t, kMaxSatellites> satStrength{};
   std::array<uint8_t, kMaxSatellites> satQuality{};
 
-  // Temps GPS (semaine + ms dans la semaine), calculé par le récepteur —
-  // PAS `ts` (horloge interne, steady_clock, sans rapport avec le temps
-  // GPS) : c'est ce que MavlinkInterface envoie tel quel dans
-  // GPS_INPUT.time_week/time_week_ms pour l'EKF3 du FC.
+  // Temps GPS du récepteur, PAS `ts` (steady_clock interne) — envoyé tel
+  // quel dans GPS_INPUT.time_week/time_week_ms.
   uint16_t gpsWeek{0};
   uint32_t gpsTowMs{0};
 };
 
-// Nuage de points LIDAR en NED, relatif au drone, projeté via l'attitude
-// courante. points[i].isZero() : aucune mesure à cet angle ce tour-ci.
-// rangeMm/intensity sont la mesure brute repère-corps (rangeMm[i] = portée
-// à l'angle i en degrés, AVANT projection NED) — conservée à côté de
-// `points` pour la télémétrie (LIDAR_SCAN) : reprojeter `points` en
-// repère-corps demanderait de désappliquer l'attitude, inutilement fragile.
+// Points en NED relatif au drone ; isZero() = aucune mesure à cet angle.
+// rangeMm/intensity gardent la mesure brute repère-corps pour LIDAR_SCAN
+// — cf. SENSORFUSION.md §5.
 struct LidarMap {
   TYPES::TimePoint ts{};
   std::array<TYPES::Vec3, 360> points{};
@@ -54,8 +44,8 @@ struct LidarMap {
   std::array<uint16_t, 360> rangeMm{};
 };
 
-// État dynamique fusionné, repère NED — vérité terrain pour Nav/MC.
-// posNed a l'offset HomeCalibrator appliqué, attitude relayée du FC.
+// État fusionné en NED, vérité terrain pour Nav/MC. posNed porte l'offset
+// HomeCalibrator, l'attitude est relayée du FC.
 struct DynamicState {
   TYPES::TimePoint ts{};
   TYPES::Position posNed{};
@@ -80,12 +70,12 @@ public:
                               SharedSFMem &SF)
       : SharedCompMemHandler(SF.compMem, id, timeout), SF_(SF) {};
 
-  // Écriture — appelée par les Task de SensorFusion (GPSTask, LidarTask, EKFTask).
+  // Écriture : les trois Task de SensorFusion.
   void setGpsMag(GpsMagSample s) { setData(id_, timeout_, SF_.data.gpsMag, s); }
   void setLidarMap(LidarMap m) { setData(id_, timeout_, SF_.data.lidar, m); }
   void setDynamicState(DynamicState s) { setData(id_, timeout_, SF_.data.state, s); }
 
-  // Lecture — Nav (state), MissionControl (lidar), MavlinkInterface (gpsMag).
+  // Lecture : Nav (state), MC (lidar), MavlinkInterface (gpsMag).
   [[nodiscard]] std::optional<GpsMagSample> getGpsMag() {
     return getData(id_, timeout_, SF_.data.gpsMag);
   }

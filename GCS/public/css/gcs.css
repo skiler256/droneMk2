@@ -189,19 +189,6 @@ a:hover { color: #8ce9f5; }
   font: 600 10.8px var(--f-mono);
 }
 
-/* ── Batterie ──────────────────────────────────────────────────────────── */
-
-.batt__row   { display: flex; align-items: center; gap: 12px; }
-.batt__shell { display: flex; align-items: center; }
-.batt__case  { width: 58px; height: 28px; border: 2px solid rgba(230, 241, 244, .45); border-radius: 2px; padding: 2px; }
-.batt__fill  { height: 100%; border-radius: 1px; }
-.batt__nub   { width: 3px; height: 9px; background: rgba(230, 241, 244, .45); border-radius: 0 2px 2px 0; }
-.batt__pct-unit { font-size: 15.6px; }
-.batt__cells { flex: 1; display: flex; gap: 2px; height: 22px; }
-.batt__cell  { flex: 1; border: 1px solid rgba(255, 255, 255, .12); border-radius: 1px; position: relative; overflow: hidden; }
-.batt__cell-fill { position: absolute; bottom: 0; left: 0; right: 0; }
-.batt__grid  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
-
 /* ── Actions ───────────────────────────────────────────────────────────── */
 
 .act__arm {
@@ -523,14 +510,6 @@ a:hover { color: #8ce9f5; }
 .radio__kpi-label { font: 600 9.6px var(--f-ui); letter-spacing: 1px; color: rgba(230, 241, 244, .38); }
 .radio__band { flex: none; font: 600 10.2px var(--f-mono); color: var(--fg-dimmer); white-space: nowrap; }
 
-/* ── Thermique ─────────────────────────────────────────────────────────── */
-
-.therm { display: flex; align-items: center; gap: 12px; }
-.therm__gauge-wrap { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.therm__gauge { position: relative; height: 7px; border-radius: 4px; background: linear-gradient(90deg, #35d67c 0%, #35d67c 52%, #ffb443 74%, #ff5c5c 100%); }
-.therm__cursor { position: absolute; top: -3px; width: 2px; height: 13px; background: var(--fg-hi); }
-.therm__scale { display: flex; justify-content: space-between; font: 500 11.4px var(--f-mono); color: rgba(230, 241, 244, .45); }
-
 /* ── Journal d'evenements ──────────────────────────────────────────────── */
 
 .log__pinned { display: flex; flex-direction: column; gap: 4px; }
@@ -566,3 +545,164 @@ a:hover { color: #8ce9f5; }
 /* ── Fraicheur : un groupe sans paquet recent passe en demi-teinte ─────── */
 
 .is-stale { opacity: .38; transition: opacity .25s ease; }
+
+
+/* ── Deblocage audio ──────────────────────────────────────────────────────
+   En overlay plein ecran et non en widget flottant : le son des alarmes est
+   un prerequis d'exploitation, pas un reglage de confort. */
+
+.audiogate {
+  position: fixed; inset: 0; z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 9, 12, .82); backdrop-filter: blur(3px);
+}
+
+.audiogate.hidden { display: none; }
+
+.audiogate__card {
+  width: 420px; padding: 28px 30px 22px;
+  background: var(--panel); border: 1px solid var(--accent);
+  border-radius: 10px; text-align: center;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+}
+
+.audiogate__title {
+  font: 700 13.4px var(--f-ui); letter-spacing: 2px;
+  color: var(--accent); text-transform: uppercase; margin-bottom: 14px;
+}
+
+.audiogate__text {
+  font: 500 12.4px var(--f-mono); line-height: 1.55;
+  color: rgba(230, 241, 244, .76); margin: 0 0 22px;
+}
+
+.audiogate__btn {
+  width: 100%; padding: 13px 0; cursor: pointer;
+  font: 700 12.6px var(--f-ui); letter-spacing: 1.8px; text-transform: uppercase;
+  color: #06222a; background: var(--accent);
+  border: none; border-radius: 6px;
+}
+
+.audiogate__btn:hover { filter: brightness(1.12); }
+
+.audiogate__skip {
+  margin-top: 12px; cursor: pointer; background: none; border: none;
+  font: 500 10.8px var(--f-mono); color: var(--fg-dimmer);
+  text-decoration: underline;
+}
+
+/* Le son coupe doit rester visible : une alarme muette sans indication
+   serait un mode degrade invisible. */
+.audiomute {
+  position: fixed; right: .6rem; bottom: .6rem; z-index: 9999;
+  pointer-events: none;
+  font: 600 10.6px var(--f-mono); letter-spacing: 1px;
+  padding: .3rem .6rem; border-radius: 5px;
+  background: #3a2a00; color: #ffb84f; border: 1px solid #7a5a00;
+}
+
+.audiomute.hidden { display: none; }
+
+/* ── Schema drone (bloc concu hors depot, cf. GCS/SCHEMA_DRONE_SPEC.md) ── */
+
+/* Bloc « Schéma drone » — classes .scheme__*
+   Aucune valeur dynamique ici : le moteur de rendu pose les classes d'état
+   (is-ok | is-warn | is-crit | is-nodata [+ is-blink]) et deux variables :
+   --fill (batterie, 0–1) et --dev (moteurs, 0–1, |écart| normalisé). */
+
+.scheme { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Jauge continue moteurs : neutre (ok) à écart nul → ambre à 0.5 → rouge à 1.
+   Déclarée avant les états pour qu'un état explicite l'emporte. */
+.scheme__part--motor.is-cont {
+  --c: color-mix(in oklab,
+        var(--crit) calc(clamp(0, var(--dev, 0) * 2 - 1, 1) * 100%),
+        color-mix(in oklab, var(--warn) calc(clamp(0, var(--dev, 0) * 2, 1) * 100%), var(--ok)));
+}
+
+.scheme .is-ok     { --c: var(--ok); }
+.scheme .is-warn   { --c: var(--warn); }
+.scheme .is-crit   { --c: var(--crit); }
+.scheme .is-nodata { --c: var(--fg-faint); }
+.scheme .is-blink  { animation: scheme-blink 2s ease-in-out infinite; }
+@keyframes scheme-blink { 0%, 45% { opacity: 1; } 60%, 85% { opacity: .2; } 100% { opacity: 1; } }
+
+.scheme__badge { color: var(--c); border-color: currentColor; }
+.scheme__badge.is-nodata { color: var(--fg-dimmer); border-style: dashed; }
+
+/* Scène SVG — se comprime avec la colonne, aspect conservé */
+.scheme__stage { flex: 1 1 0; min-height: 0; position: relative; margin: 8px; }
+.scheme__svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+
+.scheme__body { fill: none; stroke: var(--fg-faint); stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
+.scheme__hatch { stroke: var(--fg-faint); stroke-width: 1; }
+
+.scheme__shape { fill: color-mix(in srgb, var(--c) 22%, transparent); stroke: var(--c); stroke-width: 1.25; }
+.is-nodata .scheme__shape { fill: url(#scheme-hatch); stroke-dasharray: 3 2; }
+
+.scheme__part--ant .scheme__shape,
+.scheme__part--ant.is-nodata .scheme__shape { fill: none; stroke-width: 3.5; stroke-linecap: round; }
+.scheme__part--ant.is-nodata .scheme__shape { stroke-dasharray: 1 4.5; }
+
+.scheme__part--batt .scheme__shape { fill: color-mix(in srgb, var(--c) 6%, transparent); }
+.scheme__part--batt.is-nodata .scheme__shape { fill: url(#scheme-hatch); }
+.scheme__batt-fill {
+  fill: color-mix(in srgb, var(--c) 48%, transparent);
+  transform-box: fill-box; transform-origin: 0 50%;
+  transform: scaleX(var(--fill, 0));
+}
+.is-nodata .scheme__batt-fill { display: none; }
+.scheme__tick { fill: none; stroke: var(--fg-faint); stroke-width: 1; }
+
+.scheme__pip { fill: var(--c); }
+.scheme__pip.is-nodata { fill: none; stroke: var(--fg-faint); stroke-width: 1; stroke-dasharray: 2 1.5; }
+
+.scheme__lbl { font: 600 10px var(--f-ui); letter-spacing: .8px; fill: var(--fg-dim); }
+.scheme__tag { font: 700 11px var(--f-ui); letter-spacing: .8px; fill: var(--fg); }
+.is-nodata .scheme__tag { fill: var(--fg-dimmer); }
+.scheme__val { font: 500 9.5px var(--f-mono); fill: var(--fg-dim); }
+.scheme__val--in { fill: var(--fg); }
+.is-nodata .scheme__val--in { fill: var(--fg-dimmer); }
+
+/* ── Legende du schema ──────────────────────────────────────────────────── */
+
+.scheme__legend {
+  display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 6px 10px 9px; flex: 0 0 auto;
+}
+
+.scheme__key {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 600 9.6px var(--f-ui); letter-spacing: 1.1px; text-transform: uppercase;
+  color: var(--fg-dimmer);
+}
+
+.scheme__key i {
+  width: 8px; height: 8px; border: 1px solid var(--c);
+  background: color-mix(in srgb, var(--c) 28%, transparent);
+}
+
+.scheme__key.is-nodata i { background: none; border-style: dashed; }
+
+/* ── Encadre autonomie ──────────────────────────────────────────────────── */
+
+.endur      { flex: 0 0 auto; padding: 10px 12px 8px; }
+.endur__top { display: flex; align-items: center; gap: 14px; }
+
+.endur__charge { flex: 0 0 auto; }
+.endur__pct    { display: flex; align-items: baseline; gap: 2px; color: var(--ok); }
+.endur__pct > span:first-child { font: 700 40px/1 var(--f-mono); }
+.endur__unit   { font: 600 11px var(--f-ui); color: var(--fg-dimmer); letter-spacing: .6px; }
+
+.endur__est      { flex: 1 1 auto; border-left: 1px solid var(--line); padding-left: 14px; }
+.endur__esthead  { margin-bottom: 4px; }
+.endur__row      { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.endur__val      { display: flex; align-items: baseline; gap: 3px; }
+.endur__val > span:first-child { font: 700 19px/1.25 var(--f-mono); color: var(--fg); }
+
+.endur__foot {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line);
+}
+
+.endur__raw { font: 500 11.4px var(--f-mono); color: var(--fg-dim); }

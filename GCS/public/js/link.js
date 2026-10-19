@@ -62,15 +62,39 @@
         var alarm = (cols[6] || '').trim().toLowerCase(); // colonne Alarm, cf. codes_common.py
         var panel = (cols[7] || '').trim().split(',').map(function (p) { return p.trim(); })
           .filter(Boolean);
+        // Colonne Schematic : formes du schema drone que ce code colore.
+        var schematic = (cols[8] || '').trim().split(',').map(function (p) { return p.trim(); })
+          .filter(Boolean);
         var m = code && code.match(/^([A-Z]{2})([A-Z])(\d{3})$/);
         if (!m) continue;
         var packed = ((COMPONENTS[m[1]] || 0) << 24) | ((CATEGORIES[m[2]] || 0) << 16) |
                      parseInt(m[3], 10);
         CODES_TABLE.set(packed >>> 0,
-          { code: code, name: name, severity: severity, alarm: alarm, panel: panel });
+          { code: code, name: name, severity: severity, alarm: alarm, panel: panel,
+            schematic: schematic });
       }
     }).catch(function () { /* pas grave : affichage en hex en repli */ });
   })();
+
+  // Pannes actives, par forme du schema. Recalcule a chaque changement de
+  // code plutot que maintenu par increments : une forme peut etre allumee par
+  // plusieurs codes, et seul le pire compte.
+  var activeCodes = new Map(); // packed -> info
+
+  function recomputeFaults(state) {
+    var worst = {};
+    activeCodes.forEach(function (info) {
+      var sev = info.severity;
+      var level = (sev === 'Emergency' || sev === 'Critical') ? 'crit'
+                : (sev === 'Warning') ? 'warn' : null;
+      if (!level) return; // Info : pas une panne, n'allume rien
+      info.schematic.forEach(function (el) {
+        if (worst[el] !== 'crit') worst[el] = level;
+      });
+    });
+    state.hw.faults = worst;
+    GCS.touch(state, 'hw');
+  }
 
   function lookupCode(packed) {
     return CODES_TABLE.get(packed >>> 0) || null;
@@ -97,6 +121,39 @@
   // buildHealthPkt, defilement) — on maintient donc un upsert par id plutot
   // que de remplacer toute la liste a chaque reception.
   var componentIndexById = {};
+
+  // Cree l'entree au premier paquet qui parle du composant, que ce soit
+  // HEALTH ou TASK_RATE : l'ordre d'arrivee n'est pas garanti.
+  function componentSlot(state, id) {
+    var name = COMPONENT_NAMES[id];
+    if (name === undefined) return undefined;
+    var idx = componentIndexById[id];
+    if (idx === undefined) {
+      idx = state.components.length;
+      componentIndexById[id] = idx;
+      // hz null -> '--' cote render.js, pas '0 Hz' : tant que TASK_RATE n'est
+      // pas arrive, la frequence est inconnue et non nulle.
+      state.components.push({ name: name, hz: null, note: '', health: 'IDLE', tasks: {} });
+    }
+    return idx;
+  }
+
+  // La carte n'a qu'une ligne : on y met la Task la plus en retard sur sa
+  // cible, c'est la seule info actionnable. 10 % de marge pour absorber le
+  // bruit d'ordonnancement et la fenetre de mesure d'une seconde.
+  function rateDeficitNote(tasks) {
+    var worstId = null, worstRatio = 1;
+    for (var id in tasks) {
+      var t = tasks[id];
+      if (!t.target) continue; // cible non publiee : pas de reference
+      var ratio = t.hz / t.target;
+      if (ratio < worstRatio) { worstRatio = ratio; worstId = id; }
+    }
+    if (worstId === null || worstRatio > 0.9) return '';
+    var w = tasks[worstId];
+    return 'T' + worstId + ' ' + w.hz.toFixed(0) + '/' + w.target.toFixed(0) + ' Hz';
+  }
+
 
   GCS.applyPacket = function applyPacket(state, pkt) {
     var p = pkt.payload || {};
@@ -164,8 +221,9 @@
         state.battery.pct     = p.remaining_pct;
         state.battery.voltage = p.voltage;
         state.battery.current = p.current;
-        // tempC/consumed_mAh/cycles/cells/secondsRemaining : pas de paquet
-        // dedie cote drone actuellement, restent a 0 (cf. README.md).
+        // minutesRemaining/kmRemaining restent null : ce sont des calculs
+        // GCS non tranches (capacite du pack, reserve de retour), pas des
+        // mesures -- cf. GCS/SCHEMA_DRONE_SPEC.md §5.
         GCS.touch(state, 'battery');
         break;
 
@@ -220,18 +278,30 @@
         GCS.touch(state, 'sys');
         break;
 
+      case 'ESC_RPM':
+        // Quatre zeros simultanes = le FC n'a jamais emis ESC_TELEMETRY, pas
+        // quatre moteurs a l'arret (cf. SYSMONITORING.md §14).
+        state.hw.rpm = (p.rpm && p.rpm.some(function (v) { return v > 0; })) ? p.rpm : null;
+        GCS.touch(state, 'hw');
+        break;
+
       case 'HEALTH': {
-        var name = COMPONENT_NAMES[p.component];
-        if (name === undefined) break; // composant hors GCS (ex: GlobalWatchdog) : ignore
-        var idx = componentIndexById[p.component];
-        if (idx === undefined) {
-          idx = state.components.length;
-          componentIndexById[p.component] = idx;
-          // hz/note : pas de donnee cote drone (pas de paquet de charge par
-          // Task) -- hz reste null (affiche '--' cote render.js, pas "0 Hz").
-          state.components.push({ name: name, hz: null, note: '', health: 'IDLE' });
-        }
-        state.components[idx].health = HEALTH_NAMES[p.health] || 'IDLE';
+        var hIdx = componentSlot(state, p.component);
+        if (hIdx === undefined) break; // composant hors GCS (ex: GlobalWatchdog)
+        state.components[hIdx].health = HEALTH_NAMES[p.health] || 'IDLE';
+        GCS.touch(state, 'components');
+        break;
+      }
+
+      case 'TASK_RATE': {
+        // Un seul couple (composant, Task) par paquet : le drone fait
+        // defiler ses 19 Task (cf. SYSMONITORING.md §13).
+        var rIdx = componentSlot(state, p.component);
+        if (rIdx === undefined) break;
+        var comp = state.components[rIdx];
+        comp.tasks[p.task_id] = { hz: p.hz, target: p.target_hz };
+        comp.hz = comp.tasks[0] ? comp.tasks[0].hz : null;
+        comp.note = rateDeficitNote(comp.tasks);
         GCS.touch(state, 'components');
         break;
       }
@@ -266,6 +336,13 @@
         // notifiee sur levee ET effacement, un effacement doit pouvoir
         // arreter une alarme en boucle en cours (cf. alarm.js::notifyCode).
         if (GCS.alarm) GCS.alarm.notifyCode(p.code, info, !!p.active);
+
+        // Schema drone : un code n'allume une forme que s'il la designe.
+        if (info && info.schematic && info.schematic.length) {
+          if (p.active) activeCodes.set(p.code >>> 0, info);
+          else activeCodes.delete(p.code >>> 0);
+          recomputeFaults(state);
+        }
         break;
       }
 
@@ -278,6 +355,10 @@
   };
 
   /* ── Transport ─────────────────────────────────────────────────────────── */
+
+  // Exposee : sim.js applique la meme regle d'ecart que le lien reel, pour
+  // que la vitrine et le vol affichent la carte de la meme facon.
+  GCS.rateDeficitNote = rateDeficitNote;
 
   GCS.link = {
     ws: null,

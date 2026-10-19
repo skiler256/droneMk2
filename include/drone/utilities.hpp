@@ -16,10 +16,8 @@ namespace UTILITIES {
 template <typename Predicate>
 bool waitUntil(Predicate &&pred, TYPES::Us timeout, bool invert = false,
                TYPES::Us period = TYPES::Us(10)) {
-  // TYPES::Clock, pas std::chrono::steady_clock en dur : ce timeout tourne
-  // dans le chemin chaud de SharedMemory::lockedAccess (verrou CAS), doit
-  // rester cohérent avec la politique d'horloge du reste du process (cf.
-  // DRONE_USE_SIM_CLOCK, types.hpp).
+  // TYPES::Clock et non steady_clock en dur : chemin chaud du verrou CAS,
+  // doit suivre la politique d'horloge du process (DRONE_USE_SIM_CLOCK).
   TYPES::TimePoint deadline = TYPES::Clock::now() + timeout;
 
   while (TYPES::Clock::now() < deadline) {
@@ -42,29 +40,13 @@ bool waitUntil(Predicate &&pred, TYPES::Us timeout, bool invert = false,
   return std::chrono::duration_cast<TYPES::Us>(end - start);
 }
 
-// -----------------------------------------------------------------------
-// CRC32 (polynome CRC-32C / Castagnoli, celui supporte nativement par
-// l'extension ARMv8 CRC32) sur un buffer brut.
-//
-// - Sur la cible (Raspberry Pi 5, Cortex-A76, ARMv8) : instruction machine
-//   dediee (__crc32d/__crc32b), quasi gratuite en cycles.
-// - En dev sur Codespace (x86_64) ou toute autre cible sans support ARM :
-//   fallback logiciel par table de lookup, portable, correct mais plus
-//   lent (~1 cycle/octet). Le choix est fait a la compilation, aucune
-//   branche runtime.
-//
-// A utiliser pour valider l'integrite d'un payload dans le shared memory
-// IPC (SharedMemoryHandler::computeChecksum), pas pour de la cryptographie
-// (CRC32 n'est PAS resistant a une falsification volontaire).
-// -----------------------------------------------------------------------
+// CRC-32C (Castagnoli) : instruction ARMv8 sur cible, table de lookup en
+// dev x86, resultat identique des deux cotes. Integrite shm uniquement,
+// pas de la cryptographie -- cf. ARCHITECTURE_IPC.md §2.4.
 namespace Crc32Detail {
 
 #if !defined(__aarch64__)
-// Table generee au polynome CRC-32C (0x1EDC6F41, reflechi 0x82F63B78),
-// le meme que celui utilise par l'instruction materielle ARMv8 -- ca
-// garantit un resultat identique entre dev (x86) et cible (ARM), utile
-// si un checksum calcule en dev doit un jour etre compare a un calcule
-// sur cible (logs, tests golden, etc.)
+// Polynome 0x1EDC6F41 (reflechi 0x82F63B78), celui de l'instruction ARMv8.
 inline constexpr auto makeTable() {
   std::array<uint32_t, 256> table{};
   for (uint32_t i = 0; i < 256; ++i) {
@@ -105,8 +87,7 @@ inline uint32_t crc32(const void *data, std::size_t len) {
   return crc ^ 0xFFFFFFFFu;
 }
 
-// Surcharge pratique pour n'importe quel type trivially copyable (les
-// payloads du shared memory IPC, typiquement).
+// Surcharge pour tout type trivially copyable (payloads shm).
 template <typename T>
   requires std::is_trivially_copyable_v<T>
 uint32_t crc32(const T &value) {

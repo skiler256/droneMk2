@@ -4,6 +4,7 @@
 #include "drone/types.hpp"
 #include "drone/utilities.hpp"
 #include <cstdlib>
+#include <string_view>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -33,18 +34,36 @@ constexpr float kMinArmedRpm = 1000.0f;
 constexpr float kMaxArmedRpm = 10000.0f;
 constexpr TYPES::Ms kEscStaleThreshold{500};
 
-// Override env var pour le SITL uniquement (pack batterie/ESC simulés non
-// réalistes) -- comportement de prod inchangé si non définies, cf. sitl/SITL.md §4.
+#ifdef DRONE_USE_SITL_DRIVERS
+// Surcharges réservées au SITL : une variable d'environnement ne doit pas
+// pouvoir désactiver une protection de vol — cf. sitl/SITL.md §4.
 [[nodiscard]] float envFloatOrDefault(const char *envVar, float defaultV) {
   if (const char *v = std::getenv(envVar))
     return std::strtof(v, nullptr);
   return defaultV;
 }
 
-const bool kSkipRpmCheck = std::getenv("DRONE_SKIP_RPM_CHECK") != nullptr;
+// Comparaison à "1" et non simple présence : DRONE_SKIP_RPM_CHECK=0
+// désactivait le check, l'inverse de ce que la variable laisse lire.
+[[nodiscard]] bool envFlag(const char *envVar) {
+  const char *v = std::getenv(envVar);
+  return v && std::string_view(v) == "1";
+}
 
-const float kBattLowVoltage = envFloatOrDefault("DRONE_BATT_LOW_V", 14.0f);
-const float kBattCriticalVoltage = envFloatOrDefault("DRONE_BATT_CRITICAL_V", 12.5f);
+const bool kSkipRpmCheck = envFlag("DRONE_SKIP_RPM_CHECK");
+const float kBattLowVoltage = envFloatOrDefault("DRONE_BATT_LOW_V", 19.8f);
+const float kBattCriticalVoltage = envFloatOrDefault("DRONE_BATT_CRITICAL_V", 18.0f);
+#else
+constexpr bool kSkipRpmCheck = false;
+// Pack 6S, cf. MAVLINKINTERFACE.md §9.
+constexpr float kBattLowVoltage = 19.8f;
+constexpr float kBattCriticalVoltage = 18.0f;
+#endif
+
+// Durée pendant laquelle le seuil doit rester franchi, par niveau : FCP001
+// n'est qu'un voyant, FCP003 déclenche un LANDING — cf. MAVLINKINTERFACE.md §9.
+constexpr TYPES::Ms kBattLowSagFilter{500};
+constexpr TYPES::Ms kBattCriticalSagFilter{10000};
 
 // Fallback autonome si MissionControl ou le GCS ne répondent plus, cf.
 // MAVLINKINTERFACE.md §9.
@@ -201,11 +220,21 @@ void FSTask::loop() {
     linkLostActive_ = false;
   }
 
-  // Voyants GCS RPM bas/haut, cf. MAVLINKINTERFACE.md §9. Pas de vérif si
-  // désarmé (RPM=0 normal) ; RPM haut jamais déclenché par une donnée absente.
+  // Voyants RPM/batterie, et MVC008 si la donnée FC est illisible — §9.
+  auto armed = comp.fc_.getArmed();
+  auto battery = comp.fc_.getBattery();
+  bool fcUnreadable = !armed || !battery;
+  if (fcUnreadable && !fcUnreadableActive_) {
+    comp.sysState_.raiseCode(CODES::MVC008);
+    fcUnreadableActive_ = true;
+  } else if (!fcUnreadable && fcUnreadableActive_) {
+    comp.sysState_.clearCode(CODES::MVC008);
+    fcUnreadableActive_ = false;
+  }
+
   bool rpmFault = false;
   bool rpmHigh = false;
-  if (!kSkipRpmCheck && comp.fc_.getArmed().value_or(false)) {
+  if (!kSkipRpmCheck && armed.value_or(false)) {
     auto escTs = comp.fc_.getEscStatusTs();
     bool escStale = !escTs || UTILITIES::msBetween(*escTs, Clock::now()) > kEscStaleThreshold;
     if (escStale) {
@@ -236,10 +265,33 @@ void FSTask::loop() {
     rpmHighActive_ = false;
   }
 
+  // Confirmé seulement si la condition tient `hold` d'affilée.
+  auto sustained = [&](bool raw, TYPES::TimePoint &since, TYPES::Ms hold) {
+    if (!raw) {
+      since = TYPES::TimePoint{};
+      return false;
+    }
+    if (since == TYPES::TimePoint{}) {
+      since = Clock::now();
+      return false;
+    }
+    return UTILITIES::msBetween(since, Clock::now()) >= hold;
+  };
+
   // Pas conditionné à l'armement, contrairement au RPM. voltage<=0 = jamais reçu.
-  float voltage = comp.fc_.getBattery().value_or(FCBatteryStatus{}).voltage.v;
+  float voltage = battery.value_or(FCBatteryStatus{}).voltage.v;
   bool battLow = voltage > 0.0f && voltage < kBattLowVoltage;
   bool battCritical = voltage > 0.0f && voltage < kBattCriticalVoltage;
+
+  // Illisible : conserver l'état, ne pas effacer une alarme légitime.
+  if (fcUnreadable) {
+    battLow = battLowActive_;
+    battCritical = battCriticalActive_;
+  } else {
+    battLow = sustained(battLow, battLowSince_, kBattLowSagFilter);
+    battCritical =
+        sustained(battCritical, battCriticalSince_, kBattCriticalSagFilter);
+  }
 
   if (battLow && !battLowActive_) {
     comp.sysState_.raiseCode(CODES::FCP001);
@@ -393,10 +445,8 @@ void TTxTask::loop() {
       // SensorFusion ne fournit plus de cap sur ce lien.
       uint16_t yawCdeg = 0;
 
-      // time_usec accepte epoch Unix OU temps depuis le boot (spec
-      // GPS_INPUT) — steady_clock va bien ici, contrairement à
-      // time_week/time_week_ms (sample->gpsWeek/gpsTowMs) qui doivent être
-      // le vrai temps GPS.
+      // time_usec accepte le temps depuis le boot, contrairement à
+      // time_week/time_week_ms qui exigent le vrai temps GPS (§11).
       auto timeUsec = static_cast<uint64_t>(
           std::chrono::duration_cast<std::chrono::microseconds>(
               sample->ts.time_since_epoch())
@@ -478,13 +528,9 @@ void TTxAckTask::loop() {
         continue; // pas final (ex: takeoff) : on continue d'attendre le vrai résultat
 
       if (ack.result != MAV_RESULT_ACCEPTED) {
-        // Échec réel : n'abandonne la séquence que si c'était un ordre
-        // MissionControl (ex: guided refusé -> arm -> takeoff quand même).
-        // Une commande interne (requestInitStreams) qui échoue ne doit PAS
-        // faire disparaître silencieusement un ordre de vol déjà en file
-        // derrière elle (ex: ESC_TELEMETRY_1_TO_4 rejeté par un SITL
-        // standard sans télémétrie ESC simulée -- videait toute la queue,
-        // arm compris, sans jamais le signaler à MissionControl).
+        // N'abandonne la séquence que pour un ordre MissionControl : une
+        // commande interne qui échoue ne doit pas emporter un ordre de vol
+        // en file derrière elle — cf. MAVLINKINTERFACE.md §6.
         bool wasFromMC = comp.pendingAck_.fromMissionControl;
         resolvePending(false);
         if (wasFromMC)
@@ -635,11 +681,13 @@ void TRxTask::loop() {
       // ArduPilot y annonce prearm checks/EKF3 source/erreurs capteur —
       // juste loggé pour l'instant, pas de champ SharedFCStatus dédié.
       case MAVLINK_MSG_ID_STATUSTEXT: {
+#ifdef DRONE_USE_SITL_DRIVERS
         mavlink_statustext_t st{};
         mavlink_msg_statustext_decode(&msg, &st);
         std::string text(st.text, strnlen(st.text, sizeof(st.text)));
         std::cout << "[FC STATUSTEXT] severity=" << static_cast<int>(st.severity)
                  << " " << text << "\n";
+#endif
         break;
       }
 
@@ -654,19 +702,23 @@ void TRxTask::loop() {
       }
 
       case MAVLINK_MSG_ID_GPS_RAW_INT: {
+#ifdef DRONE_USE_SITL_DRIVERS
         mavlink_gps_raw_int_t gps{};
         mavlink_msg_gps_raw_int_decode(&msg, &gps);
         std::cout << "[FC GPS_RAW_INT] fix_type=" << static_cast<int>(gps.fix_type)
                  << " satellites=" << static_cast<int>(gps.satellites_visible) << "\n";
+#endif
         break;
       }
 
       case MAVLINK_MSG_ID_EKF_STATUS_REPORT: {
+#ifdef DRONE_USE_SITL_DRIVERS
         mavlink_ekf_status_report_t ekf{};
         mavlink_msg_ekf_status_report_decode(&msg, &ekf);
         std::cout << "[FC EKF_STATUS_REPORT] flags=0x" << std::hex << ekf.flags
                  << std::dec << " pos_horiz_var=" << ekf.pos_horiz_variance
                  << " compass_var=" << ekf.compass_variance << "\n";
+#endif
         break;
       }
 

@@ -90,11 +90,9 @@
     /** Amorce les champs qui ne bougent pas. */
     init: function (state) {
       state.lidar.maxRange = 45;
-      state.battery.cycles = 148;
       state.mission.planName = 'COASTAL-LOOP-07';
       state.mission.wpCount  = WP.length - 1;
       state.mission.armed    = true;
-      state.sys.thermalLimitC = 85;
       for (var i = 0; i < 9; i++) this._pushEvent(state);
     },
 
@@ -155,17 +153,12 @@
       GCS.touch(state, 'position');
 
       /* ── Batterie ─────────────────────────────────────────────────────── */
-      state.battery.pct              = battPct;
-      state.battery.voltage          = 21.0 + (battPct / 100) * 3.4;
-      state.battery.current          = 8.4 + Math.sin(t * 0.6) * 1.5;
-      state.battery.tempC            = 32 + Math.sin(t * 0.15) * 2;
-      state.battery.consumed_mAh     = 2600 - battPct * 10;
-      state.battery.secondsRemaining = Math.max(0, (battPct - 22) * 0.62 * 60);
-      state.battery.rtlNeedPct       = 11 + distHome / 90;
-      state.battery.cells.length = 0;
-      for (var c = 0; c < 6; c++) {
-        state.battery.cells.push(Math.max(10, Math.min(100, battPct + Math.sin(t * 0.3 + c) * 2)));
-      }
+      // Pack 6S : 19.8 V = seuil bas, 25.2 V = pleine charge (cf. les seuils
+      // de MavlinkInterface). Les deux estimations restent null comme en vol
+      // reel, leur calcul n'etant pas tranche.
+      state.battery.pct     = battPct;
+      state.battery.voltage = 19.8 + (battPct / 100) * 5.4;
+      state.battery.current = 8.4 + Math.sin(t * 0.6) * 1.5;
       GCS.touch(state, 'battery');
 
       /* ── Lidar ────────────────────────────────────────────────────────── */
@@ -203,20 +196,33 @@
 
       /* ── Systeme ──────────────────────────────────────────────────────── */
       state.sys.cpuTempC   = 46 + Math.sin(t * 0.2) * 3.5;
-      state.sys.cpuLoadPct = 37 + Math.sin(t * 0.25) * 7;
-      state.sys.ramUsedGb  = 2.2 + Math.sin(t * 0.2) * 0.2;
-      state.sys.uptimeSec  = t;
       GCS.touch(state, 'sys');
 
       /* ── Composants ───────────────────────────────────────────────────── */
-      state.components = [
-        { name: 'SYS MONITORING', hz: 50 + Math.sin(t * 0.5),      note: 'watchdog fed · 0 resets', health: 'NOMINAL' },
-        { name: 'MAVLINK IF',     hz: 20 + Math.sin(t * 0.4),      note: 'hb ok · seq 0 drop',      health: 'NOMINAL' },
-        { name: 'SENSOR FUSION',  hz: 400 + Math.sin(t * 0.6) * 4, note: 'EKF3 · innov 0.03',       health: 'NOMINAL' },
-        { name: 'NAVIGATION',     hz: 50 + Math.sin(t * 0.3),      note: 'xtrack 0.4 m',            health: 'NOMINAL' },
-        { name: 'MISSION CTRL',   hz: 10 + Math.sin(t * 0.2),
-          note: 'leg ' + (pos.leg + 1) + '/' + (WP.length - 1) + ' · plan valid',                   health: 'NOMINAL' }
-      ];
+      // Fréquences cibles = les loopFrequency réelles des Task (cf. les
+      // TaskConfig dans src/*/*.cpp). Le jitter simulé reste sous la marge
+      // de 10 % de rateDeficitNote, sauf pour la Task volontairement en
+      // retard plus bas, qui exerce le chemin d'affichage de l'écart.
+      var SIM_TASKS = {
+        'SYS MONITORING': [50, 10, 50, 30],
+        'MAVLINK IF':     [50, 20, 100, 50, 20],
+        'SENSOR FUSION':  [100, 50, 10],
+        'NAVIGATION':     [20, 50, 20],
+        'MISSION CTRL':   [20, 10, 20, 10]
+      };
+
+      state.components = Object.keys(SIM_TASKS).map(function (name, ci) {
+        var tasks = {};
+        SIM_TASKS[name].forEach(function (target, id) {
+          // Task 1 de SENSOR FUSION décroche à ~75 % : vitrine de l'écart.
+          var factor = (name === 'SENSOR FUSION' && id === 1)
+            ? 0.75
+            : 1 + Math.sin(t * (0.2 + ci * 0.1) + id) * 0.02;
+          tasks[id] = { hz: target * factor, target: target };
+        });
+        return { name: name, hz: tasks[0].hz, note: GCS.rateDeficitNote(tasks),
+                 health: 'NOMINAL', tasks: tasks };
+      });
       GCS.touch(state, 'components');
 
       /* ── Radio ────────────────────────────────────────────────────────── */

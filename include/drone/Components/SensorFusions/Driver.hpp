@@ -1,6 +1,7 @@
 #pragma once
 #include "drone/types.hpp"
 #include <cerrno>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <expected>
@@ -22,8 +23,7 @@ public:
     }
   }
 
-  // Un descripteur de fichier ne se copie pas : on interdit copie,
-  // et on autorise (par défaut) le move si un jour c'est nécessaire.
+  // Un descripteur de fichier ne se copie pas ; le move reste possible.
   IDriver(const IDriver &) = delete;
   IDriver &operator=(const IDriver &) = delete;
   IDriver(IDriver &&) = delete;
@@ -35,8 +35,7 @@ public:
   [[nodiscard]] TYPES::DriverHealth getHealth() const { return health_; }
 
 protected:
-  // Les classes dérivées ont besoin d'appeler ces méthodes depuis leur
-  // propre init(), donc protected et non private.
+  // protected et non private : les dérivées les appellent depuis init().
 
   [[nodiscard]] std::optional<TYPES::DriverError>
   i2cConnect(std::uint8_t i2cAddress, const char *busPath = "/dev/i2c-1") {
@@ -112,15 +111,22 @@ struct GPSData {
   };
 
   Coord coord{};
-  std::vector<SatelliteInfo> sats{};
+
+  // Tableau FIXE, jamais un vector : ce driver tourne en SCHED_FIFO.
+  static constexpr std::size_t kMaxSatDetail = 16;
+  std::array<SatelliteInfo, kMaxSatDetail> sats{};
+  std::uint8_t satDetailCount{0}; // entrées valides de `sats`
+
+  // Canaux suivis (numCh), NON plafonné — distinct du détail ci-dessus,
+  // cf. SENSORFUSION.md §3.
+  std::uint8_t satellitesTracked{0};
 
   // year, month, day, hour, min, sec (UBX-NAV-TIMEUTC)
   int timeArray[6]{0, 0, 0, 0, 0, 0};
 
   bool gpsFixOk{false}; // fix 3D uniquement
 
-  // Code fix brut UBX NAV-STATUS.gpsFix (pas la numérotation MAVLink
-  // GPS_FIX_TYPE — conversion faite côté SensorFusion).
+  // Brut UBX, pas la numérotation MAVLink (conversion côté SensorFusion).
   std::uint8_t fixType{0};
 
   std::uint32_t pAcc{0}; // mm, horizontal (NAV-PVT hAcc)
@@ -132,9 +138,8 @@ struct GPSData {
 
   std::int32_t altMslMm{0}; // mm, altitude au-dessus du niveau de la mer (NAV-POSLLH hMSL)
 
-  // ms depuis le début de la semaine GPS courante (UBX NAV-PVT iTOW) —
-  // exactement le format attendu par MAVLink GPS_INPUT.time_week_ms, calculé
-  // par le récepteur lui-même (précision ms, indépendant de l'horloge du Pi).
+  // iTOW brut : déjà le format de GPS_INPUT.time_week_ms, calculé par le
+  // récepteur et non par l'horloge du Pi.
   std::uint32_t iTowMs{0};
 
   int velNED[3]{0, 0, 0}; // vNORTH, vEAST, vDOWN (cm/s)
@@ -148,8 +153,7 @@ struct MagData {
 };
 
 struct LidarData {
-    // Indexé par angle entier (0-359°). 0 = aucune mesure reçue à cet angle
-    // pour ce tour (distance physique de 0mm impossible, utilisé comme sentinelle).
+    // Indexé par angle (0-359°) ; 0 = aucune mesure (sentinelle).
     std::array<std::uint16_t, 360> distance_mm{};
     std::array<std::uint8_t, 360> intensity{};
 };

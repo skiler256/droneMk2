@@ -38,7 +38,16 @@ MAJOR_SEVERITIES = {"Critical", "Emergency"}
 
 CODE_RE = re.compile(r"^([A-Z]{2})([A-Z])(\d{3})$")
 
-CSV_FIELDS = ["Code", "Component", "Category", "Name", "Description", "Criticity", "Alarm", "Panel"]
+CSV_FIELDS = ["Code", "Component", "Category", "Name", "Description", "Criticity", "Alarm",
+              "Panel", "Schematic"]
+
+# Formes du schéma drone du dashboard (cf. GCS/SCHEMA_DRONE_SPEC.md). La
+# couleur n'est pas stockée : elle découle de Criticity, sinon un code pourrait
+# allumer en rouge sur le schéma ce qu'il signale en ambre au panneau ESP32.
+SCHEMATIC_ELEMENTS = {
+    "CPU", "FC", "GPS", "MAG", "ESC", "LIDAR",
+    "MOTOR_FRONT", "MOTOR_REAR", "BATTERY", "ANT_PDL", "ANT_SDL",
+}
 
 
 class DiagCode:
@@ -54,8 +63,10 @@ class DiagCode:
     # ("panne cause plusieurs voyants", décision explicite : politique dark
     # cockpit, chaque code décrit lui-même sa cascade plutôt qu'une règle
     # implicite basée sur la sévérité).
+    # schematic="" : le code n'allume aucune forme du schéma drone. Sinon liste
+    # de SCHEMATIC_ELEMENTS séparés par virgule (ex: "MOTOR_FRONT,MOTOR_REAR").
     def __init__(self, code, component_label, category_label, name, description, severity,
-                alarm="", panel=""):
+                alarm="", panel="", schematic=""):
         self.code = code
         self.component_label = component_label
         self.category_label = category_label
@@ -64,10 +75,15 @@ class DiagCode:
         self.severity = severity
         self.alarm = alarm
         self.panel = panel
+        self.schematic = schematic
 
     @property
     def panel_labels(self):
         return [p.strip() for p in self.panel.split(",") if p.strip()]
+
+    @property
+    def schematic_labels(self):
+        return [e.strip() for e in self.schematic.split(",") if e.strip()]
 
     @property
     def component_id(self):
@@ -95,6 +111,7 @@ class DiagCode:
             "Criticity": self.severity,
             "Alarm": self.alarm,
             "Panel": self.panel,
+            "Schematic": self.schematic,
         }
 
 
@@ -110,7 +127,8 @@ def _label_from_full_name(table, full_name):
 
 
 def parse_row(code_raw, component_raw, category_raw, name, description, severity_raw,
-              alarm_raw=None, panel_raw=None, *, seen=None, known_alarm_ids=None, where=""):
+              alarm_raw=None, panel_raw=None, schematic_raw=None, *, seen=None,
+              known_alarm_ids=None, where=""):
     """Valide une ligne brute (types str) et renvoie un DiagCode. Lève
     CodeValidationError avec un message clair sinon — utilisé à la fois par
     le parsing CSV (gen_codes.py) et par l'API web (codes_editor.py)."""
@@ -159,6 +177,13 @@ def parse_row(code_raw, component_raw, category_raw, name, description, severity
             f"{where}Alarm '{alarm}' inconnu de ALARMS.csv "
             f"(ajoute-le d'abord dans l'onglet Alarmes)")
 
+    schematic = (schematic_raw or "").strip().upper()
+    unknown = [e for e in (x.strip() for x in schematic.split(",")) if e and e not in SCHEMATIC_ELEMENTS]
+    if unknown:
+        raise CodeValidationError(
+            f"{where}Schematic {unknown} inconnu "
+            f"(attendu parmi: {', '.join(sorted(SCHEMATIC_ELEMENTS))})")
+
     return DiagCode(
         code=code_raw,
         component_label=comp_label,
@@ -168,6 +193,7 @@ def parse_row(code_raw, component_raw, category_raw, name, description, severity
         severity=SEVERITIES[severity_key],
         alarm=alarm,
         panel=(panel_raw or "").strip().upper(),
+        schematic=schematic,
     )
 
 
@@ -197,7 +223,7 @@ def read_csv(path: Path, known_alarm_ids=None):
             codes.append(parse_row(
                 code_raw, row.get("Component"), row.get("Category"),
                 row.get("Name"), row.get("Description"), row.get("Criticity"),
-                row.get("Alarm"), row.get("Panel"),
+                row.get("Alarm"), row.get("Panel"), row.get("Schematic"),
                 seen=seen, known_alarm_ids=known_alarm_ids, where=f"{path}:{lineno}: ",
             ))
         except CodeValidationError as e:

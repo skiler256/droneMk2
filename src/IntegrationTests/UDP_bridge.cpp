@@ -1,35 +1,10 @@
-// Pont shm <-> UDP unique pour les tests d'intégration : s'attache, de façon
-// opportuniste et indépendante, aux segments SITL::/HIL::/NAV_SITL::k*ShmPath
-// (publiés respectivement par mv_sitl, hil_sf_mv, nav_sitl), ainsi qu'aux
-// VRAIS chemins de prod (namespace PROD, kNavShmPath etc. de
-// GlobalWatchdog.hpp — publiés par le vrai binaire `drone`, typiquement
-// lancé par le SITL_MASTER avec -DDRONE_USE_SITL_DRIVERS). Tous peuvent être
-// actifs en même temps ou pas du tout, réessayé périodiquement si un binaire
-// démarre après le pont. Réutilise les VRAIS handlers (aucune réimplémentation
-// du verrou CAS).
-//
-// Protocole texte, un datagramme = un segment, ligne 1 "SEGMENT=<NS>_<NOM>"
-// (NS = SITL, HIL, NAV_SITL, MC_SITL ou PROD) puis une ligne "cle=valeur" par
-// champ — pas de lib JSON, débogable à la main avec `nc -ul <port>`. Deux
-// ports localhost (le pont et le serveur web tournent tous les deux sur le
-// Pi, seul le navigateur est distant) :
-//   - kStatusPort  : le pont ENVOIE ici, ~10Hz, un datagramme par segment actif
-//                    — tools/dashboard/dashboard_server.py écoute.
-//   - kCommandPort : le pont ÉCOUTE ici les injections de test, "CMD=<NOM>\n
-//                    NS=<SITL|HIL|NAV_SITL|MC_SITL|PROD>\ncle=valeur...".
-//
-// PROD est en lecture seule côté dashboard (pas d'injection GPS/segment :
-// les vrais writers — Navigation/SensorFusion/MissionControl réels — sont
-// déjà en place, cf. allowGpsMagInject=false).
-//
-// IMPORTANT : CMD=GPSMAG n'est routable QUE vers SITL. Côté HIL, le vrai
-// SensorFusion tourne et est l'unique writer légitime de gpsMag (principe
-// un-seul-writer-par-segment) — laisser le pont y écrire aussi créerait une
-// race à deux writers. Côté NAV_SITL, aucun SensorFusion ne tourne du tout
-// (cf. NAV_SITL.cpp) mais gpsMag n'y sert à rien non plus (GPS simulé laissé
-// côté SITL) — rejeté dans les deux cas (log stderr).
-//
-// Usage : ./udp_bridge (avant ou après mv_sitl/hil_sf_mv/nav_sitl, l'ordre n'importe pas)
+// Pont shm <-> UDP des tests d'intégration : s'attache de façon opportuniste
+// aux segments SITL/HIL/NAV_SITL/MC_SITL et aux vrais chemins de prod (en
+// lecture seule), dans n'importe quel ordre de démarrage. Réutilise les vrais
+// handlers, sans réimplémenter le verrou CAS.
+// Protocole texte, ports et règle « CMD=GPSMAG réservé à SITL » (race à deux
+// writers) : cf. sitl/SITL.md §2.
+// Usage : ./udp_bridge
 
 #include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"

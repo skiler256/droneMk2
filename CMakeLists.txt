@@ -153,6 +153,7 @@ add_library(drone_lib STATIC
     src/MavlinkInterface/UdpMavlinkLink.cpp
     src/SystemMonitoring/SystemMonitoring.cpp
     src/SystemMonitoring/UdpTelemetryDriver.cpp
+    src/SystemMonitoring/WFB_NG_Driver.cpp
     src/SystemMonitoring/UdpVideoDriver.cpp
     src/SystemMonitoring/LinuxThermalZoneDriver.cpp
     # src/Watchdog/GlobalWatchdog.cpp
@@ -201,6 +202,12 @@ drone_test(test_missioncontrol tests/test_missioncontrol.cpp)
 # drone_test(test_kalman       tests/test_kalman.cpp)
 drone_test(test_mavlink      tests/test_mavlink.cpp)
 drone_test(test_sensorfusion tests/test_sensorfusion.cpp)
+drone_test(test_drivers      tests/test_drivers.cpp)
+
+# ─── test_audit : anomalies d'AUDIT.md ───────────────────────────────────────
+# ROUGE par construction : affirme le comportement attendu, pas l'actuel.
+# Chaque test passe au vert quand l'anomalie correspondante est corrigée.
+drone_test(test_audit        tests/test_audit.cpp)
 
 # ─── test_global_watchdog : boîte noire, process réels ───────────────────────
 # Binaire compagnon minimal (pas de dispatch main.cpp, trop lourd) que
@@ -222,6 +229,21 @@ add_dependencies(test_global_watchdog test_stub_child)
 # cmake --build build --target mv_sitl      # ou udp_bridge, hil_sf_mv, etc.
 # ════════════════════════════════════════════════════════════════════════════
 option(BUILD_ITESTS "Compiler les binaires de test d'intégration SITL/HIL (dev uniquement)" OFF)
+
+# ─── Bancs matériels ─────────────────────────────────────────────────────────
+# Binaires autonomes qui exercent un driver réel et affichent le résultat en
+# console. Aucun privilège RT, aucune shm, aucun dashboard — pendant C++ des
+# scripts de tools/hw_debug/. Utiles au bring-up matériel.
+option(BUILD_HW_BENCH "Compiler les bancs de test matériel (bench_gps, ...)" OFF)
+if(BUILD_HW_BENCH)
+    foreach(BENCH gps lidar mag)
+        add_executable(bench_${BENCH} src/HwBench/bench_${BENCH}.cpp)
+        target_link_libraries(bench_${BENCH} PRIVATE drone_lib)
+        add_dependencies(bench_${BENCH} generate_codes generate_telemetry
+                                        generate_missionplan)
+    endforeach()
+    message(STATUS "✓ bancs matériels : bench_gps, bench_lidar, bench_mag")
+endif()
 
 if(BUILD_ITESTS)
     add_executable(mv_sitl src/IntegrationTests/MV_SITL.cpp)
@@ -250,5 +272,9 @@ if(BUILD_ITESTS)
 endif()
 
 # ─── Cross-compilation ARM64 Pi5 ─────────────────────────────────────────────
+# NON DISPONIBLE : cmake/arm64.cmake n'existe pas dans le dépôt. Compiler
+# directement sur le Pi (cf. BRINGUP_PDL.md §6), ou écrire le fichier de
+# toolchain. La ligne ci-dessous est la forme attendue, pas une procédure
+# utilisable en l'état.
 # cmake -B build/arm64 -DCMAKE_TOOLCHAIN_FILE=cmake/arm64.cmake -DCMAKE_BUILD_TYPE=Release
 # cmake --build build/arm64

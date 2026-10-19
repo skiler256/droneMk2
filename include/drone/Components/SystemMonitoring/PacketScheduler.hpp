@@ -5,8 +5,8 @@
 #include <array>
 #include <cstddef>
 
-// Choisit, à chaque cycle radio, le paquet TELEM::* à émettre en priorité
-// sur un lien donné -- un seul par cycle. Règles de choix : SYSMONITORING.md §5.
+// Choisit le paquet TELEM::* à émettre, un seul par cycle radio — règles
+// de départage : SYSMONITORING.md §5.
 class PacketScheduler {
 public:
   explicit PacketScheduler(TELEM::Link link) : link_(link) {
@@ -66,11 +66,8 @@ private:
     bool pending{false};
   };
 
-  // true si s est dû à `now` ; renvoie dans `overdue` de combien (utilisé
-  // pour départager deux paquets dus à la même priorité). Pour un
-  // événementiel en attente (pending), overdue est forcé au maximum : un
-  // changement d'état prime toujours sur la redondance périodique d'un
-  // autre paquet de même priorité.
+  // `overdue` = de combien le paquet est en retard, sert au départage.
+  // Forcé au maximum pour un événementiel en attente (cf. §5, règle 4).
   [[nodiscard]] static bool isDue(const Slot &s, TYPES::TimePoint now,
                                   TYPES::Ms &overdue) {
     if (s.meta->rateHz > 0) {

@@ -1,23 +1,8 @@
-// Binaire de dev : SysMonitoring SEUL, face à des données shm injectées à la
-// main (pas de vol réel, pas des autres composants réels) — sert à observer
-// le flux de télémétrie réel sur le GCS/ (Node.js) sans faire tourner tout
-// le reste du système. Tourne sur les MÊMES ports UDP que main.cpp
-// (runSysMonitoring) : le GCS n'a besoin d'aucune configuration différente.
-//
-// Usage : ./sysmon_sitl
-// Injection : datagrammes UDP texte sur le port 15020 (127.0.0.1), même
-// esprit que UDP_bridge.cpp ("CMD=<NOM>\ncle=valeur\n...") :
-//   echo -e "CMD=STATE\nnorth=10\neast=0\ndown=-5\nvn=1\nve=0\nvd=0\nroll=0\npitch=0\nyaw=90" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=GPS\nlat=48.858\nlon=2.294\nalt=42\nhdop=0.9\nvdop=1.1\nfixtype=3\nnumsats=11" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=SAT\nindex=0\nid=12\nstrength=180\nquality=5" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=LIDARPOINT\nbearing=45\ndist_mm=1200\nintensity=200" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=LIDARCLEAR" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=BATTERY\nvoltage=22.1\ncurrent=8.4\npct=76" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=MISSIONSTATE\nstate=Mission" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=FMA\nlateral_engaged=0\nlateral_armed=0\nvertical_engaged=0\nvertical_armed=0\ntarget_altitude=10\ntarget_speed=3" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=HEALTH\ncomponent=SensorFusion\nhealth=SICK" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=CODE\ncomponent=SensorFusion\ncode=SFS004\naction=raise" | nc -u -w0 127.0.0.1 15020
-//   echo -e "CMD=CODE\ncomponent=SensorFusion\ncode=SFS004\naction=clear" | nc -u -w0 127.0.0.1 15020
+// Test : SysMonitoring seul, alimenté par injection UDP texte sur le port
+// 15020 — observe le flux de télémétrie réel sur le GCS sans monter le reste
+// du système. Tourne sur les MÊMES ports que main.cpp, donc le GCS ne
+// demande aucune reconfiguration.
+// Usage : ./sysmon_sitl — commandes d'injection : SYSMONITORING.md §8.
 
 #include "drone/Components/SystemMonitoring/Driver/LinuxThermalZoneDriver.hpp"
 #include "drone/Components/SystemMonitoring/Driver/UdpTelemetryDriver.hpp"

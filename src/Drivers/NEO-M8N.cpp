@@ -1,14 +1,13 @@
 #include "drone/Components/Drivers/NEO-M8N.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <unistd.h>
 
 NEO_M8N::NEO_M8N(const char *portName) : portName_(portName) {}
 
 std::optional<TYPES::DriverError> NEO_M8N::init() {
-  // Étape 1 : le NEO-M8N démarre TOUJOURS à 9600 bit/s par défaut à froid,
-  // quelle que soit la config précédente (elle n'est pas persistée en EEPROM
-  // ici).
+  // Démarre TOUJOURS à 9600 à froid : la config n'est pas persistée en EEPROM.
   if (auto err = uartConnect(portName_, B9600)) {
     setHealth(TYPES::DriverHealth::Unconnected);
     return err;
@@ -121,9 +120,7 @@ std::optional<TYPES::DriverError> NEO_M8N::configureGNSS() {
   static constexpr std::uint8_t CFG_MSG_PVT_ON[] = {
       0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0x01, 0x07,
       0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x18, 0xE1};
-  // NAV-DOP (0x01,0x04) : seule source de hdop/vdop, ni NAV-PVT ni
-  // NAV-POSLLH ne les fournissent (checksum calculé, pas repris de l'ancien
-  // driver comme les autres trames ci-dessus).
+  // Seule source de hdop/vdop ; checksum calculé, pas repris de l'ancien driver.
   static constexpr std::uint8_t CFG_MSG_DOP_ON[] = {
       0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0x01, 0x04,
       0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x15, 0xCC};
@@ -183,6 +180,12 @@ std::expected<GPSData, TYPES::DriverError> NEO_M8N::update() {
 }
 
 void NEO_M8N::stepParser(std::uint8_t byte) {
+  // Couvre class/id/len/payload : tout sauf sync et checksum.
+  auto accumulate = [this](std::uint8_t b) {
+    ckA_ = static_cast<std::uint8_t>(ckA_ + b);
+    ckB_ = static_cast<std::uint8_t>(ckB_ + ckA_);
+  };
+
   switch (parseState_) {
   case ParseState::SyncA:
     parseState_ = (byte == 0xB5) ? ParseState::SyncB : ParseState::SyncA;
@@ -193,21 +196,27 @@ void NEO_M8N::stepParser(std::uint8_t byte) {
     break;
 
   case ParseState::Class:
+    ckA_ = 0;
+    ckB_ = 0;
+    accumulate(byte);
     ubxClass_ = byte;
     parseState_ = ParseState::Id;
     break;
 
   case ParseState::Id:
+    accumulate(byte);
     ubxId_ = byte;
     parseState_ = ParseState::LenL;
     break;
 
   case ParseState::LenL:
+    accumulate(byte);
     lenL_ = byte;
     parseState_ = ParseState::LenM;
     break;
 
   case ParseState::LenM:
+    accumulate(byte);
     lenM_ = byte;
     payloadSize_ = static_cast<std::uint16_t>(lenL_ | (lenM_ << 8));
     if (payloadSize_ > sizeof(payloadBuffer_)) {
@@ -219,16 +228,27 @@ void NEO_M8N::stepParser(std::uint8_t byte) {
     break;
 
   case ParseState::Payload:
+    accumulate(byte);
     payloadBuffer_[payloadCursor_++] = byte;
     if (payloadCursor_ == payloadSize_) {
-      parseState_ = ParseState::Checksum;
+      parseState_ = ParseState::ChecksumA;
     }
     break;
 
-  case ParseState::Checksum:
-    // 2 octets de checksum consommés sans vérification, comme dans
-    // l'ancien driver (state 8 puis 9). Non modifié à ta demande.
-    handleUBX(ubxClass_, ubxId_, payloadSize_);
+  case ParseState::ChecksumA:
+    // Les DEUX octets sont consommés : un CK_B valant 0xB5 ouvrait sinon une
+    // trame fantôme et faisait perdre la suivante.
+    checksumOk_ = (byte == ckA_);
+    parseState_ = ParseState::ChecksumB;
+    break;
+
+  case ParseState::ChecksumB:
+    // Trame corrompue ignorée mais comptée (cf. checksumErrors()).
+    if (checksumOk_ && byte == ckB_) {
+      handleUBX(ubxClass_, ubxId_, payloadSize_);
+    } else {
+      ++checksumErrors_;
+    }
     parseState_ = ParseState::SyncA;
     break;
   }
@@ -242,7 +262,9 @@ void NEO_M8N::handleUBX(std::uint8_t cls, std::uint8_t id,
 
   switch (id) {
   case 0x21: // NAV-TIMEUTC
-    if (payloadSize == 20) {
+    // bit2 du champ `valid` (offset 19) = validUTC. Sans lui, la date n'est
+    // pas acquise et alimenterait une semaine GPS fausse (SENSORFUSION.md §3).
+    if (payloadSize == 20 && (payloadBuffer_[19] & 0x04) != 0) {
       data_.timeArray[0] = (payloadBuffer_[13] << 8) | payloadBuffer_[12];
       data_.timeArray[1] = payloadBuffer_[14];
       data_.timeArray[2] = payloadBuffer_[15];
@@ -256,7 +278,10 @@ void NEO_M8N::handleUBX(std::uint8_t cls, std::uint8_t id,
   case 0x03: // NAV-STATUS
     if (payloadSize == 16) {
       data_.fixType = payloadBuffer_[4];
-      data_.gpsFixOk = (payloadBuffer_[4] >= 0x03);
+      // 0x03 = fix 3D, 0x04 = GPS + dead reckoning. 0x05 ("time only") ne
+      // porte AUCUNE position.
+      data_.gpsFixOk =
+          (payloadBuffer_[4] == 0x03 || payloadBuffer_[4] == 0x04);
       newPacketDecoded_ = true;
     }
     break;
@@ -292,13 +317,24 @@ void NEO_M8N::handleUBX(std::uint8_t cls, std::uint8_t id,
     break;
 
   case 0x30: { // NAV-SVINFO
-    data_.sats.clear();
-    const std::uint8_t N = payloadBuffer_[4];
-    for (int i = 0; i < N; ++i) {
-      data_.sats.push_back({payloadBuffer_[9 + 12 * i],
-                            payloadBuffer_[12 + 12 * i],
-                            payloadBuffer_[11 + 12 * i]});
+    // numCh vient du payload : valider la taille annoncée évite une lecture
+    // très au-delà du tampon. Offsets par canal : SENSORFUSION.md §3.
+    const std::uint8_t numCh = payloadBuffer_[4];
+    if (payloadSize != 8u + 12u * numCh) {
+      break; // longueur annoncée incompatible avec numCh
     }
+
+    // Le compte suivi n'est PAS plafonné, seul le détail l'est.
+    data_.satellitesTracked = numCh;
+    const std::size_t kept =
+        std::min<std::size_t>(numCh, GPSData::kMaxSatDetail);
+    data_.sats = {};
+    for (std::size_t i = 0; i < kept; ++i) {
+      data_.sats[i] = {payloadBuffer_[9 + 12 * i],   // svid
+                       payloadBuffer_[12 + 12 * i],  // cno (force du signal)
+                       payloadBuffer_[11 + 12 * i]}; // quality
+    }
+    data_.satDetailCount = static_cast<std::uint8_t>(kept);
     newPacketDecoded_ = true;
     break;
   }

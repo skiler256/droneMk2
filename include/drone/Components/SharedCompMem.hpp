@@ -32,11 +32,16 @@ public:
     recordStart(comp_.ColdStartHistory, ts);
   };
 
-  [[nodiscard]] std::optional<TYPES::TimePoint> getHotStartTs(size_t i) {
+  // expected = la lecture shm a-t-elle réussi ; optional = le slot porte-t-il
+  // un horodatage. Confondre les deux faisait passer un timeout pour une
+  // absence d'historique (cf. ARCHITECTURE_IPC.md §4.3).
+  using StartTs = std::expected<std::optional<TYPES::TimePoint>, TYPES::shmError>;
+
+  [[nodiscard]] StartTs getHotStartTs(size_t i) {
     return getStart(comp_.HotStartHistory, i);
   }
 
-  [[nodiscard]] std::optional<TYPES::TimePoint> getColdtStartTs(size_t i) {
+  [[nodiscard]] StartTs getColdStartTs(size_t i) {
     return getStart(comp_.ColdStartHistory, i);
   };
 
@@ -45,15 +50,14 @@ protected:
   TYPES::ComponentID id_;
   TYPES::Us timeout_;
 
-  // A combiner avec le checksum du payload de la sous-classe, sinon une
-  // corruption de l'historique de redémarrage passe inaperçue.
+  // À combiner au checksum de la sous-classe, sinon une corruption de
+  // l'historique passe inaperçue.
   uint32_t historyChecksum() {
     return UTILITIES::crc32(comp_.HotStartHistory) ^
            UTILITIES::crc32(comp_.ColdStartHistory);
   };
 
-  // Filet partiel : ne détecte que les horodatages dans le futur
-  // (impossibles). TimePoint{} (slot jamais utilisé) n'est pas corrompu.
+  // Filet partiel : ne détecte que les horodatages futurs (impossibles).
   void sanitizeHistory(
       std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history) {
     auto now = TYPES::Clock::now();
@@ -80,13 +84,19 @@ private:
     setData(id_, timeout_, history, history_);
   };
 
-  std::optional<TYPES::TimePoint>
-  getStart(std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history, size_t i) {
+  // La sentinelle « slot jamais écrit » (TimePoint{}) est connue ici, pas des
+  // appelants : sanitizeHistory() s'appuie déjà sur la même convention.
+  StartTs getStart(std::array<TYPES::TimePoint, MAX_COMPONENT_RESTART> &history,
+                   size_t i) {
     auto data = getData(id_, timeout_, history);
-    if (data)
-      return data->at(i);
-    return {};
+    if (!data)
+      return std::unexpected(peekError());
+
+    const auto ts = data->at(i);
+    if (ts == TYPES::TimePoint{})
+      return std::optional<TYPES::TimePoint>{};
+    return std::optional<TYPES::TimePoint>{ts};
   };
 };
 
-// rajouter retour erreur
+

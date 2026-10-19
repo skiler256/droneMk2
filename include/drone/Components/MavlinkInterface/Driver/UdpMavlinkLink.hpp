@@ -4,11 +4,9 @@
 #include <mutex>
 #include <netinet/in.h>
 
-// Driver factice de dev : lien MAVLink vers ArduPilot SITL en UDP, à la
-// place de l'UART réel (UartMavlinkLink). Le port source utilisé par SITL
-// est éphémère (choisi par l'OS côté WSL/MAVProxy, pas fixe) — le pair
-// est donc appris dynamiquement au premier paquet reçu, comme le fait
-// MAVProxy lui-même, plutôt que configuré à l'avance.
+// Lien MAVLink vers ArduPilot SITL en UDP, à la place de l'UART réel. Le
+// port source de SITL étant éphémère, le pair est appris au premier paquet
+// reçu plutôt que configuré — cf. MAVLINKINTERFACE.md, section SITL.
 class UdpMavlinkLink : public IMavlinkLink {
 public:
   explicit UdpMavlinkLink(uint16_t localPort);

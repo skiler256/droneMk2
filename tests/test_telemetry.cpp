@@ -37,6 +37,42 @@ TEST(TelemetryPacketTest, AutopilotModeRoundTrip) {
   EXPECT_FLOAT_EQ(out.target_speed, 3.5f);
 }
 
+TEST(TelemetryPacketTest, TaskRateRoundTrip) {
+  TELEM::TaskRatePkt in{.component = 3, .task_id = 2, .hz = 47.5f,
+                        .target_hz = 50.0f};
+  auto out = TELEM::TaskRatePkt::unpack(in.pack());
+  EXPECT_EQ(out.component, 3);
+  EXPECT_EQ(out.task_id, 2);
+  EXPECT_FLOAT_EQ(out.hz, 47.5f);
+  EXPECT_FLOAT_EQ(out.target_hz, 50.0f);
+}
+
+TEST(TelemetryPacketTest, EscRpmRoundTrip) {
+  TELEM::EscRpmPkt in{.rpm = {4210.0f, 4195.5f, 3980.0f, 4205.0f}};
+  auto out = TELEM::EscRpmPkt::unpack(in.pack());
+  EXPECT_FLOAT_EQ(out.rpm[0], 4210.0f);
+  EXPECT_FLOAT_EQ(out.rpm[1], 4195.5f);
+  EXPECT_FLOAT_EQ(out.rpm[2], 3980.0f);
+  EXPECT_FLOAT_EQ(out.rpm[3], 4205.0f);
+}
+
+TEST(TelemetryPacketTest, EscRpmMatchesSourceCadence) {
+  // 2 Hz : la cadence d'ESC_TELEMETRY côté FC. Émettre plus vite ne ferait
+  // que renvoyer la même mesure (cf. SYSMONITORING.md §14).
+  const auto *meta = TELEM::find(TELEM::PacketID::ESC_RPM);
+  ASSERT_NE(meta, nullptr);
+  EXPECT_EQ(meta->rateHz, 2);
+  EXPECT_EQ(meta->linkMask, static_cast<uint8_t>(TELEM::Link::Main));
+}
+
+TEST(TelemetryPacketTest, TaskRateIsMainLinkOnly) {
+  // Diagnostic : rien à faire sur le lien de secours, et ça garantit qu'un
+  // seul des deux switch d'émission est concerné (cf. SYSMONITORING.md §13).
+  const auto *meta = TELEM::find(TELEM::PacketID::TASK_RATE);
+  ASSERT_NE(meta, nullptr);
+  EXPECT_EQ(meta->linkMask, static_cast<uint8_t>(TELEM::Link::Main));
+}
+
 TEST(TelemetryPacketTest, EmptyPayloadPacketRoundTrip) {
   // CMD_ARM n'a aucun champ : pack()/unpack() doivent rester no-op valides.
   TELEM::CmdArmPkt in{};

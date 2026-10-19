@@ -12,9 +12,7 @@ constexpr std::array<char, 4> kMagic{'G', 'P', 'S', '1'};
 constexpr uint8_t kVersion = 1;
 constexpr std::size_t kHeaderSize = kMagic.size() + sizeof(kVersion);
 
-// Ordre de champs figé — cf. sitl/gps_bridge.py (Phase B) pour le
-// pendant Python. Pas de gap : GPSData::sats (vector) exclu du fil,
-// cf. commentaire du header (pas nécessaire pour "SITL nu").
+// Ordre figé, cf. sitl/gps_bridge.py. GPSData::sats est exclu du fil.
 constexpr std::size_t kPayloadSize =
     sizeof(double) * 2 +               // latitude, longitude
     sizeof(int) * 6 +                  // timeArray
@@ -103,6 +101,11 @@ std::expected<GPSData, TYPES::DriverError> UdpGpsDriver::update() {
   take(data.speed);
   take(data.groundSpeed);
   take(data.heading);
+
+  // Filet : un take() ajouté sans mettre kPayloadSize à jour dépasserait
+  // la zone validée sans qu'aucun garde ne le voie.
+  if (off != kHeaderSize + kPayloadSize)
+    return std::unexpected(TYPES::DriverError::InvalidData);
 
   return data;
 }

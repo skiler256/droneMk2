@@ -1,17 +1,10 @@
-// Couvre ComponentWatchdog (ring buffer de restart, escalade vers exit(1),
-// polling des erreurs shm), Task (câblage TaskConfig -> ComponentWatchdog),
-// et ComponentBase (décision hot-start/cold-start/DEAD).
-//
-// Note d'environnement : ComponentWatchdog/Task lancent un thread réel via
-// SCHED_FIFO (temps réel) dans leur constructeur/start(). La plupart des
-// tests ci-dessous pilotent loop()/heartbeat() à la main et n'ont pas
-// besoin de ce thread réel. La section "exécution réelle" en bas EN a
-// besoin (RLIMIT_RTPRIO suffisant, ou root) — elle se skip proprement
-// (GTEST_SKIP) si SCHED_FIFO n'est pas disponible, pour rester utilisable
-// dans un sandbox sans privilège RT.
+// Couvre ComponentWatchdog, Task et ComponentBase. La plupart des tests
+// pilotent loop()/heartbeat() à la main ; la section "exécution réelle" en bas
+// exige SCHED_FIFO (RLIMIT_RTPRIO ou root) et se skip proprement sinon.
 
 #include "drone/Components/Navigation/SharedNavMem.hpp"
 #include "drone/core/ComponentBase.hpp"
+#include "drone/core/SharedSysStateMem.hpp"
 #include <atomic>
 #include <chrono>
 #include <gtest/gtest.h>
@@ -54,7 +47,7 @@ TEST(ComponentWatchdogTest, RestartsBelowThresholdDoNotEscalate) {
   // timeout=0 : le prochain loop() considère systématiquement la task comme
   // morte (elapsed > 0 dès qu'un peu de temps s'est écoulé).
   wd.registerTask(
-      1, [&] { ++startCount; }, [] {}, Ms(0), /*maxRestart=*/3, Ms(60000));
+      1, [&] { ++startCount; }, [] {}, nullptr, 0.0f, Ms(0), /*maxRestart=*/3, Ms(60000));
 
   for (int i = 0; i < 2; ++i) {
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -69,7 +62,7 @@ TEST(ComponentWatchdogDeathTest, EscalatesToExitAfterTooManyRestarts) {
       {
         ComponentWatchdog wd(0, 0);
         wd.registerTask(
-            1, [] {}, [] {}, Ms(0), /*maxRestart=*/3, Ms(60000));
+            1, [] {}, [] {}, nullptr, 0.0f, Ms(0), /*maxRestart=*/3, Ms(60000));
 
         for (int i = 0; i < 3; ++i) {
           std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -93,7 +86,7 @@ TEST(ComponentWatchdogTest, RestartWindowPruningPreventsEscalation) {
   constexpr Ms window(20);
 
   wd.registerTask(
-      1, [&] { ++startCount; }, [] {}, Ms(0), /*maxRestart=*/3, window);
+      1, [&] { ++startCount; }, [] {}, nullptr, 0.0f, Ms(0), /*maxRestart=*/3, window);
 
   for (int i = 0; i < 5; ++i) {
     std::this_thread::sleep_for(std::chrono::milliseconds(30)); // > window
@@ -108,7 +101,7 @@ TEST(ComponentWatchdogTest, HeartbeatPreventsRestart) {
   int startCount = 0;
 
   wd.registerTask(
-      1, [&] { ++startCount; }, [] {}, Ms(1000), /*maxRestart=*/3, Ms(60000));
+      1, [&] { ++startCount; }, [] {}, nullptr, 0.0f, Ms(1000), /*maxRestart=*/3, Ms(60000));
 
   wd.heartbeat(1);
   wd.loop();
@@ -204,15 +197,16 @@ TEST(TaskDeathTest, ConstructorWiresRestartThresholdCorrectly) {
 // ─── ComponentBase : décision hot-start/cold-start/DEAD ────────────────────
 
 namespace {
-ComponenConfig makeConfig() {
+// firstBoot=false = ce que GW transmet en relançant un composant mort.
+ComponenConfig makeConfig(bool firstBoot = true) {
   return ComponenConfig{
       .max_cold_start = 1,
       .max_cold_start_interval = Ms(60000),
       .max_hot_start = 3,
       .max_hot_start_interval = Ms(60000),
-      .shm_timeout = Us(20000),
       .id = ComponentID::Navigation,
       .CompCore = 0,
+      .firstBoot = firstBoot,
   };
 }
 } // namespace
@@ -238,7 +232,7 @@ TEST(ComponentBaseTest, SingleHotStartIsDegraded) {
 
   comp.recordHotStart(Clock::now());
 
-  ComponentBase<0> base(makeConfig(), comp, sysState);
+  ComponentBase<0> base(makeConfig(/*firstBoot=*/false), comp, sysState);
 
   auto health = sysState.getHealth(ComponentID::Navigation);
   ASSERT_TRUE(health.has_value());
@@ -302,7 +296,7 @@ TEST(TaskRealExecutionTest, LoopRunsAtConfiguredFrequency) {
       .restartWindow = Ms(60000),
   };
   TestTask task(cfg, wd);
-  task.start();
+  ASSERT_TRUE(task.start().has_value());
 
   std::this_thread::sleep_for(std::chrono::milliseconds(105));
   task.stop();
@@ -319,10 +313,11 @@ TEST(ComponentWatchdogRealThreadTest, DetectsAndRestartsATrulyDeadTask) {
     GTEST_SKIP() << "SCHED_FIFO indisponible ici (pas de privilège RT)";
 
   ComponentWatchdog wd(1, 0); // thread de fond réel, poll ~100Hz
+  ASSERT_TRUE(wd.start().has_value()) << "lancement du thread RT refusé";
   std::atomic<int> startCount{0};
 
   wd.registerTask(
-      1, [&] { startCount.fetch_add(1); }, [] {}, Ms(30),
+      1, [&] { startCount.fetch_add(1); }, [] {}, nullptr, 0.0f, Ms(30),
       /*maxRestart=*/5, Ms(60000));
 
   // On ne heartbeat jamais et on n'appelle jamais loop() nous-même : c'est
@@ -337,11 +332,12 @@ TEST(ComponentWatchdogRealThreadTest, RespectsHeartbeatFromAnotherThread) {
     GTEST_SKIP() << "SCHED_FIFO indisponible ici (pas de privilège RT)";
 
   ComponentWatchdog wd(1, 0);
+  ASSERT_TRUE(wd.start().has_value()) << "lancement du thread RT refusé";
   std::atomic<int> startCount{0};
   std::atomic<bool> stop{false};
 
   wd.registerTask(
-      1, [&] { startCount.fetch_add(1); }, [] {}, Ms(30),
+      1, [&] { startCount.fetch_add(1); }, [] {}, nullptr, 0.0f, Ms(30),
       /*maxRestart=*/5, Ms(60000));
 
   std::thread heartbeatThread([&] {
@@ -379,6 +375,7 @@ TEST(TaskRealExecutionTest, WatchdogRestartsATransientlyStalledTask) {
     GTEST_SKIP() << "SCHED_FIFO indisponible ici (pas de privilège RT)";
 
   ComponentWatchdog wd(1, 0);
+  ASSERT_TRUE(wd.start().has_value()) << "lancement du thread RT refusé";
   TaskConfig cfg{
       .id = 1,
       .RTpriority = 1,
@@ -389,7 +386,7 @@ TEST(TaskRealExecutionTest, WatchdogRestartsATransientlyStalledTask) {
       .restartWindow = Ms(60000),
   };
   StallOnceTask task(cfg, wd);
-  task.start();
+  ASSERT_TRUE(task.start().has_value());
   ASSERT_EQ(task.generation(), 1u);
 
   // Assez long pour couvrir : itérations normales + stall (150ms) +
@@ -404,4 +401,73 @@ TEST(TaskRealExecutionTest, WatchdogRestartsATransientlyStalledTask) {
   // revenir (loop() retourne) fait continuer le MÊME thread sans aucune
   // intervention, donc loopCount grimperait pareil dans les deux cas.
   EXPECT_GT(task.generation(), 1u);
+}
+
+// ─── Mesure de fréquence (F1) ──────────────────────────────────────────────
+
+TEST(ComponentWatchdogRateTest, PublishesMeasuredHzAfterOneSecondWindow) {
+  SharedSysStateMem mem{};
+  SharedSysStateMemHandler h(mem, ComponentID::Navigation, Us(2000));
+
+  ComponentWatchdog wd(0, 0);
+  wd.setRatePublisher(h);
+
+  uint32_t count = 0;
+  wd.registerTask(
+      1, [] {}, [] {}, [&] { return count; }, 100.0f, Ms(60000), /*maxRestart=*/3,
+      Ms(60000));
+
+  // Avant la fin de la fenêtre, rien n'est publié : 0 = pas encore mesurée.
+  count = 25;
+  wd.loop();
+  auto before = h.getTaskHz(ComponentID::Navigation);
+  ASSERT_TRUE(before.has_value());
+  EXPECT_FLOAT_EQ((*before)[1], 0.0f);
+
+  // 50 itérations sur une fenêtre d'un peu plus d'une seconde.
+  std::this_thread::sleep_for(std::chrono::milliseconds(1050));
+  count = 50;
+  wd.loop();
+
+  auto after = h.getTaskHz(ComponentID::Navigation);
+  ASSERT_TRUE(after.has_value());
+  EXPECT_NEAR((*after)[1], 50.0f, 5.0f);
+  // Les autres slots restent intacts.
+  EXPECT_FLOAT_EQ((*after)[0], 0.0f);
+}
+
+TEST(ComponentWatchdogRateTest, PublishesConfiguredTargetOnce) {
+  SharedSysStateMem mem{};
+  SharedSysStateMemHandler h(mem, ComponentID::Navigation, Us(2000));
+
+  ComponentWatchdog wd(0, 0);
+  wd.setRatePublisher(h);
+
+  uint32_t count = 0;
+  wd.registerTask(
+      1, [] {}, [] {}, [&] { return count; }, 50.0f, Ms(60000),
+      /*maxRestart=*/3, Ms(60000));
+
+  // La cible n'est publiée qu'avec la première mesure : avant, le GCS n'a
+  // rien à comparer de toute façon.
+  wd.loop();
+  auto before = h.getTaskTargetHz(ComponentID::Navigation);
+  ASSERT_TRUE(before.has_value());
+  EXPECT_FLOAT_EQ((*before)[1], 0.0f);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(1050));
+  wd.loop();
+  auto after = h.getTaskTargetHz(ComponentID::Navigation);
+  ASSERT_TRUE(after.has_value());
+  EXPECT_FLOAT_EQ((*after)[1], 50.0f);
+}
+
+TEST(ComponentWatchdogRateTest, NoPublisherIsNotAnError) {
+  ComponentWatchdog wd(0, 0);
+  uint32_t count = 0;
+  wd.registerTask(
+      1, [] {}, [] {}, [&] { return count; }, 100.0f, Ms(60000), /*maxRestart=*/3,
+      Ms(60000));
+  wd.loop(); // pas de setRatePublisher : publishRates sort immédiatement
+  SUCCEED();
 }

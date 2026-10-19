@@ -2,13 +2,9 @@
 #include "drone/Components/SharedCompMem.hpp"
 #include "drone/types.hpp"
 
-// Commandes GCS routées vers MissionControl (CMD_ARM/DISARM/MODE/WAYPOINT/
-// RTL/LAND/TAKEOFF/HOLD/RESUME/ANSWER, cf. TELEMETRY.csv). CMD_EMERGENCY
-// n'y est PAS : elle est signalée via un CODES::Code (SMO001, cf.
-// INDEX.csv) plutôt que ce FIFO — un ordre d'urgence ne doit jamais
-// attendre son tour derrière d'autres commandes en file. TSafetyMonitor
-// (MC) scanne les codes actifs, pas ce FIFO, donc aucune latence de
-// dépilement pour l'E-stop.
+// Commandes GCS routées vers MissionControl. CMD_EMERGENCY n'y est PAS :
+// signalée par CODES::SMO001 pour ne jamais attendre derrière la file —
+// cf. SYSMONITORING.md §10.
 enum class GCSCommandType : uint8_t {
   Arm,
   Disarm,
@@ -22,10 +18,8 @@ enum class GCSCommandType : uint8_t {
   Answer // réponse à un MC_QUERY (cf. SharedCmdMem::PendingQuery)
 };
 
-// Struct à plat (pas d'union) : plus simple à stocker en shm — le léger
-// gaspillage d'espace (les champs hors-sujet pour `type` restent à zéro)
-// est négligeable pour une commande ponctuelle GCS, pas un flux haute
-// fréquence.
+// À plat et non en union : le gaspillage est négligeable pour une commande
+// ponctuelle, cf. SYSMONITORING.md §10.
 struct GCSCommand {
   uint32_t seq{0};
   GCSCommandType type{GCSCommandType::Arm};
@@ -45,10 +39,7 @@ struct payload {
   RingBuffer<GCSCommand, 8> gcsCmds{};
   uint32_t nextGcsSeq{0};
 
-  // Dernière réception HEARTBEAT_GCS par lien — sert de proxy de
-  // "qualité" faute de RSSI matériel (WFB_NG_Driver/CC1101_Driver pas
-  // encore implémentés, cf. SYSMONITORING.md §7) : un consommateur (MC,
-  // dashboard) déduit fraîcheur/perte de lien via msBetween(now, ...).
+  // Proxy de qualité de lien faute de RSSI matériel — SYSMONITORING.md §10.
   TYPES::TimePoint lastHeartbeatMain{};
   TYPES::TimePoint lastHeartbeatSec{};
 };
@@ -61,8 +52,7 @@ public:
                               SharedComMem &Com)
       : SharedCompMemHandler(Com.compMem, id, timeout), Com_(Com) {};
 
-  // seq assigné ici, jamais par l'appelant — même raison que
-  // SharedCmdMemHandler::pushMavlinkCommand.
+  // seq assigné ici, jamais par l'appelant.
   [[nodiscard]] bool pushGCSCommand(GCSCommand c) {
     auto seq = getData(id_, timeout_, Com_.data.nextGcsSeq).value_or(0);
     auto next = seq + 1;

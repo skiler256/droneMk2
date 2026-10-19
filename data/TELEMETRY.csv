@@ -26,3 +26,5 @@ GPSPOS;DOWN;Routine;1;0;MAIN;lat:f32,lon:f32,alt_msl:f32,vdop:f32
 SAT_INFO;DOWN;Routine;1;0;MAIN;count:u8,id:u8[16],strength:u8[16],quality:u8[16]
 LIDAR_SCAN;DOWN;Routine;2;0;MAIN;min_dist_mm:u16,min_bearing_deg:i16,range_mm:u16[360],intensity:u8[360]
 CPU_TEMP;DOWN;Routine;1;0;BOTH;temp_c:f32
+TASK_RATE;DOWN;Routine;5;0;MAIN;component:u8,task_id:u8,hz:f32,target_hz:f32
+ESC_RPM;DOWN;Routine;2;0;MAIN;rpm:f32[4]

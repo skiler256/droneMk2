@@ -4,12 +4,12 @@
 #include "drone/Components/SensorFusions/SharedSFMem.hpp"
 #include "drone/core/ComponentBase.hpp"
 #include "drone/core/watchdog.hpp"
+#include <atomic>
+#include <mutex>
 
 class Navigation;
 
-// Séquencement (façon FMA Airbus) : dépile navCmds, promeut armedSegment
-// en engagedSegment (sur amorçage ou sur Atteint, cf. canEngage), tient
-// le FMA latéral. Séparé de TAP (calcul pur) car événementiel — cf. NAVIGATION.md §2.
+// Séquencement événementiel, séparé de TAP (calcul pur) — NAVIGATION.md §2.
 class TSeqTask : public Task {
 public:
   explicit TSeqTask(Navigation &component, TaskConfig config,
@@ -20,8 +20,7 @@ private:
   Navigation &comp;
   void loop() override;
 
-  // Tente de promouvoir armedSegment en engagedSegment — false si rien
-  // d'armé, déjà engagé, ou sécurité non respectée (cf. canEngage).
+  // false si rien d'armé, déjà engagé, ou sécurité non respectée.
   bool tryPromote();
 };
 
@@ -38,9 +37,8 @@ private:
   void loop() override;
 };
 
-// Sécurité redondante, indépendante de TAP : santé EKF, présence
-// d'obstacle — déclenche un hold via holdActive_ (jamais d'écriture
-// directe sur NavCommand, TAP reste le seul écrivain).
+// Sécurité redondante : pose holdActive_, n'écrit jamais NavCommand (TAP
+// en reste seul écrivain) — cf. NAVIGATION.md §6.
 class TFSTask : public Task {
 public:
   explicit TFSTask(Navigation &component, TaskConfig config,
@@ -51,10 +49,10 @@ private:
   Navigation &comp;
   void loop() override;
 
-  // Édge-triggered, un flag par cause (même pattern que gpsFaultActive_
-  // dans SensorFusion) — holdActive_ est l'OR des deux, pas lui-même edge-triggered.
+  // Edge-triggered par cause ; holdActive_ en est l'OR, pas edge-triggered.
   bool ekfStaleActive_{false};
   bool obstacleActive_{false};
+  bool lidarStaleActive_{false};
 };
 
 class Navigation : public ComponentBase<3> {
@@ -69,15 +67,15 @@ public:
       &sysState_;            // pour raiseCode/clearCode depuis les Task
   SharedCmdMemHandler &cmd_; // segment courant + ordres ponctuels de MC
 
-  // Rafraîchis par TSeq, lus par TAP.
+  // Partagés entre les 3 Tasks — cf. ARCHITECTURE_IPC.md §3. Les structs
+  // multi-champs passent par le mutex, les scalaires par un atomique.
+  std::mutex segmentsMutex_;
   NavSegment engagedSegment_{};
   NavSegment armedSegment_{};
-  uint32_t lastSegmentSeq_{0};
-  bool newSegment_{
-      false}; // consommé (remis à false) par TAP au reset de ses états internes
 
-  // Posé par TFS, lu par TAP — un seul écrivain de NavCommand (TAP), cf. NAVIGATION.md §1.
-  bool holdActive_{false};
+  std::atomic<uint32_t> lastSegmentSeq_{0};
+  std::atomic<bool> newSegment_{false}; // consommé par TAP via exchange()
+  std::atomic<bool> holdActive_{false}; // posé par TFS, lu par TAP
 
 private:
   TSeqTask TSeq;

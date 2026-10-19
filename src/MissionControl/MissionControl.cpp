@@ -10,11 +10,12 @@ using namespace TYPES;
 
 namespace {
 
-// Chemin fixe, override DRONE_MISSION_PLAN_PATH pour les tests -- cf.
-// MISSIONCONTROL.md §5.
+// Surcharge réservée au SITL, cf. AUDIT.md §20.
 [[nodiscard]] std::string missionPlanPath() {
+#ifdef DRONE_USE_SITL_DRIVERS
   if (const char *override = std::getenv("DRONE_MISSION_PLAN_PATH"))
     return override;
+#endif
   return "/etc/drone/missionplan.bin";
 }
 
@@ -68,11 +69,8 @@ constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
   return buf;
 }
 
-// Charge + valide le plan de mission, cf. MISSIONCONTROL.md §5. GPS/EKF
-// perdu ou batterie (bas OU critique) au PRE_FLIGHT -> refus d'armer
-// (MCA009), distinct d'un plan de mission illisible (MCA004). batt_low
-// (FCP001) bloque ici aussi, pas seulement batt_critical (FCP003) --
-// decision explicite (plus conservateur qu'un simple voyant).
+// Charge et valide le plan ; batt_low bloque aussi, pas seulement
+// batt_critical — cf. MISSIONCONTROL.md §5.
 [[nodiscard]] bool runPreflightChecks(MissionControl &comp) {
   bool gpsOk = !hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS002) &&
               !hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS005);
@@ -93,7 +91,10 @@ constexpr float kTakeoffVertSpeedToleranceMs = 0.3f;
     comp.sysState_.raiseCode(CODES::MCA004);
     return false;
   }
-  comp.plan_ = *plan;
+  {
+    std::lock_guard lk(comp.planMutex_);
+    comp.plan_ = *plan;
+  }
   return true;
 }
 
@@ -162,7 +163,7 @@ void StateMachineTask::loop() {
       in.gcsCmd = gcs;
   }
 
-  if (comp.state_ == MissionState::PreFlight) {
+  if (comp.state_.load() == MissionState::PreFlight) {
     if (!preflightChecked_) {
       // Code precis leve par runPreflightChecks() elle-meme, cf. MISSIONCONTROL.md §5.
       preflightPassed_ = runPreflightChecks(comp);
@@ -174,7 +175,7 @@ void StateMachineTask::loop() {
   }
 
   in.armError = false;
-  if (comp.state_ == MissionState::Armed) {
+  if (comp.state_.load() == MissionState::Armed) {
     // Armé en attente de confirmation FC depuis plus de kArmTimeout ->
     // erreur. armed absent (pas encore de HEARTBEAT) traité comme non-armé.
     bool armConfirmTimeout = !comp.fc_.getArmed().value_or(false) &&
@@ -185,16 +186,16 @@ void StateMachineTask::loop() {
     in.armError = armConfirmTimeout || rpmFault;
   }
 
-  in.recoverableFailureActive = comp.recoverableFailureActive_;
-  in.unrecoverableFailureActive = comp.unrecoverableFailureActive_;
-  in.obstacleActive = comp.obstacleActive_;
-  in.volumeBreached = comp.volumeBreached_;
-  in.lidarLost = comp.lidarLost_;
-  in.missionComplete = comp.missionComplete_;
+  in.recoverableFailureActive = comp.recoverableFailureActive_.load();
+  in.unrecoverableFailureActive = comp.unrecoverableFailureActive_.load();
+  in.obstacleActive = comp.obstacleActive_.load();
+  in.volumeBreached = comp.volumeBreached_.load();
+  in.lidarLost = comp.lidarLost_.load();
+  in.missionComplete = comp.missionComplete_.load();
 
   // cf. MISSIONCONTROL.md §4 (landed).
   in.landed = false;
-  if (comp.state_ == MissionState::Landing && !comp.fc_.getArmed().value_or(true)) {
+  if (comp.state_.load() == MissionState::Landing && !comp.fc_.getArmed().value_or(true)) {
     auto state = comp.SF_.getDynamicState();
     float speed = state ? state->velNed.norm().v : 0.0f;
     bool stationary = speed < kLandedVelocityThreshold;
@@ -209,70 +210,114 @@ void StateMachineTask::loop() {
     }
   }
 
-  if (comp.state_ == MissionState::Emergency)
+  if (comp.state_.load() == MissionState::Emergency)
     in.emergencyElapsed = UTILITIES::msBetween(emergencyEnteredAt_, now);
+  if (holdQueryAt_ != TYPES::TimePoint{})
+    in.holdQueryElapsed = UTILITIES::msBetween(holdQueryAt_, now);
+
+  // Rapports des subordonnés : les vider à chaque cycle, sinon les FIFO se
+  // remplissent et les push échouent. Cf. MISSIONCONTROL.md §8.
+  bool commandRejected = false;
+  while (auto report = comp.cmd_.popMavlinkReport())
+    commandRejected |= !report->success;
+  while (auto report = comp.cmd_.popNavReport())
+    commandRejected |= !report->success;
+
+  if (commandRejected && !commandRejectedActive_) {
+    comp.sysState_.raiseCode(CODES::MCA011);
+    commandRejectedActive_ = true;
+  }
 
   uint32_t pendingSeq = 0;
   if (auto q = comp.cmd_.getPendingQuery())
     pendingSeq = q->seq;
 
-  auto outcome = MC_CONV::step(comp.state_, previousFlightMode_, pendingSeq, in);
+  auto outcome = MC_CONV::step(comp.state_.load(), previousFlightMode_, pendingSeq, in);
+
+  // Refus de push = commande perdue. MCA010 est levé dans tous les cas ; pour
+  // les commandes SANS rattrapage (LAND, disarm, set-mode) la transition est
+  // en plus bloquée, sinon le système annoncerait un état que le FC n'a jamais
+  // reçu. cf. MISSIONCONTROL.md §4.
+  bool sensitiveCommandLost = false;
+  auto sendFC = [&](CODES::Code code, uint32_t payload, bool sensitive) {
+    if (comp.cmd_.pushMavlinkCommand(code, payload))
+      return true;
+    comp.sysState_.raiseCode(CODES::MCA010);
+    if (sensitive)
+      sensitiveCommandLost = true;
+    return false;
+  };
 
   // cf. MISSIONCONTROL.md §4, "Commande effective du FC".
-  if (outcome.next == MissionState::Armed && comp.state_ != MissionState::Armed) {
+  if (outcome.next == MissionState::Armed && comp.state_.load() != MissionState::Armed) {
     armRequestedAt_ = now;
-    [[maybe_unused]] auto modePushed = comp.cmd_.pushMavlinkCommand(CODES::MCO002, 0);
-    [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO003, 0);
+    sendFC(CODES::MCO002, 0, /*sensitive=*/true); // set mode
+    sendFC(CODES::MCO003, 0, /*sensitive=*/false); // arm : armError rattrape
   }
-  if (outcome.next == MissionState::Idle && comp.state_ == MissionState::Armed) {
-    [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO004, 0);
+  if (outcome.next == MissionState::Idle && comp.state_.load() == MissionState::Armed) {
+    sendFC(CODES::MCO004, 0, /*sensitive=*/true); // disarm
   }
-  if (outcome.next == MissionState::Mission && comp.state_ == MissionState::Armed) {
+  if (outcome.next == MissionState::Mission && comp.state_.load() == MissionState::Armed) {
     // Altitude source et garde takeoffComplete_ : MISSIONCONTROL.md §4, sitl/SITL.md §3.
-    comp.takeoffTargetAlt_ = comp.plan_.header.takeoffAlt;
-    comp.takeoffComplete_ = false;
-    auto altitudeCm = static_cast<uint32_t>(comp.plan_.header.takeoffAlt * 100.0f);
-    [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO001, altitudeCm);
+    float takeoffAlt;
+    {
+      std::lock_guard lk(comp.planMutex_);
+      takeoffAlt = comp.plan_.header.takeoffAlt;
+    }
+    comp.takeoffTargetAlt_.store(takeoffAlt);
+    comp.takeoffComplete_.store(false);
+    auto altitudeCm = static_cast<uint32_t>(takeoffAlt * 100.0f);
+    // takeoffComplete_ reste false si la commande est perdue : le plan ne
+    // démarrera pas, donc pas besoin de bloquer la transition.
+    sendFC(CODES::MCO001, altitudeCm, /*sensitive=*/false);
   }
-  if (outcome.next == MissionState::Landing && comp.state_ != MissionState::Landing) {
-    [[maybe_unused]] auto pushed = comp.cmd_.pushMavlinkCommand(CODES::MCO006, 0);
+  if (outcome.next == MissionState::Landing && comp.state_.load() != MissionState::Landing) {
+    sendFC(CODES::MCO006, 0, /*sensitive=*/true); // LAND
   }
 
-  if ((comp.state_ == MissionState::Mission || comp.state_ == MissionState::Manual) &&
-      outcome.next != comp.state_)
-    previousFlightMode_ = comp.state_;
+  // L'état n'avance pas : MC réessaiera au cycle suivant (20Hz), et le GCS voit
+  // que l'ordre n'a pas pris au lieu d'un état mensonger.
+  if (sensitiveCommandLost)
+    return;
 
-  if (outcome.next == MissionState::Emergency && comp.state_ != MissionState::Emergency)
+  if ((comp.state_.load() == MissionState::Mission || comp.state_.load() == MissionState::Manual) &&
+      outcome.next != comp.state_.load())
+    previousFlightMode_ = comp.state_.load();
+
+  if (outcome.next == MissionState::Emergency && comp.state_.load() != MissionState::Emergency)
     emergencyEnteredAt_ = now;
 
   // cf. MISSIONCONTROL.md §8.
   auto currentQuery = comp.cmd_.getPendingQuery();
   QueryType currentType = currentQuery ? currentQuery->type : QueryType::None;
   QueryType desiredType = outcome.query.value_or(QueryType::None);
-  if (desiredType != currentType)
+  if (desiredType != currentType) {
     comp.cmd_.setPendingQuery(desiredType);
+    holdQueryAt_ =
+        (desiredType == QueryType::None) ? TYPES::TimePoint{} : now;
+  }
 
-  comp.state_ = outcome.next;
-  comp.cmd_.setMissionState(comp.state_);
+  comp.state_.store(outcome.next);
+  comp.cmd_.setMissionState(comp.state_.load());
 }
 
 void MiSequencerTask::loop() {
-  if (comp.state_ != MissionState::Mission)
+  if (comp.state_.load() != MissionState::Mission)
     return; // inactif hors MISSION — pas de pilotage manuel Nav-aware pour l'instant (TODO)
 
   auto now = Clock::now();
 
   // cf. sitl/SITL.md §3.
-  if (!comp.takeoffComplete_) {
+  if (!comp.takeoffComplete_.load()) {
     auto state = comp.SF_.getDynamicState();
     if (!state)
       return; // pas d'état SF dispo, on retente au prochain cycle
     float altUpM = -state->posNed.ned.z; // NED : z négatif = vers le haut
-    float altErrorM = std::abs(altUpM - comp.takeoffTargetAlt_);
+    float altErrorM = std::abs(altUpM - comp.takeoffTargetAlt_.load());
     float vertSpeedMs = std::abs(state->velNed.ned.z);
     if (altErrorM > kTakeoffAltToleranceM || vertSpeedMs > kTakeoffVertSpeedToleranceMs)
       return; // montée toujours en cours
-    comp.takeoffComplete_ = true;
+    comp.takeoffComplete_.store(true);
   }
 
   if (inHold_) {
@@ -313,12 +358,21 @@ void MiSequencerTask::loop() {
     armedSeqPending_ = 0;
   }
 
-  if (nextIndex_ >= comp.plan_.segments.size()) {
-    comp.missionComplete_ = true;
+  std::size_t segmentCount;
+  {
+    std::lock_guard lk(comp.planMutex_);
+    segmentCount = comp.plan_.segments.size();
+  }
+  if (nextIndex_ >= segmentCount) {
+    comp.missionComplete_.store(true);
     return;
   }
 
-  const auto &seg = comp.plan_.segments[nextIndex_];
+  MISSIONPLAN::SegmentVariant seg;
+  {
+    std::lock_guard lk(comp.planMutex_);
+    seg = comp.plan_.segments[nextIndex_];
+  }
 
   if (const auto *wp = std::get_if<MISSIONPLAN::WaypointSegment>(&seg)) {
     Position entryWp;
@@ -383,26 +437,30 @@ void SafetyMonitorTask::loop() {
   bool anyDead = anyComponentHealth(comp.sysState_, kMonitoredComponents, ComponentHealth::DEAD);
   bool anySick = anyComponentHealth(comp.sysState_, kMonitoredComponents, ComponentHealth::SICK);
 
-  comp.recoverableFailureActive_ =
+  comp.recoverableFailureActive_.store(
       hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS002) ||
       hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS005) ||
       hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::MVC004) ||
       hasMajorCode(comp.sysState_, ComponentID::MissionControl, CODES::MCA005) ||
-      bothGcsLinksLost || anySick;
+      bothGcsLinksLost || anySick);
 
-  comp.unrecoverableFailureActive_ =
+  comp.unrecoverableFailureActive_.store(
       hasMajorCode(comp.sysState_, ComponentID::SysMonitoring, CODES::SMO001) ||
       hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::MVP001) ||
       hasMajorCode(comp.sysState_, ComponentID::MavlinkInterface, CODES::FCP003) ||
-      anyDead;
+      anyDead);
 
-  comp.obstacleActive_ = hasMajorCode(comp.sysState_, ComponentID::Navigation, CODES::NVA004);
-  comp.lidarLost_ = hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS004);
+  comp.obstacleActive_.store(hasMajorCode(comp.sysState_, ComponentID::Navigation, CODES::NVA004));
+  comp.lidarLost_.store(hasMajorCode(comp.sysState_, ComponentID::SensorFusion, CODES::SFS004));
 
   // Volume de vol autorisé, cf. MISSIONCONTROL.md §6.
   bool breached = false;
   if (auto state = comp.SF_.getDynamicState()) {
-    const auto &hdr = comp.plan_.header;
+    MISSIONPLAN::MissionHeader hdr;
+    {
+      std::lock_guard lk(comp.planMutex_);
+      hdr = comp.plan_.header;
+    }
     float horizDist = std::sqrt(state->posNed.ned.x * state->posNed.ned.x +
                                 state->posNed.ned.y * state->posNed.ned.y);
     float altitude = -state->posNed.ned.z; // NED : z négatif en vol -> altitude positive
@@ -420,7 +478,7 @@ void SafetyMonitorTask::loop() {
     comp.sysState_.clearCode(CODES::MCA007);
     volumeBreachActive_ = false;
   }
-  comp.volumeBreached_ = breached;
+  comp.volumeBreached_.store(breached);
 }
 
 // Seul consommateur de gcsCmds, cf. MISSIONCONTROL.md §7.

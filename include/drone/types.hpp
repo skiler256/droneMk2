@@ -1,15 +1,5 @@
 #pragma once
 
-// ─────────────────────────────────────────────────────────────────────────────
-// drone/types.hpp
-//
-// Types forts pour toutes les grandeurs physiques du drone.
-//
-// Principe : deux grandeurs de types différents ne peuvent pas être
-// confondues — le compilateur refuse le mélange. Un float brut ne peut
-// pas être passé là où un Meters est attendu.
-// ─────────────────────────────────────────────────────────────────────────────
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <algorithm>
@@ -26,11 +16,7 @@
 namespace TYPES {
 
 // ─── Horloge commune ────────────────────────────────────────────────────────
-//
-// Résolu à la compilation (option CMake DRONE_USE_SIM_CLOCK), pas de
-// dispatch virtuel — cf. INTEGRATION_TEST.md §8.2. Les deux horloges sont
-// TrivialClock, donc TimePoint/Ms/Us restent valides sans changement dans
-// le reste du code (Task, ComponentBase, msBetween, ...).
+// Résolue à la compilation, pas de dispatch virtuel — cf. sitl/SITL.md.
 #ifdef DRONE_USE_SIM_CLOCK
 using Clock = SimClock;
 #else
@@ -41,9 +27,6 @@ using Ms = std::chrono::milliseconds;
 using Us = std::chrono::microseconds;
 
 // ─── Types scalaires forts ──────────────────────────────────────────────────
-//
-// Chaque type encapsule un float et n'est constructible que de façon
-// explicite — impossible de passer un float nu par accident.
 
 template <typename Tag> struct Scalar {
   float v;
@@ -56,25 +39,20 @@ template <typename Tag> struct Scalar {
   constexpr Scalar operator-() const noexcept { return Scalar{-v}; }
 };
 
-// Grandeurs de distance / position
 struct TagMeters {};
-using Meters = Scalar<TagMeters>; // distance en mètres
+using Meters = Scalar<TagMeters>;
 
-// Grandeurs de vitesse
 struct TagMetersPerSec {};
-using MetersPerSec = Scalar<TagMetersPerSec>; // vitesse en m/s
+using MetersPerSec = Scalar<TagMetersPerSec>;
 
-// Grandeurs magnétiques
 struct TagGauss {};
 using Gauss = Scalar<TagGauss>;
 
-// Grandeurs d'angle
 struct TagRadians {};
 struct TagDegrees {};
 using Radians = Scalar<TagRadians>;
 using Degrees = Scalar<TagDegrees>;
 
-// Conversions explicites
 [[nodiscard]] constexpr Radians toRadians(Degrees d) noexcept {
   return Radians{d.v * (3.14159265358979323846f / 180.0f)};
 }
@@ -82,23 +60,17 @@ using Degrees = Scalar<TagDegrees>;
   return Degrees{r.v * (180.0f / 3.14159265358979323846f)};
 }
 
-// Grandeurs de fréquence / temps
 struct TagHz {};
-using Hz = Scalar<TagHz>; // fréquence en hertz
+using Hz = Scalar<TagHz>;
 
-// Grandeurs électriques (batterie, ESC)
 struct TagVolts {};
 struct TagAmps {};
 using Volts = Scalar<TagVolts>;
 using Amps = Scalar<TagAmps>;
 
 // ─── Vecteurs 3D POD ─────────────────────────────────────────────────────────
-// Décision actée (CLAUDE.md) : pas de type Eigen dans un payload shared
-// memory — Eigen ne garantit ni trivially-copyable ni standard-layout, et
-// c'est requis par crc32<T>()/le memcpy implicite entre process via mmap.
-// Vec3/Quat sont trois/quatre floats bruts, rien d'autre. `asEigen()` donne
-// une vue Eigen::Map à la demande pour du calcul (Kalman, etc.) SANS jamais
-// stocker le type Eigen lui-même — la struct qui l'utilise reste POD.
+// Floats bruts, jamais de type Eigen stocké : contrainte des payloads shm
+// (cf. ARCHITECTURE_IPC.md §2.1). asEigen() rend une vue à la demande.
 
 struct Vec3 {
   float x{0.0f}, y{0.0f}, z{0.0f};
@@ -118,8 +90,7 @@ struct Vec3 {
   }
 };
 
-// Quaternion unitaire, identité par défaut (w=1) — contrairement à
-// Eigen::Quaternionf, dont le défaut est non-initialisé.
+// Identité par défaut (w=1), contrairement à Eigen::Quaternionf.
 struct Quat {
   float w{1.0f}, x{0.0f}, y{0.0f}, z{0.0f};
 
@@ -128,12 +99,7 @@ struct Quat {
   }
 };
 
-// Repère NED (North-East-Down) pour Position/Velocity/Acceleration : x=Nord,
-// y=Est, z=Bas (altitude négative en vol). MagneticField reste en repère
-// capteur (pas de rotation appliquée) — c'est le rôle de SensorFusion de la
-// projeter en NED, pas de ce type.
-
-struct Position { // mètres, NED
+struct Position { // mètres, NED (x=Nord, y=Est, z=Bas)
   Vec3 ned{};
   [[nodiscard]] Meters norm() const noexcept { return Meters{ned.norm()}; }
 };
@@ -149,7 +115,8 @@ struct Acceleration { // m/s², NED
   Vec3 ned{};
 };
 
-struct MagneticField { // Gauss, repère capteur
+// Repère capteur, pas NED : c'est SensorFusion qui projette.
+struct MagneticField {
   Vec3 B{};
   [[nodiscard]] Gauss norm() const noexcept { return Gauss{B.norm()}; }
 };
@@ -165,7 +132,7 @@ struct Attitude {
   }
   [[nodiscard]] Radians pitch() const noexcept {
     float s = 2.0f * (q.w * q.y - q.z * q.x);
-    s = std::clamp(s, -1.0f, 1.0f); // évite un domaine invalide pour asin au gimbal lock
+    s = std::clamp(s, -1.0f, 1.0f); // domaine d'asin invalide au gimbal lock
     return Radians{std::asin(s)};
   }
   [[nodiscard]] Radians yaw() const noexcept {
@@ -178,13 +145,12 @@ struct Attitude {
 
 struct Waypoint {
   Position target;
-  MetersPerSec approach_speed{1.5f}; // vitesse d'approche
-  Meters acceptance_radius{0.3f};    // rayon d'acceptation
+  MetersPerSec approach_speed{1.5f};
+  Meters acceptance_radius{0.3f};
 };
 
 // ─── Mode de navigation ──────────────────────────────────────────────────────
-// Cf. Design.md — state machine de Navigation, pas encore câblée mais déjà
-// spécifiée : gardé ici même si pas encore consommé par du code actif.
+// Spécifiée dans Design.md, pas encore câblée à du code actif.
 
 enum class NavMode {
   IDLE,      // au sol, pas armé
@@ -213,7 +179,6 @@ enum class NavMode {
   return "UNKNOWN";
 }
 
-// Alias pratique pour les retours faillibles
 template <typename T, typename E> using Result = std::expected<T, E>;
 
 // ─── IPC : identité des composants et de leurs segments partagés ────────────
@@ -226,8 +191,7 @@ enum class ComponentID : uint8_t {
   SysMonitoring,
   GlobalWatchdog,
 
-  Count // toujours en dernier : sert a dimensionner le tableau, jamais utilise
-        // comme index reel
+  Count // dimensionne les tableaux, jamais un index réel
 };
 
 enum class ComponentHealth : uint8_t {
@@ -267,6 +231,31 @@ enum class DriverError : std::uint8_t {
   ConfigFailed,
   NoNewData, // aucun paquet complet reçu depuis le dernier update()
 };
+
+[[nodiscard]] constexpr std::string_view toString(DriverError e) noexcept {
+  switch (e) {
+  case DriverError::None:              return "None";
+  case DriverError::I2COpenFailed:     return "I2COpenFailed";
+  case DriverError::I2CAddressFailed:  return "I2CAddressFailed";
+  case DriverError::I2CReadFailed:     return "I2CReadFailed";
+  case DriverError::I2CWriteFailed:    return "I2CWriteFailed";
+  case DriverError::UARTOpenFailed:    return "UARTOpenFailed";
+  case DriverError::UARTAttrGetFailed: return "UARTAttrGetFailed";
+  case DriverError::UARTAttrSetFailed: return "UARTAttrSetFailed";
+  case DriverError::UARTReadFailed:    return "UARTReadFailed";
+  case DriverError::UARTWriteFailed:   return "UARTWriteFailed";
+  case DriverError::SocketOpenFailed:  return "SocketOpenFailed";
+  case DriverError::SocketBindFailed:  return "SocketBindFailed";
+  case DriverError::SocketReadFailed:  return "SocketReadFailed";
+  case DriverError::SocketWriteFailed: return "SocketWriteFailed";
+  case DriverError::NotInitialized:    return "NotInitialized";
+  case DriverError::Timeout:           return "Timeout";
+  case DriverError::InvalidData:       return "InvalidData";
+  case DriverError::ConfigFailed:      return "ConfigFailed";
+  case DriverError::NoNewData:         return "NoNewData";
+  }
+  return "UNKNOWN";
+}
 
 enum class DriverHealth : uint8_t {
   Unconnected = 0,

@@ -1,12 +1,6 @@
-// Binaire de test HIL (Hardware In the Loop) : fait tourner SensorFusion et
-// MavlinkInterface dans le même process, face aux VRAIS capteurs (GPS/
-// LIDAR) et au vrai FC (UART), sans GlobalWatchdog ni les autres composants.
-// Publie ses propres segments shm dédiés (cf. drone/IntegrationTests/ShmPaths.hpp).
-// Pas de magnétomètre ici : câblé directement sur le FC (cf. SENSORFUSION.md).
-//
-// Usage : ./hil_sf_mv
-// Prérequis : GPS sur /dev/ttyAMA1, LIDAR sur /dev/ttyAMA2, FC sur
-// /dev/ttyAMA0 — mêmes défauts que main.cpp.
+// Test HIL : SensorFusion + MavlinkInterface dans un seul process, face aux
+// vrais capteurs et au vrai FC, sans GlobalWatchdog — cf. sitl/SITL.md.
+// Usage : ./hil_sf_mv (GPS ttyAMA1, LIDAR ttyAMA2, FC ttyAMA0)
 
 #include "drone/Components/Drivers/LD06.hpp"
 #include "drone/Components/Drivers/NEO-M8N.hpp"

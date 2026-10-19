@@ -4,29 +4,23 @@
 #include "drone/generated/codes.hpp"
 #include "drone/types.hpp"
 
-// Consigne de sortie de la loi de correction (cf. Document de Conception
-// Logicielle §3.4.3, "Loi de correction" -> Vel_NED, Throttle(Alt),
-// Heading) — c'est ce que MavlinkInterface lit pour construire
-// SET_POSITION_TARGET_LOCAL_NED.
+// Consigne de sortie de la loi de correction, lue par MavlinkInterface
+// pour construire SET_POSITION_TARGET_LOCAL_NED.
 struct NavCommand {
   TYPES::TimePoint ts{};
-  // vx, vy, vz — les 3 composantes sont envoyées telles quelles à
-  // MavlinkInterface (SET_POSITION_TARGET_LOCAL_NED). vz vient du
-  // P-controller altitude de Nav (NAV_CONV::computeVerticalGuidance).
+  // Les 3 composantes partent telles quelles ; vz vient de Nav, pas du FC.
   TYPES::Velocity velNed{};
   TYPES::Radians headingCmd{0.0f}; // cap absolu désiré
-  // Altitude absolue visée, repère NED (négative en vol, cf. Position) —
-  // indicatif seulement (affichage GCS via UDP_bridge) : la commande
-  // réelle envoyée au FC passe par velNed.ned.z, pas ce champ.
+  // Indicatif seulement (affichage GCS) : la commande réelle passe par
+  // velNed.ned.z — cf. NAVIGATION.md §5.
   TYPES::Meters altitudeCmd{0.0f};
 };
 
 struct SharedNavMem {
   SharedCompMem compMem;
 
-  // Affichage FMA (armé/engagé par axe), indicatif seulement — pas via
-  // sysState_.raiseCode/clearCode. À plat pour que TSeq/TAP écrivent
-  // chacun le leur sans se marcher dessus. Cf. NAVIGATION.md §7.
+  // FMA indicatif, pas des codes de faute. À plat pour que TSeq et TAP
+  // écrivent chacun le leur — cf. NAVIGATION.md §7.
   struct payload {
     NavCommand cmd{};
     CODES::Code lateralArmed{};

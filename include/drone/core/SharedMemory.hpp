@@ -13,10 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// FIFO bornée POD — safe en shm (pas de mutex, manipulée uniquement via
-// pushFifo()/popFifo() sous le CAS-lock de SharedMemoryHandler). Échoue au
-// lieu d'écraser (cf. pushFifo) : perdre un élément silencieusement (ex: un
-// ordre de MissionControl) est pire qu'un push refusé explicitement.
+// FIFO bornée POD, refuse plutôt qu'écrase — cf. ARCHITECTURE_IPC.md §2.1.
 template <typename T, size_t N> struct RingBuffer {
   std::array<T, N> buf{};
   size_t head{0};
@@ -62,16 +59,21 @@ public:
                                std::memory_order_acq_rel);
   };
 
+  // Lecture sans consommation : un appelant qui veut connaître la cause de son
+  // propre échec ne doit pas priver le ComponentWatchdog de l'erreur, qu'il
+  // relève par consumeError() dans sa boucle.
+  [[nodiscard]] TYPES::shmError peekError() const noexcept {
+    return lastError_.load(std::memory_order_acquire);
+  };
+
 protected:
   SharedMemory &mem_;
 
-  // Checksum par composant sur les segments multi-écrivains, cf.
-  // ARCHITECTURE_IPC.md §2.4.
+  // Checksum par composant si multi-écrivains, cf. ARCHITECTURE_IPC.md §2.4.
   virtual uint32_t computeChecksum(TYPES::ComponentID id) = 0;
   virtual void reset(TYPES::ComponentID id) = 0;
 
-  // Défaut : un seul checksum (segment mono-propriétaire). Override pour
-  // multi-écrivains, cf. SharedSysStateMem.
+  // Défaut mono-propriétaire ; override pour multi-écrivains.
   virtual bool checksumValid(TYPES::ComponentID id) {
     return mem_.checksum == computeChecksum(id);
   }
@@ -79,9 +81,8 @@ protected:
     mem_.checksum = computeChecksum(id);
   }
 
-  // `id` = jeton de verrou, pas forcément le sujet lu/écrit (cf.
-  // ARCHITECTURE_IPC.md §2.3). `repairOnCorrupt` : true seulement pour un
-  // read-modify-write interne à une écriture, jamais pour une lecture pure.
+  // `id` = jeton de verrou, pas le sujet lu/écrit ; `repairOnCorrupt` jamais
+  // sur une lecture pure — cf. ARCHITECTURE_IPC.md §2.3-2.4.
   template <typename T>
   [[nodiscard]] std::optional<T> getData(TYPES::ComponentID id, TYPES::Us timeout,
                                          T &t, bool repairOnCorrupt = false) {
@@ -148,8 +149,17 @@ protected:
     return data.emplace(fetch->at(i));
   };
 
-  // Lit-modifie-écrit sous un seul verrou : évite le lost-update d'un
-  // getData()+setData() séparé.
+  // Lire-modifier-écrire sous UN seul verrou : un getData()+setData() séparé
+  // laisse un autre writer s'intercaler entre les deux (cf. AUDIT.md §4).
+  template <typename T, typename F>
+  void modifyData(TYPES::ComponentID id, TYPES::Us timeout, T &t, F &&f) {
+    auto fetch = lockedAccess(id, timeout, /*repairOnCorrupt=*/true,
+                              [&] { std::forward<F>(f)(t); });
+    if (!fetch)
+      recordError(fetch.error());
+  };
+
+  // Un seul verrou : évite le lost-update d'un getData()+setData() séparé.
   template <typename T, typename A>
   void setArrayElement(TYPES::ComponentID id, TYPES::Us timeout, size_t i, T &t,
                        A &array) {

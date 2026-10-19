@@ -47,6 +47,7 @@ def codes_to_json(codes):
             "is_major": c.is_major,
             "alarm": c.alarm,
             "panel": c.panel,
+            "schematic": c.schematic,
         }
         for c in sorted(codes, key=lambda c: c.code)
     ]
@@ -111,6 +112,7 @@ def build_code_from_payload(payload, codes_for_dup_check, known_alarm_ids):
             code_str, payload.get("component"), payload.get("category"),
             payload.get("name"), payload.get("description"),
             payload.get("severity"), payload.get("alarm"), payload.get("panel"),
+            payload.get("schematic"),
             seen=seen, known_alarm_ids=known_alarm_ids,
         )
     except CodeValidationError as e:

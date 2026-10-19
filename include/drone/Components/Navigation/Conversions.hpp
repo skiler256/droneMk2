@@ -7,14 +7,11 @@
 #include <algorithm>
 #include <cmath>
 
-// Lois de correction extraites d'APTask::loop() pour être testables sans
-// passer par la Task (loop() est privée, appelée uniquement par le thread
-// RT de la Task) — même principe que MavlinkInterface/Conversions.hpp et
-// SensorFusions/Conversions.hpp.
+// Lois de correction extraites d'APTask::loop() pour être testables hors
+// de la Task — cf. NAVIGATION.md §5.
 namespace NAV_CONV {
 
-// Même gain que le P-controller altitude ci-dessous (computeVerticalGuidance)
-// — cohérence de "feel" entre les deux axes.
+// Même gain que l'axe vertical, par cohérence de "feel".
 constexpr float kApproachKp = 0.6f;
 
 struct WaypointGuidance {
@@ -23,9 +20,8 @@ struct WaypointGuidance {
   bool arrived;
 };
 
-// Cap direct sur la cible, vitesse d'approche en P-controller saturé à
-// segment.speed (pas de dépassement même sur une cible proche) — l'axe
-// vertical (velNed.z) n'est pas rempli ici, cf. computeVerticalGuidance().
+// P-controller saturé à segment.speed : pas de dépassement sur cible
+// proche. Ne remplit pas velNed.z — cf. computeVerticalGuidance().
 [[nodiscard]] inline WaypointGuidance
 computeWaypointGuidance(const NavSegment &segment, const DynamicState &state,
                         TYPES::TimePoint now,
@@ -52,30 +48,20 @@ computeWaypointGuidance(const NavSegment &segment, const DynamicState &state,
       .cmd = cmd, .distanceRemaining = TYPES::Meters{dist}, .arrived = arrived};
 }
 
-// Sous ce seuil, la direction de state.velNed est trop bruitée (bruit GPS)
-// pour être fiable — repli sur le cap vers la cible (il faut toujours une
-// direction à observer pour TFS).
+// Sous ce seuil, la direction de velNed est trop bruitée (GPS) : repli sur
+// le cap vers la cible, TFS ayant toujours besoin d'une direction.
 constexpr float kVelocityDirectionThreshold = 0.5f; // m/s
 
-// Zone de détection devant le drone, alignée sur la trajectoire réelle
-// (angle mort du LIDAR ~200° centré sur le nez, cf. NAVIGATION.md §6).
+// Zone alignée sur la trajectoire réelle — cf. NAVIGATION.md §6.
 constexpr float kObstacleBoxForwardM = 2.0f; // 0 à 2m devant le drone
 constexpr float kObstacleBoxLateralM = 1.0f; // ±1m de part et d'autre
 
-// Direction "avant" pour TFS — recalculée indépendamment de
-// computeWaypointGuidance (TFS est une sécurité redondante, elle ne fait
-// confiance à aucun calcul déjà fait par TAP).
+// Direction "avant" de TFS, recalculée indépendamment de TAP (sécurité
+// redondante). DEUX INVARIANTS : composante verticale exclue du calcul de
+// `speed`, et vecteur de sortie unitaire — cf. NAVIGATION.md §6, bug SITL.
 [[nodiscard]] inline TYPES::Vec3
 travelDirection(const NavSegment &segment, const DynamicState &state) noexcept {
-  // Vitesse HORIZONTALE seulement -- pas state.velNed.norm() (norme 3D
-  // complète, cf. Vec3::norm()) : en montée/descente quasi verticale, cette
-  // norme est dominée par vz, "speed" passe le seuil alors que vx/vy sont
-  // quasi nuls, et le vecteur retourné (vx/speed, vy/speed, 0) n'est alors
-  // plus unitaire (norme << 1). obstacleInBox() suppose `forward` unitaire
-  // pour projeter les points LIDAR -- avec un vecteur ecrase, un obstacle
-  // reel a plusieurs metres se projette a quelques centimetres et tombe
-  // faussement dans la boite de securite (bug constate en SITL : hold_obstacle
-  // se declenchait en pleine montee sans aucun obstacle reel a proximite).
+  // HORIZONTALE seulement, jamais velNed.norm() : cf. l'invariant ci-dessus.
   float speed = std::sqrt(state.velNed.ned.x * state.velNed.ned.x +
                           state.velNed.ned.y * state.velNed.ned.y);
   if (speed > kVelocityDirectionThreshold) {
@@ -91,10 +77,8 @@ travelDirection(const NavSegment &segment, const DynamicState &state) noexcept {
   return TYPES::Vec3{1.0f, 0.0f, 0.0f}; // sur la cible, vitesse nulle : Nord par défaut
 }
 
-// Un point LidarMap tombe-t-il dans la zone de sécurité ? `forward` doit
-// être unitaire (cf. travelDirection()). Test de boîte (projection sur les
-// axes avant/latéral) plutôt qu'un cône — plus simple, et les points sont
-// déjà en NED relatif au drone donc directement exploitables.
+// `forward` DOIT être unitaire (cf. travelDirection()). Test de boîte et
+// non de cône : les points sont déjà en NED relatif au drone.
 [[nodiscard]] inline bool obstacleInBox(const LidarMap &map,
                                         const TYPES::Vec3 &forward) noexcept {
   TYPES::Vec3 right{forward.y, -forward.x, 0.0f}; // perpendiculaire, rotation -90°
@@ -112,12 +96,10 @@ travelDirection(const NavSegment &segment, const DynamicState &state) noexcept {
   return false;
 }
 
-// Plus large qu'à l'arrivée (kArrivalTolerance, Navigation.cpp) — démarrer
-// un segment tolère un peu plus de marge qu'"être arrivé".
+// Plus large que kArrivalTolerance : démarrer tolère plus qu'arriver.
 constexpr float kEngageToleranceM = 2.0f;
 
-// Sécurité avant promotion armé->engagé (TSeq) : distance à entryWp (pas
-// exitWp, la cible) — cf. NAVIGATION.md §3.
+// Distance à entryWp, pas à la cible — cf. NAVIGATION.md §3.
 [[nodiscard]] inline bool canEngage(const NavSegment &segment,
                                     const DynamicState &state) noexcept {
   float dx = segment.entryWp.ned.x - state.posNed.ned.x;
@@ -126,14 +108,11 @@ constexpr float kEngageToleranceM = 2.0f;
   return dist <= kEngageToleranceM;
 }
 
-// Axe vertical, indépendant du latéral — migré depuis
-// MavlinkInterface::altitudeToVz() (mêmes gains, cf. NAVIGATION.md §5).
-// NED : vz<0 = monte.
+// Axe vertical, indépendant du latéral. NED : vz<0 = monte (§5).
 constexpr float kAltitudeKp = 0.6f;
 constexpr float kMaxClimbRateMs = 2.0f;
 
-// En dessous de cet écart, considéré Hold plutôt que Climb/Descend — évite
-// d'afficher un mode qui change à chaque bruit de mesure autour de la cible.
+// Évite un mode FMA qui papillonne avec le bruit autour de la cible.
 constexpr float kAltitudeHoldToleranceM = 0.3f;
 
 struct VerticalGuidance {
@@ -158,9 +137,8 @@ computeVerticalGuidance(TYPES::Meters targetAltitude,
   return VerticalGuidance{.vz = TYPES::MetersPerSec{vz}, .modeCode = mode};
 }
 
-// Code FMA latéral pour un type de segment donné — switch exhaustif
-// (pas de default) : le compilateur force une mise à jour ici quand
-// Line/Curve seront ajoutés.
+// Switch exhaustif sans default : le compilateur forcera une mise à jour
+// quand Line/Curve seront ajoutés.
 [[nodiscard]] inline CODES::Code lateralModeCode(SegmentType type) noexcept {
   switch (type) {
   case SegmentType::Waypoint:

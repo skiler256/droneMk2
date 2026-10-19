@@ -6,6 +6,12 @@ comment sont organisées les 4 Tasks. Complète `GUIDE_COMPOSANTS.md` (guide
 générique d'écriture d'un composant) et `ARCHITECTURE_IPC.md` (IPC/
 watchdog) — ce document est spécifique à SysMonitoring.
 
+Côté rôle système, `SysMonitoring` correspond à un **ECAM** (Electronic
+Centralized Aircraft Monitor, terme Airbus — cohérent avec le FMA de
+`NAVIGATION.md` §7 et les alarmes MW/MC déjà nommées à l'Airbus) : c'est
+lui qui centralise l'état et le pousse vers l'équipage (GCS). `TelMainTask`
+porte le lien **PDL**, `TelSecTask` le lien **SDL** (cf. `HARDWARE.md` §2).
+
 ## 1. Vue d'ensemble
 
 ```
@@ -109,6 +115,12 @@ Règles de choix (`nextDue()`, appelé à chaque itération de
 3. **Paquet événementiel** (`rateHz == 0`) : dû si `markDirty(id)` a été
    appelé (changement détecté par la Task), OU si sa `redundancyHz`
    périodique est due même sans changement.
+4. **Un événementiel en attente gagne tout départage à priorité égale** :
+   son retard (`overdue`) est forcé au maximum, de sorte qu'un changement
+   d'état réel passe toujours avant la simple redondance périodique d'un
+   autre paquet de même priorité. Sans cette règle, la règle 2 pourrait
+   faire attendre une transition de `MISSION_STATE` derrière le énième
+   renvoi inchangé d'un paquet plus en retard.
 
 ```cpp
 comp.mainSched_.markDirty(TELEM::PacketID::MISSION_STATE); // sur changement détecté
@@ -135,6 +147,23 @@ silencieusement.
 Chaque Task est un simple dispatch `switch (due->id) { case ... encode +
 send }` (`TelMainTask`/`TelSecTask`) ou un `poll()` + décodage
 (`GCSRxTask`/`VideoTask`) — voir `src/SystemMonitoring/SystemMonitoring.cpp`.
+
+**Seuls les codes MAJEURS (Critical/Emergency) sont relayés.** `CODE` est
+`Priority=Critical` dans `TELEMETRY.csv`, et le ring des mineurs est à la fois
+plus bruyant et dépourvu de notion de « clear » à observer (il s'auto-purge par
+écrasement, cf. §5) — il n'y a donc pas de front à détecter dessus. De même,
+`HEALTH` ne portant qu'un couple `(composant, santé)` par envoi, les cinq
+composants surveillés **défilent** un par envoi plutôt que d'élargir le format
+du paquet pour si peu de champs.
+
+**État propre à chaque lien, jamais partagé.** `TelMainTask` et
+`TelSecTask` tiennent chacune leur index de défilement `HEALTH` et leur
+snapshot de codes majeurs : les deux liens n'émettent pas au même rythme,
+donc leur progression doit être indépendante. Les événements `CODE` détectés
+par diff (`scanCodeChanges`) sont mis en file **locale au process**, pas en
+shm — même principe que `StateMachineOrderQueue` côté MissionControl, et
+sans verrou ici puisque détection et consommation ont lieu dans le même
+thread (`TelMainTask::loop()`).
 
 ## 7. Drivers — interface vs. implémentation
 
@@ -166,6 +195,30 @@ inter-véhicules : seule l'implémentation concrète change.
   commandes montantes. `python3 tools/dashboard/dashboard_server.py`.
 - `tools/codes_editor.py` : onglet "Paquets télémétrie" pour éditer
   `TELEMETRY.csv` sans risque de casser l'ordre des `PacketID`.
+
+### `sysmon_sitl` — injection shm à la main
+
+`src/IntegrationTests/SYSMON_SITL.cpp` fait tourner `SysMonitoring` **seul**,
+alimenté par des datagrammes UDP texte sur `127.0.0.1:15020` (même esprit que
+`udp_bridge`, cf. `sitl/SITL.md` §2). Il écoute les **mêmes** ports de
+télémétrie que `main.cpp`, donc le dashboard GCS l'observe sans aucune
+configuration différente.
+
+Commandes d'injection, directement copiables :
+
+```sh
+echo -e "CMD=STATE\nnorth=10\neast=0\ndown=-5\nvn=1\nve=0\nvd=0\nroll=0\npitch=0\nyaw=90" | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=GPS\nlat=48.858\nlon=2.294\nalt=42\nhdop=0.9\nvdop=1.1\nfixtype=3\nnumsats=11"  | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=SAT\nindex=0\nid=12\nstrength=180\nquality=5"                                     | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=LIDARPOINT\nbearing=45\ndist_mm=1200\nintensity=200"                               | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=LIDARCLEAR"                                                                           | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=BATTERY\nvoltage=22.1\ncurrent=8.4\npct=76"                                        | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=MISSIONSTATE\nstate=Mission"                                                         | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=FMA\nlateral_engaged=0\nlateral_armed=0\nvertical_engaged=0\nvertical_armed=0\ntarget_altitude=10\ntarget_speed=3" | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=HEALTH\ncomponent=SensorFusion\nhealth=SICK"                                        | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=CODE\ncomponent=SensorFusion\ncode=SFS004\naction=raise"                           | nc -u -w0 127.0.0.1 15020
+echo -e "CMD=CODE\ncomponent=SensorFusion\ncode=SFS004\naction=clear"                           | nc -u -w0 127.0.0.1 15020
+```
 
 ## 9. Ce qui n'est PAS encore fait
 
@@ -242,3 +295,210 @@ pas de variante factice dev/prod séparée : cette API kernel existe sur
 toute machine Linux avec capteur thermique, y compris une machine de dev
 x86 (contrairement aux liens radio WFB-NG/CC1101 qui nécessitent le
 hardware).
+
+## 13. `TASK_RATE` — fréquence réelle des `Task`
+
+Chaque `TaskConfig` porte une `loopFrequency` *demandée*. Rien ne garantit
+qu'elle soit tenue : une boucle qui déborde de son budget, un driver qui
+bloque en lecture ou une préemption par une `Task` plus prioritaire font
+tomber la cadence réelle sans qu'aucun watchdog ne réagisse — le heartbeat
+continue d'arriver, simplement moins souvent, et tant qu'il reste sous le
+`timeout` la `Task` est considérée vivante. `TASK_RATE` rend cet écart
+observable.
+
+### Qui mesure
+
+La `Task` incrémente un `std::atomic<uint32_t>` après chaque `loop()`
+(`ComponentBase.hpp`). C'est son seul coût : un `fetch_add` en
+`memory_order_relaxed`, pas de lecture d'horloge ni d'accès shm sur le
+chemin de vol.
+
+Tout le calcul vit dans `ComponentWatchdog::publishRates()`
+(`watchdog.hpp`), appelé depuis `loop()`. Le watchdog conserve par `Task`
+le compteur précédent et l'instant du dernier échantillon — champs non
+atomiques de `TaskHandle`, puisqu'un seul thread y touche. Au premier tick
+au-delà de 1000 ms il calcule `delta / elapsed` et publie.
+
+Deux raisons à ce découpage :
+
+- le chemin RT ne porte qu'un incrément, et c'est le watchdog — déjà conçu
+  pour prendre des verrous shm et déjà porteur d'une erreur sticky — qui
+  paie l'accès à la mémoire partagée ;
+- l'arithmétique est mono-thread, donc sans race et sans atomique. Le seul
+  point de contact entre les deux threads est un `uint32_t` monotone : lire
+  une valeur en retard d'une itération fausse la mesure d'un pour-cent,
+  jamais la cohérence.
+
+La fenêtre d'une seconde n'est pas un réglage de confort. Déduire la
+période de deux `lastHeartbeat` successifs n'aurait rien coûté, mais le
+watchdog tourne à 100 Hz : pour une `Task` à 100 Hz l'écart mesuré serait
+du bruit d'ordonnancement replié, pas une fréquence. Une seconde donne ~100
+échantillons par mesure à cette cadence.
+
+Le compteur n'est pas remis à zéro par un restart de `Task` : la mesure
+reste juste à travers un hot-start, au prix de ne pas signaler le trou.
+
+### Stockage
+
+`SharedSysStateMem` porte deux tableaux
+`[ComponentID::Count][kMaxTasksPerComponent]` de `float` :
+
+| Champ | Écrit par | Quand |
+|---|---|---|
+| `taskHz` | `setTaskHz` | à chaque fin de fenêtre |
+| `taskTargetHz` | `setTaskTargetHz` | une fois, à la première publication |
+
+`kMaxTasksPerComponent = 8` laisse de la marge sur le composant le plus
+fourni (`MavlinkInterface`, 5 `Task`). Les `TaskID` sont numérotés 0..n-1
+par composant, donc ils indexent directement le tableau. Les deux champs
+entrent dans `computeChecksum(id)` : une mesure corrompue ne passe pas
+inaperçue. `0` signifie « pas encore mesurée », jamais « arrêtée » — un
+composant qui vient de démarrer n'a rien publié.
+
+Les deux setters sont du self-report, comme `setHealth` : un composant ne
+publie que ses propres `Task` (invariant `ARCHITECTURE_IPC.md` §2.3).
+
+Publier la cible plutôt que de la laisser côté GCS évite de dupliquer les
+19 `loopFrequency` en JavaScript, où elles dériveraient au premier
+changement de `TaskConfig`.
+
+### Transport
+
+`TASK_RATE;DOWN;Routine;5;0;MAIN;component:u8,task_id:u8,hz:f32,target_hz:f32`
+
+Un seul couple `(composant, Task)` par paquet, 10 octets utiles.
+`buildTaskRatePkt()` fait défiler les `5 × 8` slots et saute ceux à
+`hz == 0` ; à 5 Hz les 19 `Task` réelles sont rafraîchies en ~4 s, ce qui
+suffit pour une mesure qui ne bouge que toutes les secondes. Le balayage
+est borné au nombre de slots : au démarrage, quand aucune mesure n'existe
+encore, la fonction renvoie `nullopt` et l'appelant fait un `markSent`
+inconditionnel — sinon `TASK_RATE` resterait dû en permanence et
+monopoliserait le lien.
+
+`Links=MAIN` : la mesure est un outil de diagnostic, elle n'a rien à faire
+sur le lien de secours. Conséquence utile, un seul des deux `switch`
+d'émission est concerné (le `PacketScheduler` de `TelSec` ne voit même pas
+le paquet) — contrairement à `ARM_STATE`, dont l'oubli côté `TelSec` avait
+été un piège silencieux.
+
+Le paquet est ajouté **en fin** de `TELEMETRY.csv` : son `PacketID` vaut 27
+et aucun identifiant existant ne bouge.
+
+### Côté GCS
+
+`link.js` range chaque mesure dans `component.tasks[task_id]` et met à jour
+la carte du composant. La carte n'a qu'une ligne de note : elle affiche la
+`Task` la plus en retard sur sa cible, sous la forme `T2 38/50 Hz`, et
+reste vide tant que toutes les `Task` sont au-dessus de 90 % de leur cible
+— marge qui absorbe le jitter d'ordonnancement et la granularité de la
+fenêtre de mesure. La fréquence en gros caractères reste celle de la `Task`
+0, la boucle principale de chaque composant.
+
+L'entrée de composant est créée par le premier paquet qui en parle,
+`HEALTH` ou `TASK_RATE` : l'ordre d'arrivée n'est pas garanti. `hz` reste
+`null` — affiché `--`, pas `0 Hz` — tant qu'aucun `TASK_RATE` n'est arrivé.
+
+`sim.js` ne fabrique plus de sinusoïde décorrélée : il part des
+`loopFrequency` réelles, applique un jitter sous la marge de 10 %, et place
+volontairement une `Task` à 75 % de sa cible pour que la vitrine exerce le
+chemin d'affichage de l'écart. La règle de note est partagée
+(`GCS.rateDeficitNote`), donc la vitrine et le vol rendent la carte de la
+même façon.
+
+## 14. `ESC_RPM` — régime par moteur
+
+`ESC_TELEMETRY_1_TO_4` est décodé par `MavlinkInterface` à 2 Hz et remplit
+`FCEscStatus` : régime, courant et température **pour chacun des 4 moteurs**
+(`SharedFCStatus.hpp`). Jusqu'ici rien de tout cela ne sortait du drone.
+
+`ESC_RPM;DOWN;Routine;2;0;MAIN;rpm:f32[4]` transporte les régimes seuls,
+16 octets utiles. 2 Hz, soit exactement la cadence de la source : émettre
+plus vite ne ferait que renvoyer la même mesure. `Links=MAIN`, comme les
+autres paquets de diagnostic.
+
+Courant et température par ESC restent à bord pour l'instant. Ils sont
+disponibles au même endroit et s'ajouteront par un champ supplémentaire si
+le besoin se confirme — l'ordre des `PacketID` n'en sera pas affecté puisque
+seule la définition du paquet change.
+
+Le tableau reste à `{0,0,0,0}` si le FC n'a jamais émis `ESC_TELEMETRY`.
+Côté affichage, c'est un cas à distinguer d'un moteur arrêté : quatre zéros
+simultanés signifient « pas de donnée », pas « quatre moteurs à l'arrêt ».
+
+### Ce que la grandeur veut dire
+
+Le régime absolu suit les gaz : les quatre moteurs montent et descendent
+ensemble. L'information utile pour le dashboard est l'**écart au régime
+moyen des quatre**, qui révèle une répartition de charge déséquilibrée —
+centre de gravité décalé, hélice abîmée, moteur qui faiblit. Le paquet
+transporte les régimes bruts et laisse ce calcul au GCS : la moyenne n'a pas
+à être calculée deux fois, et une valeur brute reste interprétable
+autrement.
+
+Le regroupement en « avant » et « arrière » pour une vue de côté dépend de
+la numérotation des sorties moteur du contrôleur de vol pour la
+configuration du châssis, qui n'est pas la numérotation géométrique
+naturelle. Ce mapping appartient donc au GCS, pas au drone.
+
+## 15. `WFB_NG_Driver` — lien principal PDL
+
+### wfb-ng est un transport UDP
+
+`wfb_tx` lit sur un port UDP local et diffuse en wifi broadcast ; `wfb_rx`
+reçoit et réécrit sur un port UDP local. Les deux sont des process séparés,
+sur le Pi comme sur la station sol. Le logiciel de vol n'ouvre donc aucun
+socket RF : il parle à wfb-ng en UDP loopback, exactement comme il parlait au
+pont de développement.
+
+C'est pourquoi `WFB_NG_Driver` **hérite** de `UdpTelemetryDriver` au lieu de
+réimplémenter un transport. Le passage du lien émulé au lien réel est un
+changement de ports, pas de code.
+
+### Ce que la classe ajoute
+
+La santé réelle du lien. Sans elle, le drone ne distingue pas un GCS
+silencieux d'une radio qui émet dans le vide : la seule information
+disponible est l'absence de `HEARTBEAT_GCS`, qui arrive trop tard et ne dit
+pas pourquoi.
+
+`WFB_NG_Driver` ouvre donc une connexion TCP sur le socket de statistiques de
+wfb-ng, en lit les lignes et en extrait deux grandeurs :
+
+| Méthode | Sens |
+|---|---|
+| `rssiDbm()` | Niveau reçu **par le drone**, donc qualité du lien montant |
+| `lossRatio()` | Paquets perdus / reçus sur la fenêtre rapportée |
+
+La qualité du lien **descendant** ne se mesure pas ici : elle se mesure au
+récepteur de la station sol, qui est le seul à la voir. Les deux chiffres
+sont distincts et ne se remplacent pas.
+
+### Dégradation
+
+Tout est optionnel par construction :
+
+- `statsPort = 0` désactive la fonction, le driver est alors un
+  `UdpTelemetryDriver` ordinaire ;
+- service absent ou connexion refusée : nouvelle tentative à la fenêtre
+  suivante, jamais de blocage ;
+- lignes présentes mais champs inconnus : les deux valeurs restent vides,
+  le transport continue ;
+- plus de ligne valide depuis 5 s : les valeurs sont **effacées** plutôt que
+  laissées en place. Une qualité de lien figée est pire qu'absente.
+
+La lecture est limitée à une tentative par seconde : les statistiques ne
+bougent qu'à cette échelle, et `poll()` est appelé depuis une boucle RT où
+chaque appel système compte. Le socket est non bloquant, `connect()` compris.
+
+### Point à confirmer au banc
+
+**Les noms de champs du parseur ne sont pas vérifiés** contre une sortie
+réelle de wfb-ng. `parseStatsLine()` cherche `"rssi"`, `"lost"` et `"recv"`.
+Tant qu'ils ne correspondent pas, `rssiDbm()` et `lossRatio()` restent vides
+et le lien fonctionne quand même — le défaut est silencieux côté transport,
+visible côté qualité. C'est le premier point à régler sur le Pi, avec la
+sortie réelle sous les yeux.
+
+Les tests de `test_drivers.cpp` exercent le parseur contre un faux serveur
+TCP local : ils valident le découpage en lignes, le fragment à cheval sur
+deux lectures et l'absence de service, pas le format réel.

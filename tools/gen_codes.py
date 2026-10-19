@@ -91,6 +91,9 @@ def generate(codes, csv_path: Path) -> str:
     lines.append("  // Voyants du boîtier ESP32 à allumer, séparés par virgule (\"\" = aucun) —")
     lines.append("  // labels de GCS/ESP32/mapingESP.csv, cf. GCS/serial-bridge.js.")
     lines.append("  const char *panel;")
+    lines.append("  // Formes du schéma drone du dashboard à colorer, séparées par virgule")
+    lines.append("  // (\"\" = aucune) — cf. GCS/SCHEMA_DRONE_SPEC.md.")
+    lines.append("  const char *schematic;")
     lines.append("};")
     lines.append("")
     for c in codes:
@@ -101,7 +104,8 @@ def generate(codes, csv_path: Path) -> str:
     for c in codes:
         lines.append(f'    Entry{{{c.code}, Severity::{c.severity}, '
                      f'"{cpp_escape(c.name)}", "{cpp_escape(c.description)}", '
-                     f'"{cpp_escape(c.alarm)}", "{cpp_escape(c.panel)}"}},')
+                     f'"{cpp_escape(c.alarm)}", "{cpp_escape(c.panel)}", '
+                     f'"{cpp_escape(c.schematic)}"}},')
     lines.append("}};")
     lines.append("")
     lines.append("// Recherche linéaire : table petite, appelée hors boucle chaude uniquement")

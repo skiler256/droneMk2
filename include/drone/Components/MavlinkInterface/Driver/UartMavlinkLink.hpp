@@ -4,12 +4,8 @@
 #include <mutex>
 #include <termios.h>
 
-// Driver UART réel vers le FC. send()/sendUrgent() passent tous les deux
-// par le même chemin d'écriture protégé par mutex — la "priorité" de
-// sendUrgent() est purement procédurale (FSTask l'appelle directement,
-// sans passer par le scheduler de TTxACK), pas un mécanisme OS particulier
-// : un seul fil UART ne transporte de toute façon qu'un frame à la fois.
-// Cf. MAVLINKINTERFACE.md §8.
+// Driver UART réel. send() et sendUrgent() partagent le même chemin
+// d'écriture sous mutex — cf. MAVLINKINTERFACE.md §9.
 class UartMavlinkLink : public IMavlinkLink {
 public:
   explicit UartMavlinkLink(const char *portName, speed_t baudRate = B921600);

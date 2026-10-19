@@ -62,11 +62,9 @@ std::expected<MissionPlan, ParseError> parse(std::span<const std::byte> bytes) {
   plan.header = MISSIONPLAN::MissionHeader::unpack(bytes.subspan(offset));
   offset += MISSIONPLAN::MissionHeader::kSize;
 
-  // TLV : consumed=0 signale un segment illisible avant la fin déclarée du
-  // plan (offset < crcOffset) — pas de progression possible, on abandonne
-  // plutôt que de boucler. Un kind inconnu n'est PAS une erreur (segment
-  // simplement ignoré, cf. decodeSegment) — seule une longueur incohérente
-  // avec les octets restants l'est.
+  // consumed=0 : longueur incohérente, aucune progression possible — on
+  // abandonne au lieu de boucler. Un kind inconnu est juste ignoré, cf.
+  // MISSIONCONTROL.md §5.
   while (offset < crcOffset) {
     auto decoded =
         MISSIONPLAN::decodeSegment(bytes.subspan(offset, crcOffset - offset));

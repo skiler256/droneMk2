@@ -18,10 +18,8 @@ struct FCBatteryStatus {
   uint8_t remainingPct{0};
 };
 
-// Pas de Volts/Amps ici : un std::array<Scalar<Tag>, N> n'a pas de
-// constructeur par défaut exploitable (Scalar est explicite à dessein) —
-// float nu + commentaire d'unité, plus simple que d'initialiser les 4
-// éléments à la main pour un array interne à ce seul composant.
+// Floats nus et non Volts/Amps : Scalar n'a pas de ctor par défaut
+// exploitable en std::array — exception assumée, cf. §9 du .md.
 struct FCEscStatus {
   std::array<float, 4> rpmValue{};       // tr/min
   std::array<float, 4> currentAmps{};    // A
@@ -34,8 +32,7 @@ struct FCPressure {
   float temperatureC{0.0f};
 };
 
-// Bitmasks MAV_SYS_STATUS_SENSOR bruts (SYS_STATUS) — santé vue par le FC
-// lui-même, complémentaire aux codes SFS0xx/MVC0xx qui mesurent côté Pi.
+// Santé vue par le FC lui-même, complémentaire aux codes mesurés côté Pi.
 struct FCSensorHealth {
   uint32_t present{0};
   uint32_t enabled{0};
@@ -68,8 +65,7 @@ public:
                                  SharedFCStatus &fc)
       : SharedCompMemHandler(fc.compMem, id, timeout), fc_(fc) {};
 
-  // Écriture — appelée par TRx uniquement (mono-writer par convention, pas
-  // imposé par le code ; cf. reset() pour la seule vérification d'identité).
+  // TRx uniquement : mono-writer par convention, pas imposé par le code.
   void setAttitude(TYPES::Attitude a) {
     setData(id_, timeout_, fc_.data.attitude, a);
     auto now = TYPES::Clock::now();
@@ -104,8 +100,7 @@ public:
     setData(id_, timeout_, fc_.data.armedTs, now);
   }
 
-  // Lecture — SensorFusion (attitude/position/vitesse), MissionControl
-  // (batterie/ESC/pression), FSTask (lastHeartbeat).
+  // Lecteurs : cf. MAVLINKINTERFACE.md §9.
   [[nodiscard]] std::optional<TYPES::Attitude> getAttitude() {
     return getData(id_, timeout_, fc_.data.attitude);
   }

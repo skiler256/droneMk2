@@ -5,22 +5,15 @@
 #include <mutex>
 #include <optional>
 
-// FIFO borné de commandes ACK'd EN ATTENTE D'ENVOI — alimentée par TCmd
-// (ordres MissionControl) ou par des méthodes ponctuelles comme
-// requestInitStreams(). Dépilée uniquement par TTxACK, un élément à la
-// fois (jamais deux commandes ACK'd en vol simultanément).
-//
-// Contrairement à AckFifo (qui route des messages REÇUS), ici chaque
-// élément est déjà un PendingAck entièrement construit (frame packée
-// incluse) : TTxACK n'a qu'à le recopier dans pendingAck_ et l'envoyer.
+// Commandes ACK'd en attente d'ENVOI (PendingAck déjà construits, frame
+// packée incluse), à l'inverse d'AckFifo qui route des messages reçus.
+// Dépilée par TTxACK seule, un élément à la fois.
 class PendingAckQueue {
 public:
   static constexpr size_t kCapacity = 8;
 
-  // Échoue (renvoie false) si la queue est pleine plutôt que d'écraser une
-  // commande déjà en attente d'envoi — contrairement à AckFifo, perdre une
-  // commande de configuration silencieusement serait plus grave que perdre
-  // un ACK redondant.
+  // Échoue si pleine, jamais d'écrasement : perdre une commande de
+  // configuration est plus grave que perdre un ACK redondant.
   [[nodiscard]] bool push(const PendingAck &req) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (count_ >= kCapacity)
@@ -41,10 +34,8 @@ public:
     return req;
   }
 
-  // Vide la queue sans envoyer ce qui reste — utilisé par TTxACK quand une
-  // commande échoue (DENIED/FAILED/timeout) pour abandonner la séquence en
-  // cours plutôt que d'enchaîner aveuglément (ex: guided échoué -> arm
-  // -> takeoff quand même).
+  // Abandonne la séquence en cours sur échec, au lieu d'enchaîner
+  // aveuglément (ex: guided échoué -> arm -> takeoff quand même).
   void clear() {
     std::lock_guard<std::mutex> lock(mutex_);
     head_ = tail_ = count_ = 0;

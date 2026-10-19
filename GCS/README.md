@@ -34,8 +34,13 @@ drone (UDP loopback, TelMain/TelSec) ──► server.js ──► WebSocket ─
   à modifier pour changer le transport (actuellement WebSocket JSON,
   format `{type:'telemetry', link, name, fields, ts}`) ; il découple
   totalement la réception réseau du rendu (`render.js`), qui tourne à sa
-  propre fréquence. `js/alarm.js` gère le son (cf. §3), `js/volume.js` le
-  widget de volume (cf. §5), `js/state.js`/`js/dom.js`/`js/render.js` la
+  propre fréquence. Le bloc « schéma drone » (`.scheme__*`, SVG inline dans
+  `index.html`) a remplacé les panneaux Batterie et CPU Temp : chaque forme
+  reçoit son état de deux sources distinctes — les codes de diagnostic, via
+  la colonne `Schematic` d'`INDEX.csv`, et les mesures continues par seuils,
+  la panne l'emportant toujours. Contrat détaillé : `SCHEMA_DRONE_SPEC.md`.
+  `js/alarm.js` gère le son et la pop-up d'activation
+  (cf. §3), `js/state.js`/`js/dom.js`/`js/render.js` la
   boucle d'affichage, `js/viewport3d.js` la vue 3D (three.js).
 - **`debug-injector.js`** — process Node **séparé** (port 3001 par
   défaut, `GCS_DEBUG_PORT` pour changer), volontairement indépendant de
@@ -98,20 +103,32 @@ actives de sa classe jusqu'à ce qu'une **nouvelle** occurrence réarme
 automatiquement — état de son totalement indépendant de l'ack des voyants
 (`server.js`), qui suit ses propres règles.
 
-Autoplay navigateur : un badge "SON: cliquer pour activer" s'affiche tant
-qu'aucune lecture n'a réussi, mais ne bloque jamais activement la
-lecture — le navigateur est toujours sollicité directement (`.play()`
-retenté à chaque tick en cas de rejet), ce qui fonctionne aussi sans
-interaction en kiosk (`--autoplay-policy=no-user-gesture-required`).
+Autoplay navigateur : une pop-up bloquante au démarrage
+(`.audiogate` dans `index.html`, logique dans `alarm.js`) demande
+l'activation du son. Choix d'un overlay plutôt que d'un badge discret : une
+alarme muette est un mode dégradé, l'opérateur doit l'avoir choisi
+explicitement. « Continuer sans son » (ou Échap) ferme la pop-up et laisse
+un indicateur `SON INACTIF` permanent, pour qu'un dégradé ne soit jamais
+invisible.
+
+La pop-up ne bloque jamais `.play()` lui-même — le navigateur est toujours
+sollicité directement (`.play()` retenté à chaque tick en cas de rejet). En
+kiosk (`--autoplay-policy=no-user-gesture-required`) la lecture aboutit sans
+geste : la pop-up et l'indicateur s'effacent alors d'eux-mêmes
+(`onPlaybackSucceeded`).
 
 ## 4. Volume
 
-Widget flottant (`public/js/volume.js`, autonome, aucune dépendance sur le
-reste de la page) — bouton mute + curseur, appelle `/api/volume` (GET),
-`/api/volume/:percent` et `/api/mute/:state` (POST) côté `server.js`, qui
-pilote PulseAudio via `pactl`. Choix retenu (vs bouton physique ESP32 ou
-CLI seule) : contrôle depuis la page web, plus simple à opérer depuis
-l'écran déjà utilisé pour le dashboard.
+**Plus de widget dans la page.** Le curseur flottant (`public/js/volume.js`)
+a été retiré : il se superposait au coin bas-gauche du dashboard et gênait
+la lecture. Le volume se règle au niveau du système (ou par un futur bouton
+physique sur la malette, qui est de toute façon plus approprié en
+opérationnel qu'un curseur à la souris).
+
+Les routes `server.js` restent en place et fonctionnelles — `/api/volume`
+(GET), `/api/volume/:percent` et `/api/mute/:state` (POST), via `pactl` —
+pour qu'un contrôle externe ou un futur widget puisse s'y rebrancher sans
+retoucher au serveur.
 
 ## 5. Malette physique — état actuel
 

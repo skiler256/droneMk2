@@ -130,7 +130,8 @@
         <thead>
           <tr>
             <th>Code</th><th>Composant</th><th>Catégorie</th><th>Nom</th>
-            <th>Description</th><th>Sévérité</th><th>Alarme</th><th>Voyants</th><th></th>
+            <th>Description</th><th>Sévérité</th><th>Alarme</th><th>Voyants</th>
+            <th>Schéma</th><th></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -178,6 +179,17 @@
         <div>
           <label for="panel">Voyants ESP32 (labels mapingESP.csv, séparés par virgule)</label>
           <input id="panel" type="text" placeholder="GPS,EKF,MW,MC">
+        </div>
+        <div>
+          <label for="schematic">Schéma drone (formes à colorer, séparées par virgule)</label>
+          <input id="schematic" type="text" list="schematicElements"
+                 placeholder="MOTOR_FRONT,MOTOR_REAR,ESC">
+          <datalist id="schematicElements">
+            <option>CPU</option><option>FC</option><option>GPS</option>
+            <option>MAG</option><option>ESC</option><option>LIDAR</option><option>MOTOR_FRONT</option>
+            <option>MOTOR_REAR</option><option>BATTERY</option>
+            <option>ANT_PDL</option><option>ANT_SDL</option>
+          </datalist>
         </div>
         <div class="error" id="error"></div>
         <div class="btn-row">
@@ -420,6 +432,7 @@ function renderTable() {
       <td><span class="badge ${c.is_major ? 'major' : 'minor'}">${c.severity}</span></td>
       <td class="mono-small">${c.alarm || '—'}</td>
       <td class="mono-small">${c.panel || '—'}</td>
+      <td class="mono-small">${c.schematic || '—'}</td>
       <td class="actions">
         <button type="button" class="icon-btn" data-edit="${c.code}">Modifier</button>
         <button type="button" class="icon-btn danger" data-delete="${c.code}">Supprimer</button>
@@ -479,6 +492,7 @@ function startEdit(code) {
   document.getElementById('severity').value = c.severity;
   document.getElementById('alarm').value = c.alarm || '';
   document.getElementById('panel').value = c.panel || '';
+  document.getElementById('schematic').value = c.schematic || '';
   document.getElementById('error').textContent = '';
 
   document.getElementById('formTitle').textContent = `Modifier ${code}`;
@@ -528,6 +542,7 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     severity: document.getElementById('severity').value,
     alarm: document.getElementById('alarm').value,
     panel: document.getElementById('panel').value,
+    schematic: document.getElementById('schematic').value,
   };
 
   const url = editingCode ? `/api/codes/${encodeURIComponent(editingCode)}` : '/api/codes';

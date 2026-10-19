@@ -89,6 +89,33 @@ spamme pas à 100Hz) et **ne met pas à jour** les champs GPS de
 `GpsMagSample` (garde la dernière valeur connue plutôt que d'injecter une
 lecture aberrante).
 
+### Staleness : la fenêtre de grâce part de la construction
+
+`lastGoodGpsTs_`/`lastGoodLidarTs_` sont initialisés à `Clock::now()` dans le
+constructeur de leur `Task`, pas laissés à `TimePoint{}`. Partir de l'epoch
+rendait `msBetween()` énorme dès le **premier** cycle : `SFS002` était donc levé
+avant que le GPS ait pu produire quoi que ce soit — et `SFS002` est
+**Emergency**, avec alarme sonore `airbus_caution` et panneaux GCS
+`GPS,EKF,EMG`. Une alarme critique se déclenchait ainsi à chaque mise sous
+tension et restait active jusqu'au premier fix, soit plusieurs minutes à froid.
+
+Techniquement « pas de GPS au démarrage » est exact, mais une alarme critique
+systématique au boot est une alarme que l'opérateur apprend à ignorer. Avec
+l'initialisation à la construction, la panne n'est signalée qu'après le délai
+prévu (1500 ms pour le GPS, 500 ms pour le lidar).
+
+### `SFS001` est levé sur front, pas à chaque échantillon
+
+`SFS001` (`GPS_lock`, Info donc **mineur**) marque l'acquisition du fix. Il est
+levé uniquement sur la transition « pas de lock → lock », via `gpsLockActive_`,
+remis à `false` par les trois chemins de panne.
+
+Raison : les codes mineurs vivent dans un ring de 16 entrées que `raiseMinor()`
+décale à chaque appel. Levé à chaque échantillon valide (~10Hz), `SFS001`
+remplissait intégralement le ring en ~1,6 seconde et évinçait tout autre code
+mineur du composant. Le ring est un journal de diagnostic : le saturer avec un
+code nominal le rend inutilisable.
+
 ### Précision GPS réellement renseignée
 
 `hdop`/`vdop` viennent de UBX NAV-DOP (message ajouté en revue de code —
@@ -99,6 +126,55 @@ que la précision était parfaite, alors qu'elle n'était simplement jamais
 mesurée. `gpsWeek`/`gpsTowMs` (semaine GPS + ms dans la semaine) viennent
 de la date UBX NAV-TIMEUTC + `iTowMs` (NAV-PVT) — **jamais** de `ts`
 (horloge interne `steady_clock`, sans rapport avec le temps GPS réel).
+
+Le détail par satellite (`id`/force du signal/qualité, depuis UBX NAV-SAT)
+est capé à **16** entrées dans `GpsMagSample` : une constellation visible
+dépasse rarement ce nombre, et le plafond permet de rester une struct POD de
+taille fixe, condition d'un payload shm (cf. `ARCHITECTURE_IPC.md` §2.1).
+Seuls les `satellitesVisible` premiers slots — eux-mêmes bornés à 16 — sont
+significatifs.
+
+### Trames UBX décodées et conformité des offsets
+
+Le parseur de `NEO-M8N.cpp` est une machine à états octet par octet, sans
+allocation. Offsets relevés contre la spec u-blox M8 :
+
+| Message | Champs exploités | Offsets |
+|---|---|---|
+| `NAV-STATUS` (0x01 0x03) | `gpsFix` | @4 |
+| `NAV-POSLLH` (0x01 0x02) | `lon`, `lat`, `hMSL`, `vAcc` | @4, @8, @16, @24 |
+| `NAV-VELNED` (0x01 0x12) | `velN/E/D`, `speed`, `gSpeed`, `heading` | @4/8/12, @16, @20, @24 (×1e-5) |
+| `NAV-DOP` (0x01 0x04) | `vDOP`, `hDOP` | @10, @12 (×0.01) |
+| `NAV-TIMEUTC` (0x01 0x21) | `year`, `month`…`sec`, `valid` | @12-13, @14-18, @19 |
+| `NAV-PVT` (0x01 0x07) | `iTOW`, `hAcc`, `sAcc` | @0, @40, @68 |
+| `NAV-SVINFO` (0x01 0x30) | en-tête 8o, puis par canal de 12o : `svid`, `quality`, `cno` | @+1, @+3, @+4 |
+
+`NAV-SOL` (0x01 0x06) est activé sur le module mais non parsé.
+
+**Validations appliquées avant exploitation** — toutes trois sont des
+corrections d'anomalies, pas des précautions théoriques :
+
+- **Checksum Fletcher** sur class/id/len/payload, les deux octets comparés.
+  Une trame rejetée incrémente un compteur exposé par
+  `NEO_M8N::checksumErrors()` : une valeur qui grimpe pendant un essai désigne
+  le câblage ou le blindage, pas le logiciel.
+- **`NAV-SVINFO`** : `payloadSize == 8 + 12 × numCh` exigé. Sans ce contrôle,
+  un `numCh` incohérent lisait très au-delà du tampon de 1024 octets.
+- **`NAV-TIMEUTC`** : bit `validUTC` (bit 2 de `valid`) exigé, sinon la date
+  n'est pas acquise et produirait une semaine GPS fausse.
+- **`gpsFixOk`** vrai pour `gpsFix ∈ {0x03, 0x04}` seulement — `0x05`
+  (« time only ») ne porte aucune position.
+
+**Deux compteurs de satellites, à ne pas confondre** : `satellitesTracked`
+(`numCh` réel, **non plafonné**, alimente `GPS_INPUT.satellites_visible`) et
+`satDetailCount` (entrées de détail remplies, plafonné à 16 par
+`GpsMagSample::kMaxSatellites`). Plafonner le premier tronquerait le nombre de
+satellites remonté au FC, un récepteur multi-constellation en suivant
+couramment 20 à 30.
+
+À noter que ce compte porte les canaux **suivis**, pas les satellites
+**utilisés dans la solution** (bit 0 `svUsed` des flags par canal) — les deux
+lectures se défendent, le choix actuel est le premier.
 
 ## 3.5. Cap magnétique — migré vers le FC
 
@@ -148,10 +224,17 @@ edge-triggered) et `SharedSFMem.state` n'est pas mis à jour.
 
 `homeOffsetNed` (`Vec3`, membre de `SensorFusions`) est appliqué
 uniquement à la **position** (`posNed`), jamais à la vitesse (un offset
-constant n'a pas de sens sur une vitesse). **Actuellement toujours
-`{0,0,0}`** — pas de calibration réelle branchée (décision explicite :
-différé, probablement via `TCmd` plus tard quand ce mécanisme existera
-côté SF).
+constant n'a pas de sens sur une vitesse).
+
+**Capturé sur le front d'armement du FC** : `TEKF` surveille
+`SharedFCStatus::armed` et, à la transition désarmé→armé, prend la position
+brute courante comme origine. L'origine NED d'un vol est donc le **point de
+décollage**, ce qui correspond à l'usage réel et ne demande aucun ordre
+explicite — contrairement aux deux autres pistes envisagées (capture au premier
+fix EKF, ou sur commande via un futur `TCmd` côté SF).
+
+Avant le premier armement l'offset reste `{0,0,0}`, donc les positions sont
+celles du FC telles quelles.
 
 ## 5. `TLidar` — nuage de points NED, pas une carte angle/distance
 
@@ -178,6 +261,13 @@ indirectement de `TEKF`, jamais directement de `MavlinkInterface`/
 "un seul point d'entrée par donnée" (l'attitude ne doit être lue qu'une
 fois côté FC, recopiée par TEKF, puis réutilisée en interne à SF).
 
+**`rangeMm`/`intensity` conservés à côté de `points`.** La mesure brute en
+repère-corps (`rangeMm[i]` = portée à l'angle `i` en degrés, AVANT projection
+NED) reste stockée pour la télémétrie `LIDAR_SCAN` : reprojeter `points` vers
+le repère-corps pour l'émission demanderait de désappliquer l'attitude, donc
+de la conserver par ailleurs et de faire confiance à l'inversion — inutilement
+fragile pour un gain mémoire négligeable.
+
 **Staleness** : `lastGoodLidarTs_` comparé à `kMaxLidarAge` (500ms), même
 logique que `TGPS` — couvre le cas d'un capteur muet en continu sans
 jamais renvoyer d'erreur driver explicite.
@@ -185,8 +275,8 @@ jamais renvoyer d'erreur driver explicite.
 **Panne LIDAR** (`CODES::SFS004`, **Warning**, pas Critical) : sévérité
 volontairement plus faible que GPS/EKF — perte du LIDAR dégrade
 l'évitement d'obstacle mais ne met pas en péril le vol lui-même. Choix
-par défaut, à corriger si tu juges que ça mérite Critical une fois
-l'évitement d'obstacle câblé côté `Navigation`/`MissionControl`.
+par défaut, à réévaluer une fois l'évitement d'obstacle câblé côté
+`Navigation`/`MissionControl`.
 
 ## 6. Tests unitaires (`SF_CONV`, `tests/test_sensorfusion.cpp`)
 

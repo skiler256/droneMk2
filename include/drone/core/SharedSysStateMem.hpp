@@ -9,6 +9,8 @@
 
 inline constexpr std::size_t kMinorCodeRingSize = 16;
 inline constexpr std::size_t kMajorCodeSlots = 8;
+// Marge sur le composant le plus fourni (MavlinkInterface, 5 Task).
+inline constexpr std::size_t kMaxTasksPerComponent = 8;
 
 // code == 0 signifie "slot vide" (aucun CODES::Code réel n'a component=0).
 struct DiagEntry {
@@ -31,6 +33,18 @@ struct SharedSysStateMem {
              static_cast<std::size_t>(TYPES::ComponentID::Count)>
       majorCodes;
 
+  // Fréquence réelle mesurée par Task, cf. SYSMONITORING.md §13. 0 = pas
+  // encore mesurée.
+  std::array<std::array<float, kMaxTasksPerComponent>,
+             static_cast<std::size_t>(TYPES::ComponentID::Count)>
+      taskHz{};
+
+  // Fréquence configurée, publiée une fois par Task. Permet au GCS d'afficher
+  // l'écart sans dupliquer les loopFrequency, cf. SYSMONITORING.md §13.
+  std::array<std::array<float, kMaxTasksPerComponent>,
+             static_cast<std::size_t>(TYPES::ComponentID::Count)>
+      taskTargetHz{};
+
   std::array<uint32_t, static_cast<std::size_t>(TYPES::ComponentID::Count)>
       checksums{};
   std::array<bool, static_cast<std::size_t>(TYPES::ComponentID::Count)>
@@ -39,8 +53,7 @@ struct SharedSysStateMem {
 
 class SharedSysStateMemHandler : public SharedMemoryHandler {
 public:
-  // ownId = identité de verrouillage, distincte du sujet getHealth/setHealth
-  // -- cf. ARCHITECTURE_IPC.md §2.3.
+  // ownId = jeton de verrou, pas le sujet lu — cf. ARCHITECTURE_IPC.md §2.3.
   explicit SharedSysStateMemHandler(SharedSysStateMem &state,
                                     TYPES::ComponentID ownId, TYPES::Us timeout)
       : SharedMemoryHandler(state.mem), state_(state), ownId_(ownId),
@@ -57,8 +70,7 @@ public:
                     state_.compHealth);
   };
 
-  // Route selon CODES::kTable, cf. ARCHITECTURE_IPC.md §5. Code inconnu du
-  // dictionnaire -> traité comme mineur (jamais silencieusement perdu).
+  // Code inconnu du dictionnaire -> mineur, cf. ARCHITECTURE_IPC.md §5.
   void raiseCode(CODES::Code code) {
     const auto *entry = CODES::find(code);
     if (entry && CODES::isMajor(entry->severity))
@@ -67,11 +79,38 @@ public:
       raiseMinor(code);
   };
 
-  // Retire un code de l'ensemble actif majeur. No-op si le code n'y était
-  // pas (jamais levé, déjà effacé, ou mineur — le ring n'a pas de clear,
-  // il s'auto-purge par écrasement FIFO).
+  // Majeurs seulement : le ring des mineurs s'auto-purge par écrasement.
   void clearCode(CODES::Code code) {
     clearMajor(code);
+  };
+
+  // Self-report, comme setHealth : un composant ne publie que ses Task.
+  void setTaskHz(TYPES::TaskID task, float hz) {
+    if (task >= kMaxTasksPerComponent)
+      return;
+    auto idx = static_cast<std::size_t>(ownId_);
+    modifyData(ownId_, timeout_, state_.taskHz[idx],
+               [&](auto &rates) { rates[task] = hz; });
+  };
+
+  std::optional<std::array<float, kMaxTasksPerComponent>>
+  getTaskHz(TYPES::ComponentID id) {
+    return getArrayElement<std::array<float, kMaxTasksPerComponent>>(
+        ownId_, timeout_, static_cast<std::size_t>(id), state_.taskHz);
+  };
+
+  void setTaskTargetHz(TYPES::TaskID task, float hz) {
+    if (task >= kMaxTasksPerComponent)
+      return;
+    auto idx = static_cast<std::size_t>(ownId_);
+    modifyData(ownId_, timeout_, state_.taskTargetHz[idx],
+               [&](auto &rates) { rates[task] = hz; });
+  };
+
+  std::optional<std::array<float, kMaxTasksPerComponent>>
+  getTaskTargetHz(TYPES::ComponentID id) {
+    return getArrayElement<std::array<float, kMaxTasksPerComponent>>(
+        ownId_, timeout_, static_cast<std::size_t>(id), state_.taskTargetHz);
   };
 
   std::optional<std::array<DiagEntry, kMinorCodeRingSize>>
@@ -91,63 +130,47 @@ private:
   TYPES::ComponentID ownId_;
   TYPES::Us timeout_;
 
-  // Décalage façon SharedCompMem::recordStart — même pattern déjà éprouvé,
-  // pas besoin d'un index de tête séparé (qui échapperait au verrou).
-  // Toujours sur le slot ownId_ (self-report, cf. raiseCode()).
+  // Décalage plutôt qu'un index de tête, qui échapperait au verrou.
   void raiseMinor(CODES::Code code) {
     auto idx = static_cast<std::size_t>(ownId_);
-    auto fetch = getData(ownId_, timeout_, state_.minorCodes[idx]);
-    if (!fetch)
-      return;
-    auto ring = fetch.value();
-    for (std::size_t i = kMinorCodeRingSize - 1; i > 0; --i)
-      ring[i] = ring[i - 1];
-    ring[0] = DiagEntry{code.pack(), TYPES::Clock::now()};
-    setData(ownId_, timeout_, state_.minorCodes[idx], ring);
+    modifyData(ownId_, timeout_, state_.minorCodes[idx], [&](auto &ring) {
+      for (std::size_t i = kMinorCodeRingSize - 1; i > 0; --i)
+        ring[i] = ring[i - 1];
+      ring[0] = DiagEntry{code.pack(), TYPES::Clock::now()};
+    });
   };
 
   void raiseMajor(CODES::Code code) {
     auto idx = static_cast<std::size_t>(ownId_);
-    auto fetch = getData(ownId_, timeout_, state_.majorCodes[idx]);
-    if (!fetch)
-      return;
-    auto slots = fetch.value();
-    auto packed = code.pack();
-
-    for (auto &s : slots) {
-      if (s.code == packed) { // déjà actif : rafraîchit juste l'horodatage
-        s.ts = TYPES::Clock::now();
-        setData(ownId_, timeout_, state_.majorCodes[idx], slots);
-        return;
+    const auto packed = code.pack();
+    modifyData(ownId_, timeout_, state_.majorCodes[idx], [&](auto &slots) {
+      for (auto &s : slots) {
+        if (s.code == packed) { // déjà actif : rafraîchit l'horodatage
+          s.ts = TYPES::Clock::now();
+          return;
+        }
       }
-    }
-    for (auto &s : slots) {
-      if (s.code == 0) {
-        s = DiagEntry{packed, TYPES::Clock::now()};
-        setData(ownId_, timeout_, state_.majorCodes[idx], slots);
-        return;
+      for (auto &s : slots) {
+        if (s.code == 0) {
+          s = DiagEntry{packed, TYPES::Clock::now()};
+          return;
+        }
       }
-    }
-    // Les kMajorCodeSlots sont tous pris : limite connue, pas de repli
-    // silencieux élégant ici (cf. discussion — un composant avec plus de
-    // kMajorCodeSlots pannes critiques simultanées a un problème plus grave
-    // que ce compteur).
+      // Saturation : code perdu, limite assumée (ARCHITECTURE_IPC.md §6).
+    });
   };
 
   void clearMajor(CODES::Code code) {
     auto idx = static_cast<std::size_t>(ownId_);
-    auto fetch = getData(ownId_, timeout_, state_.majorCodes[idx]);
-    if (!fetch)
-      return;
-    auto slots = fetch.value();
-    auto packed = code.pack();
-    for (auto &s : slots) {
-      if (s.code == packed) {
-        s = DiagEntry{};
-        setData(ownId_, timeout_, state_.majorCodes[idx], slots);
-        return;
+    const auto packed = code.pack();
+    modifyData(ownId_, timeout_, state_.majorCodes[idx], [&](auto &slots) {
+      for (auto &s : slots) {
+        if (s.code == packed) {
+          s = DiagEntry{};
+          return;
+        }
       }
-    }
+    });
   };
 
   // Uniquement le slot `id`, cf. ARCHITECTURE_IPC.md §2.4.
@@ -155,11 +178,12 @@ private:
     auto idx = static_cast<std::size_t>(id);
     return UTILITIES::crc32(state_.compHealth[idx]) ^
            UTILITIES::crc32(state_.minorCodes[idx]) ^
-           UTILITIES::crc32(state_.majorCodes[idx]);
+           UTILITIES::crc32(state_.majorCodes[idx]) ^
+           UTILITIES::crc32(state_.taskHz[idx]) ^
+           UTILITIES::crc32(state_.taskTargetHz[idx]);
   };
 
-  // checksums[id] par composant + checksumSet[id] (équivalent par-slot de
-  // mem_.initialized) : cf. ARCHITECTURE_IPC.md §2.4.
+  // checksumSet[id] = équivalent par-slot de mem_.initialized (§2.4).
   bool checksumValid(TYPES::ComponentID id) {
     auto idx = static_cast<std::size_t>(id);
     if (!state_.checksumSet[idx])
@@ -182,6 +206,8 @@ private:
     state_.compHealth[idx] = TYPES::ComponentHealth::IDLE;
     state_.minorCodes[idx] = {};
     state_.majorCodes[idx] = {};
+    state_.taskHz[idx] = {};
+    state_.taskTargetHz[idx] = {};
     updateChecksum(id); // ne revalide QUE ce slot, jamais les autres
   };
 };

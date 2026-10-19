@@ -8,8 +8,7 @@
 
 class SensorFusions;
 
-// GPS — le magnétomètre est câblé directement sur le FC (§3.5 du .md),
-// plus fusionné ici.
+// GPS seul : le magnétomètre est câblé sur le FC (§3.5 du .md).
 class GPSTask : public Task {
 public:
   explicit GPSTask(SensorFusions &component, TaskConfig config,
@@ -22,14 +21,14 @@ private:
 
   // Édge-triggered : raiseCode() seulement sur transition, pas à chaque cycle.
   bool gpsFaultActive_{false};
+  bool gpsLockActive_{false};
 
-  // Dernier échantillon exploitable — détecte un driver muet sans jamais
-  // d'erreur explicite (gpsHasNoNewData seul ne couvre pas ce cas).
-  TYPES::TimePoint lastGoodGpsTs_{};
+  // Détecte un driver muet qui ne renvoie jamais d'erreur explicite. Initialisé
+  // à la construction : partir de l'epoch levait la panne au premier cycle.
+  TYPES::TimePoint lastGoodGpsTs_{TYPES::Clock::now()};
 };
 
-// Relaie attitude + position/vitesse EKF du FC vers SharedSFMem.state (+
-// HomeCalibrator) — aucune validation, si l'EKF FC déconne le drone crash.
+// Relais pur, aucune validation de plausibilité — cf. SENSORFUSION.md §4.
 class EKFTask : public Task {
 public:
   explicit EKFTask(SensorFusions &component, TaskConfig config,
@@ -40,10 +39,10 @@ private:
   SensorFusions &comp;
   void loop() override;
   bool EKFFaultActive_{false};
+  bool wasArmed_{false}; // front d'armement, pour capturer l'origine NED
 };
 
-// Convertit chaque mesure (angle, distance) LIDAR en point NED via
-// l'attitude courante de SharedSFMem.state (dépend donc de TEKF).
+// Projette le LIDAR en NED via l'attitude : dépend donc de TEKF (§5).
 class LidarTask : public Task {
 public:
   explicit LidarTask(SensorFusions &component, TaskConfig config,
@@ -56,7 +55,7 @@ private:
 
   // Édge-triggered, même logique que GPSTask.
   bool lidarFaultActive_{false};
-  TYPES::TimePoint lastGoodLidarTs_{};
+  TYPES::TimePoint lastGoodLidarTs_{TYPES::Clock::now()};
 };
 
 class SensorFusions : public ComponentBase<3> {
@@ -71,7 +70,7 @@ public:
   SharedFCStatusHandler &fc_;
   IDriver<LidarData> &lidar_;
 
-  // Offset NED (HomeCalibrator) appliqué à la position EKF du FC — nul pour l'instant.
+  // HomeCalibrator, appliqué à la position seule — nul pour l'instant (§4).
   TYPES::Vec3 homeOffsetNed{};
 
 private:

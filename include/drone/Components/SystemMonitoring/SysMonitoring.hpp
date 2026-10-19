@@ -10,14 +10,11 @@
 
 class SysMonitoring;
 
-// Composants pertinents pour le GCS (GlobalWatchdog exclu) — partagé par le
-// défilement HEALTH et la détection de changement de codes majeurs.
+// Composants pertinents pour le GCS, GlobalWatchdog exclu.
 inline constexpr size_t kMonitoredComponentCount = 5;
 
-// Événement CODE en attente d'émission — file LOCALE au process (PAS shm,
-// même principe que StateMachineOrderQueue de MissionControl) : détection
-// et consommation se font toutes les deux dans TelMainTask::loop() (même
-// thread), pas besoin de verrou.
+// File locale au process, sans verrou : même thread des deux côtés —
+// cf. SYSMONITORING.md §6.
 struct PendingCodeEvent {
   uint32_t code{0};
   bool active{false}; // true = code levé, false = code effacé
@@ -35,14 +32,13 @@ public:
 private:
   SysMonitoring &comp;
   void loop() override;
-  // Index de défilement HEALTH (un composant par envoi, cf.
-  // SystemMonitoring.cpp::buildHealthPkt) — propre à ce lien, indépendant de
-  // TelSecTask (chaque lien progresse à son propre rythme d'envoi).
+  // Un composant par envoi ; propre à ce lien (§6).
   size_t healthCycleIndex_{0};
+  // Un couple (composant, Task) par envoi (§13). TASK_RATE est Links=MAIN,
+  // donc ce curseur n'existe pas côté TelSec.
+  size_t taskRateCycleIndex_{0};
 
-  // Détection de changement des codes majeurs (Critical/Emergency) par
-  // polling+diff, cf. SystemMonitoring.cpp::scanCodeChanges — snapshot et
-  // file propres à ce lien, indépendants de TelSecTask.
+  // Diff des codes majeurs ; snapshot propre à ce lien (§6).
   std::array<std::array<uint32_t, kMajorCodeSlots>, kMonitoredComponentCount> lastMajorCodes_{};
   bool codePrimed_{false};
   std::array<PendingCodeEvent, kPendingCodeCap> pendingCodes_{};
@@ -80,7 +76,7 @@ private:
   bool secLostActive_{false};
 };
 
-// Relai vidéo (WFB-NG uniquement) — RT priority basse, tolérante à la perte.
+// Relai vidéo (WFB-NG uniquement), tolérant à la perte.
 class VideoTask : public Task {
 public:
   explicit VideoTask(SysMonitoring &component, TaskConfig config,

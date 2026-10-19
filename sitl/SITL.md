@@ -192,6 +192,35 @@ use` au démarrage de l'orchestrateur.
 | 15001 | `dashboard_server.py` | Statut shm depuis `udp_bridge` |
 | 8766 | `dashboard_server.py` | Page web + API JSON |
 
+### Protocole texte du pont (`udp_bridge`)
+
+Pas de bibliothèque JSON : un datagramme = un segment, débogable à la main
+avec `nc -ul <port>`.
+
+- **Statut** (le pont émet, ~10Hz, port 15001) : ligne 1
+  `SEGMENT=<NS>_<NOM>` où `<NS>` vaut `SITL`, `HIL`, `NAV_SITL`, `MC_SITL` ou
+  `PROD`, puis une ligne `cle=valeur` par champ.
+- **Injection** (le pont écoute, port de commande) :
+  `CMD=<NOM>\nNS=<SITL|HIL|NAV_SITL|MC_SITL|PROD>\ncle=valeur...`.
+
+Le pont s'attache **de façon opportuniste et indépendante** aux segments des
+binaires de test (`mv_sitl`, `hil_sf_mv`, `nav_sitl`, `mc_sitl`) comme aux
+vrais chemins de prod, réessayant périodiquement : les binaires peuvent
+démarrer avant ou après lui, dans n'importe quel ordre, et plusieurs
+namespaces peuvent être actifs simultanément. Il réutilise les vrais handlers,
+sans réimplémenter le verrou CAS.
+
+**`PROD` est en lecture seule** (`allowGpsMagInject=false`) : les vrais
+writers — Navigation, SensorFusion et MissionControl réels — sont déjà en
+place.
+
+**`CMD=GPSMAG` n'est routable que vers `SITL`.** Côté `HIL`, le vrai
+`SensorFusion` tourne et est l'unique writer légitime de `gpsMag` : laisser le
+pont y écrire créerait une situation à deux writers, contraire au principe
+un-seul-writer-par-segment (cf. `ARCHITECTURE_IPC.md` §2.1). Côté `NAV_SITL`,
+aucun `SensorFusion` ne tourne, mais `gpsMag` n'y sert à rien non plus (GPS
+simulé laissé côté SITL). Rejeté dans les deux cas, avec trace sur `stderr`.
+
 **Le routage des capteurs n'est pas symétrique** — il reproduit
 l'architecture réelle plutôt qu'un chemin uniforme :
 
@@ -406,8 +435,18 @@ de télémétrie ESC/DShot (`ESC_TELEMETRY_1_TO_4` rejeté, code `command_reject
 `MVC002` — bénin, sans rapport avec l'arm). Sans données ESC, la staleness
 se déclenchait immédiatement dès l'armement (`FSTask::loop()`) et désarmait
 le drone sans aucune demande GCS. `procman.py` positionne
-`DRONE_SKIP_RPM_CHECK=1` pour `drone` en SITL — le check RPM réel (protection
-légitime en vol) reste intact en dehors de cette variable.
+`DRONE_SKIP_RPM_CHECK=1` pour `drone` en SITL.
+
+**Ces surcharges n'existent que dans un binaire SITL.** `DRONE_SKIP_RPM_CHECK`,
+`DRONE_BATT_LOW_V`, `DRONE_BATT_CRITICAL_V` et `DRONE_MISSION_PLAN_PATH` sont
+compilées sous `#ifdef DRONE_USE_SITL_DRIVERS` : un binaire de production les
+ignore totalement, le code de lecture n'y est même pas présent. Une variable
+restée dans un service systemd ou un environnement hérité ne peut donc pas
+désactiver une protection de vol.
+
+À noter aussi que `DRONE_SKIP_RPM_CHECK` est désormais comparée à `"1"` et non
+testée par simple présence : `=0` désactivait le check, l'inverse de ce que la
+variable laisse lire.
 
 ---
 

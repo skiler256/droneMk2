@@ -70,5 +70,10 @@ std::expected<LidarData, TYPES::DriverError> UdpLidarDriver::update() {
   off += data.distance_mm.size() * sizeof(uint16_t);
   std::memcpy(data.intensity.data(), rxBuf_.data() + off, data.intensity.size() * sizeof(uint8_t));
 
+  // Filet : un take() ajouté sans mettre kPayloadSize à jour dépasserait
+  // la zone validée sans qu'aucun garde ne le voie.
+  if (off != kHeaderSize + kPayloadSize)
+    return std::unexpected(TYPES::DriverError::InvalidData);
+
   return data;
 }

@@ -12,6 +12,7 @@ constexpr Meters kArrivalTolerance{0.5f};
 // Redondant au seuil d'EKFTask côté SF, volontairement plus large -- pas
 // une simple relecture du même check, cf. NAVIGATION.md §6.
 constexpr Ms kEkfStaleThreshold{400};
+constexpr Ms kLidarMapStaleThreshold{400};
 } // namespace
 
 Navigation::Navigation(ComponenConfig config, SharedSysStateMemHandler &sysState,
@@ -50,30 +51,40 @@ Navigation::Navigation(ComponenConfig config, SharedSysStateMemHandler &sysState
 
 // cf. NAVIGATION.md §4.
 bool TSeqTask::tryPromote() {
-  if (comp.armedSegment_.seq == 0 || comp.armedSegment_.seq == comp.engagedSegment_.seq)
-    return false;
+  NavSegment armed;
+  {
+    std::lock_guard lk(comp.segmentsMutex_);
+    if (comp.armedSegment_.seq == 0 ||
+        comp.armedSegment_.seq == comp.engagedSegment_.seq)
+      return false;
+    armed = comp.armedSegment_;
+  }
 
   auto state = comp.SF_.getDynamicState();
   if (!state)
     return false;
 
-  if (!NAV_CONV::canEngage(comp.armedSegment_, *state))
+  if (!NAV_CONV::canEngage(armed, *state))
     return false;
 
-  comp.cmd_.setEngagedSegment(comp.armedSegment_);
+  comp.cmd_.setEngagedSegment(armed);
   return true;
 }
 
 void TSeqTask::loop() {
   if (auto seg = comp.cmd_.getEngagedSegment()) {
-    if (seg->seq != comp.lastSegmentSeq_) {
-      comp.engagedSegment_ = *seg;
-      comp.lastSegmentSeq_ = seg->seq;
-      comp.newSegment_ = true;
+    if (seg->seq != comp.lastSegmentSeq_.load(std::memory_order_acquire)) {
+      {
+        std::lock_guard lk(comp.segmentsMutex_);
+        comp.engagedSegment_ = *seg;
+      }
+      comp.lastSegmentSeq_.store(seg->seq, std::memory_order_release);
+      comp.newSegment_.store(true, std::memory_order_release);
     }
   }
 
   if (auto armed = comp.cmd_.getArmedSegment()) {
+    std::lock_guard lk(comp.segmentsMutex_);
     comp.armedSegment_ = *armed;
   }
 
@@ -96,18 +107,24 @@ void TSeqTask::loop() {
       tryPromote();
   }
 
-  comp.nav_.setLateralArmed(comp.armedSegment_.seq != 0
-                                ? NAV_CONV::lateralModeCode(comp.armedSegment_.type)
+  NavSegment armedSnap, engagedSnap;
+  {
+    std::lock_guard lk(comp.segmentsMutex_);
+    armedSnap = comp.armedSegment_;
+    engagedSnap = comp.engagedSegment_;
+  }
+  comp.nav_.setLateralArmed(armedSnap.seq != 0
+                                ? NAV_CONV::lateralModeCode(armedSnap.type)
                                 : CODES::Code{});
-  comp.nav_.setLateralEngaged(comp.engagedSegment_.seq != 0
-                                  ? NAV_CONV::lateralModeCode(comp.engagedSegment_.type)
+  comp.nav_.setLateralEngaged(engagedSnap.seq != 0
+                                  ? NAV_CONV::lateralModeCode(engagedSnap.type)
                                   : CODES::Code{});
 }
 
 void APTask::loop() {
   auto now = Clock::now();
 
-  if (comp.holdActive_) {
+  if (comp.holdActive_.load(std::memory_order_acquire)) {
     // TFS a demandé un hold : consigne vitesse nulle, cap/alt figés à
     // l'état courant plutôt que de continuer la loi de correction.
     auto state = comp.SF_.getDynamicState();
@@ -121,32 +138,36 @@ void APTask::loop() {
     return;
   }
 
-  if (comp.engagedSegment_.seq == 0)
+  NavSegment engaged;
+  {
+    std::lock_guard lk(comp.segmentsMutex_);
+    engaged = comp.engagedSegment_;
+  }
+  if (engaged.seq == 0)
     return; // rien engagé -- cf. NAVIGATION.md §5
 
   auto state = comp.SF_.getDynamicState();
   if (!state)
     return; // pas d'état SF disponible ce cycle
 
-  if (comp.newSegment_) {
-    // Reset des états internes au changement de segment — rien à reset
-    // pour l'instant, le P-controller de computeWaypointGuidance() n'a pas
-    // de mémoire (pas d'intégrateur).
-    comp.newSegment_ = false;
+  // exchange : consomme le drapeau sans en perdre un posé entre-temps.
+  if (comp.newSegment_.exchange(false, std::memory_order_acq_rel)) {
+    // Rien à réinitialiser pour l'instant : computeWaypointGuidance() n'a pas
+    // d'intégrateur.
   }
 
   auto vertical = NAV_CONV::computeVerticalGuidance(
-      comp.engagedSegment_.targetAltitude, Meters{state->posNed.ned.z});
+      engaged.targetAltitude, Meters{state->posNed.ned.z});
 
-  switch (comp.engagedSegment_.type) {
+  switch (engaged.type) {
   case SegmentType::Waypoint: {
     auto guidance = NAV_CONV::computeWaypointGuidance(
-        comp.engagedSegment_, *state, now, kArrivalTolerance);
+        engaged, *state, now, kArrivalTolerance);
     guidance.cmd.velNed.ned.z = vertical.vz.v;
     comp.nav_.setCommand(guidance.cmd);
 
     SegmentProgress progress{
-        .seq = comp.engagedSegment_.seq,
+        .seq = engaged.seq,
         .status = guidance.arrived ? SegmentStatus::Atteint
                                    : SegmentStatus::EnCours,
         .distanceRestante = guidance.distanceRemaining,
@@ -177,11 +198,28 @@ void TFSTask::loop() {
   }
 
   bool obstacle = false;
+  bool mapStale = true;
   if (state) {
     if (auto map = comp.SF_.getLidarMap()) {
-      Vec3 forward = NAV_CONV::travelDirection(comp.engagedSegment_, *state);
+      mapStale = UTILITIES::msBetween(map->ts, now) > kLidarMapStaleThreshold;
+      NavSegment engaged;
+      {
+        std::lock_guard lk(comp.segmentsMutex_);
+        engaged = comp.engagedSegment_;
+      }
+      Vec3 forward = NAV_CONV::travelDirection(engaged, *state);
       obstacle = NAV_CONV::obstacleInBox(*map, forward);
     }
+  }
+
+  // TFS ne fait confiance à aucune donnée sans en vérifier l'âge : une carte
+  // figée ferait conclure « pas d'obstacle » indéfiniment (NAVIGATION.md §6).
+  if (mapStale && !lidarStaleActive_) {
+    comp.sysState_.raiseCode(CODES::NVA011);
+    lidarStaleActive_ = true;
+  } else if (!mapStale && lidarStaleActive_) {
+    comp.sysState_.clearCode(CODES::NVA011);
+    lidarStaleActive_ = false;
   }
 
   if (obstacle && !obstacleActive_) {
@@ -192,5 +230,7 @@ void TFSTask::loop() {
     obstacleActive_ = false;
   }
 
-  comp.holdActive_ = ekfStaleActive_ || obstacleActive_;
+  comp.holdActive_.store(ekfStaleActive_ || obstacleActive_ ||
+                             lidarStaleActive_,
+                         std::memory_order_release);
 }

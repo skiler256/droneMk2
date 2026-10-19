@@ -67,25 +67,53 @@
     return el;
   }
 
-  // ── Badge de statut audio ────────────────────────────────────────────────
-  // Indicateur visuel seulement, ne bloque jamais .play() -- cf. GCS/README.md §3.
+  // ── Deblocage audio au demarrage ─────────────────────────────────────────
+  // Pop-up bloquante plutot qu'un badge discret : une alarme muette est un
+  // mode degrade, l'operateur doit l'avoir choisi. Ne bloque jamais .play()
+  // lui-meme -- cf. GCS/README.md §3.
   var audioConfirmed = false;
-  var unlockBadge = document.createElement('div');
-  unlockBadge.style.cssText = 'position:fixed;right:.6rem;bottom:.6rem;z-index:9999;' +
-    'font:11px ui-monospace,monospace;padding:.3rem .6rem;border-radius:5px;' +
-    'background:#3a2a00;color:#ffb84f;border:1px solid #7a5a00;pointer-events:none;';
-  document.addEventListener('DOMContentLoaded', function () {
-    if (!audioConfirmed) { unlockBadge.textContent = 'SON: cliquer pour activer'; document.body.appendChild(unlockBadge); }
-  });
-  function dismissBadge() {
-    audioConfirmed = true;
-    unlockBadge.remove();
+  var muteChip = null;
+  var gateEl = null;
+
+  function showMuteChip() {
+    if (muteChip) return;
+    muteChip = document.createElement('div');
+    muteChip.className = 'audiomute';
+    muteChip.textContent = 'SON INACTIF';
+    document.body.appendChild(muteChip);
   }
-  ['click', 'keydown'].forEach(function (evt) {
-    global.addEventListener(evt, function once() {
-      dismissBadge();
-      global.removeEventListener(evt, once);
-    }, { once: true });
+
+  // Appelee quand une lecture aboutit vraiment : en kiosk
+  // (--autoplay-policy=no-user-gesture-required) le son marche sans geste,
+  // la pop-up s'efface donc d'elle-meme et l'indicateur disparait.
+  function onPlaybackSucceeded() {
+    audioConfirmed = true;
+    if (gateEl) gateEl.classList.add('hidden');
+    if (muteChip) { muteChip.remove(); muteChip = null; }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var gate = document.querySelector('[data-bind="audioGate"]');
+    if (!gate) { audioConfirmed = true; return; } // page sans pop-up : on n'entrave rien
+    gateEl = gate;
+
+    function close(withSound) {
+      audioConfirmed = withSound;
+      gate.classList.add('hidden');
+      if (!withSound) showMuteChip();
+    }
+
+    var btn = gate.querySelector('[data-bind="audioGateBtn"]');
+    var skip = gate.querySelector('[data-bind="audioGateSkip"]');
+    if (btn) btn.addEventListener('click', function () { close(true); });
+    if (skip) skip.addEventListener('click', function () { close(false); });
+
+    // Echap = meme chose que "continuer sans son" : pas de piege clavier.
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key !== 'Escape') return;
+      close(false);
+      document.removeEventListener('keydown', onEsc);
+    });
   });
 
   // ── État ─────────────────────────────────────────────────────────────────
@@ -222,7 +250,7 @@
 
     // Toujours tenter, cf. GCS/README.md §3 -- rejet normal sans geste,
     // reessaie au prochain tick (currentlyPlaying=null dans le catch).
-    el.play().then(dismissBadge).catch(function (e) {
+    el.play().then(onPlaybackSucceeded).catch(function (e) {
       console.warn('[gcs] alarme ' + candidate.alarmId + ': lecture bloquée (' + e.message + ')');
       currentlyPlaying = null;
     });

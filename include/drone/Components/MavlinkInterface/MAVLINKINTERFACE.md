@@ -296,6 +296,59 @@ puisque c'est `FSTask` qui a la donnée ESC/batterie sous la main en
 premier, et que ces voyants ont un intérêt pour le GCS indépendamment de
 toute décision de MissionControl.
 
+### Seuils batterie — valeurs 6S, pas celles du SITL
+
+`kBattLowVoltage=19.8V` (3.3 V/cell) et `kBattCriticalVoltage=18.0V`
+(3.0 V/cell) pour le pack **LiPo 6S** de `HARDWARE.md` §8. Les valeurs
+précédentes (14.0/12.5 V) correspondaient à un pack 4S : sur 6S elles valent
+2.33 et 2.08 V/cellule, donc jamais atteintes avant la coupure ESC — `FCP001`
+et `FCP003` ne pouvaient pas se lever, et avec eux ni l'alerte GCS, ni le
+blocage d'armement au préflight, ni le `LANDING` immédiat.
+
+Le SITL ne dépend pas de ces défauts : `sitl/procman.py` pose
+`DRONE_BATT_LOW_V=11.0` et `DRONE_BATT_CRITICAL_V=9.5` par environnement.
+
+**Filtrage des creux de tension, par niveau.** Un pack 6S sain plonge
+transitoirement sous 21 V en charge (constaté en essai) : testé sur un
+échantillon isolé, le seuil ferait papillonner l'alarme. Le franchissement doit
+donc tenir une durée minimale, différente selon l'enjeu :
+
+| Code | Filtre | Pourquoi cette durée |
+|---|---|---|
+| `FCP001` (batt_low) | `kBattLowSagFilter` = **500 ms** | N'est ni dans `recoverableFailureActive_` ni dans `unrecoverableFailureActive_` : en vol il n'est qu'un voyant GCS (il bloque l'armement au préflight, au sol). Réagir vite ne coûte rien. |
+| `FCP003` (batt_critical) | `kBattCriticalSagFilter` = **10 s** | Alimente `unrecoverableFailureActive_`, donc un **`LANDING` immédiat**. Un faux positif commanderait un atterrissage en vol. |
+
+L'asymétrie justifie l'écart : la décharge d'un pack étant monotone et lente,
+quelques secondes de retard sur la détection ne changent rien, alors qu'un faux
+`FCP003` interrompt la mission. Une montée à forte poussée maintient d'ailleurs
+la tension basse plusieurs secondes — un filtre court ne la distinguerait pas
+d'une batterie réellement vide. ArduPilot traite le même problème avec
+`BATT_LOW_TIMER`, par défaut 10 s.
+
+Le filtre ne s'applique pas quand la donnée FC est illisible (`MVC008`) :
+l'état courant est alors conservé, sinon un timeout shm remettrait le compteur à
+zéro et retarderait indéfiniment une alarme légitime.
+
+### Lecture `SharedFCStatus` en échec — `MVC008`
+
+`FSTask` lisait `getArmed()` et `getBattery()` avec un `value_or()` optimiste :
+un timeout sur le verrou shm donnait « désarmé » et « 0 V », c'est-à-dire *tout
+va bien*. Conséquences : le check RPM était entièrement sauté, et comme les
+tests sont edge-triggered, une alarme batterie active se trouvait **effacée**
+par un simple timeout transitoire.
+
+Désormais `MVC008` (`fc_data_unreadable`) est levé, et les alarmes batterie
+conservent leur état courant au lieu d'être recalculées sur une donnée absente.
+
+### Logs de bring-up — hors binaire de production
+
+`STATUSTEXT`, `GPS_RAW_INT` et `EKF_STATUS_REPORT` sont journalisés sur
+`std::cout` sous `#ifdef DRONE_USE_SITL_DRIVERS` uniquement. `TRx` est le seul
+lecteur du lien FC et tourne en `SCHED_FIFO` à 100Hz : `std::cout` prend un
+verrou interne et peut bloquer si la sortie est lente ou un tampon de pipe
+plein. Le bloquer arrête la lecture des HEARTBEAT, que `FSTask` interprète
+alors en perte de lien (`MVC004`) — une panne provoquée par la journalisation.
+
 ### Fallback autonome `LAND` — MC et GCS ne font jamais de cold-start pour rien
 
 **Point à retenir** : `MissionControl` ne fait jamais de cold-start (cf.
@@ -323,6 +376,31 @@ pas de spam) et **totalement indépendants l'un de l'autre et de la
 state machine de MC** — c'est tout l'intérêt : si MC est mort, sa propre
 logique `EMERGENCY`/`HOLD` ne tourne plus, donc ce filet ne peut pas
 dépendre de quoi que ce soit calculé par MC.
+
+### `sendUrgent()` — une priorité procédurale, pas un mécanisme OS
+
+`ILink` expose `send()` et `sendUrgent()`. Les deux empruntent le **même**
+chemin d'écriture, protégé par le même verrou interne du driver : un fil UART
+ne transporte de toute façon qu'une trame à la fois, et aucun ordonnancement
+noyau n'est sollicité. La « priorité » est purement procédurale — `FSTask`
+appelle `sendUrgent()` directement, en contournant la file d'attente de
+`TTxACK` (`PendingAckQueue`), là où tout autre émetteur doit y passer. Autrement
+dit : la trame de `LAND` n'est pas transmise *plus vite* sur le fil, elle n'a
+simplement rien devant elle dans la file.
+
+### `SharedFCStatus` — conventions de ce segment
+
+- **Mono-writer par convention, pas par contrainte** : seule `TRx` y écrit.
+  Rien dans le code ne l'impose (`reset()` est la seule vérification
+  d'identité) — invariant à préserver manuellement.
+- **Lecteurs** : `SensorFusion` (attitude/position/vitesse), `MissionControl`
+  (batterie/ESC/pression), `FSTask` (`lastHeartbeat`).
+- **Floats nus pour les tensions/courants ESC**, malgré la règle « types forts
+  partout » de `CLAUDE.md` : un `std::array<Scalar<Tag>, N>` n'a pas de
+  constructeur par défaut exploitable, `Scalar` étant explicite à dessein.
+  Initialiser les quatre éléments à la main pour un tableau interne à ce seul
+  composant coûtait plus que l'unité portée par un commentaire. Exception
+  assumée et circonscrite à ce segment.
 
 ## 10. Messages qu'ArduPilot SITL émet réellement — pas toujours les "standards"
 
@@ -355,6 +433,23 @@ qu'ArduPilot envoie vraiment** plutôt que de supposer que la variante
   dédié pour l'instant — juste de la visibilité console pendant
   l'intégration/bring-up, à revoir si un consommateur programmatique
   (MissionControl, dashboard) en a besoin.
+
+### Sentinelles « non mesuré » des conversions d'unités
+
+La spec MAVLink encode « donnée absente » par une valeur sentinelle, pas par
+un champ de validité. Sans garde explicite, ces sentinelles se propagent en
+valeurs physiques absurdes. Les conversions de `Conversions.hpp` les ramènent
+toutes à zéro :
+
+| Champ | Sentinelle | Sans garde | Converti en |
+|---|---|---|---|
+| `BATTERY_STATUS.voltages[0]` (mV) | `UINT16_MAX` | 65.5 V | 0 V |
+| `BATTERY_STATUS.current_battery` (cA) | `-1` | −0.01 A | 0 A |
+| `BATTERY_STATUS.battery_remaining` (%) | `-1` | −1 % | 0 % |
+
+`ESC_TELEMETRY_1_TO_4.current[i]` est en revanche un `uint16_t` **non signé**,
+donc jamais négatif et sans sentinelle : sa conversion est distincte de
+`caToAmps()` (`int16_t`) bien que les deux portent des centiampères.
 
 ## 11. `GPS_INPUT` : temps GPS (`time_week`/`time_week_ms`), yaw, précision
 

@@ -1,19 +1,9 @@
-// Binaire de dev : Navigation + MavlinkInterface face à ArduPilot SITL, SANS
-// SensorFusion — test intermédiaire pour valider le séquencement/guidage de
-// Nav sans monter tout l'appareillage moteur 3D + modèle capteur (cf.
-// INTEGRATION_TEST.md). Le GPS simulé reste côté SITL (comportement par
-// défaut d'ArduPilot, pas de SIM_GPS_DISABLE) : son EKF a une position
-// valide sans qu'on lui injecte quoi que ce soit.
-//
-// Navigation lit SharedSFMem.state (DynamicState), normalement rempli par
-// EKFTask de SensorFusion — remplacé ici par un relais minimal (~mêmes
-// données, même garde de fraîcheur, mais sans instancier SensorFusions ni
-// ses dépendances GPS/LIDAR). Uniquement dans ce binaire de test, jamais
-// dans le code de prod.
-//
-// Usage : ./nav_sitl
-// Injection de segments/ordres : via UDP_bridge (CMD=SEGMENT, CMD=MCCMD
-// code=start_segment, namespace NAV_SITL).
+// Test intermédiaire : Navigation + MavlinkInterface face à ArduPilot SITL,
+// SANS SensorFusion — valide le séquencement/guidage sans monter le moteur
+// 3D ni le modèle capteur. Le GPS simulé reste côté SITL.
+// SharedSFMem.state, normalement rempli par EKFTask, l'est ici par un relais
+// minimal (mêmes données et même garde de fraîcheur) — jamais en prod.
+// Usage : ./nav_sitl — injection via udp_bridge (namespace NAV_SITL).
 
 #include "drone/Components/MavlinkInterface/Driver/UdpMavlinkLink.hpp"
 #include "drone/Components/MavlinkInterface/MavlinkInterface.hpp"

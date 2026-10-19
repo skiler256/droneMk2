@@ -12,10 +12,7 @@ namespace {
 // esprit que kFcLinkTimeout côté MavlinkInterface (3x la période nominale).
 constexpr Ms kGcsHeartbeatTimeout{3000};
 
-// HEALTH ne porte qu'un (component, health) par envoi — pas de quoi montrer
-// les 5 composants pertinents pour le GCS en un seul paquet (GlobalWatchdog
-// exclu, cf. panneau "Components" du dashboard). On les fait défiler un par
-// envoi plutôt que d'élargir le format du paquet pour si peu de champs.
+// Les 5 composants défilent, un par envoi — cf. SYSMONITORING.md §6.
 constexpr std::array<ComponentID, kMonitoredComponentCount> kMonitoredComponents{
     ComponentID::MavlinkInterface, ComponentID::SensorFusion, ComponentID::Navigation,
     ComponentID::MissionControl, ComponentID::SysMonitoring};
@@ -30,12 +27,37 @@ TELEM::HealthPkt buildHealthPkt(SysMonitoring &comp, size_t &cycleIndex) {
   return pkt;
 }
 
-// Polling+diff sur les codes MAJEURS (Critical/Emergency) des 5 composants
-// surveillés — CODE est Priority=Critical dans TELEMETRY.csv, on ne relaie
-// donc que les majeurs (le ring mineur est plus bruyant et n'a pas de
-// notion de "clear" à observer). Appelé à chaque TelMainTask/TelSecTask::
-// loop(), indépendamment de si CODE est "dû" — la détection et la
-// planification sont deux choses séparées (cf. markDirty ci-dessous).
+// Un seul couple (composant, Task) par envoi, les slots jamais mesurés
+// (hz == 0) sont sautés — cf. SYSMONITORING.md §13.
+std::optional<TELEM::TaskRatePkt> buildTaskRatePkt(SysMonitoring &comp,
+                                                   size_t &cycleIndex) {
+  constexpr size_t kSlots = kMonitoredComponentCount * kMaxTasksPerComponent;
+
+  for (size_t scanned = 0; scanned < kSlots; ++scanned) {
+    size_t slot = (cycleIndex + scanned) % kSlots;
+    ComponentID target = kMonitoredComponents[slot / kMaxTasksPerComponent];
+    size_t task = slot % kMaxTasksPerComponent;
+
+    auto rates = comp.sysState_.getTaskHz(target);
+    if (!rates || (*rates)[task] == 0.0f)
+      continue;
+
+    cycleIndex = slot + 1;
+    TELEM::TaskRatePkt pkt{};
+    pkt.component = static_cast<uint8_t>(target);
+    pkt.task_id = static_cast<uint8_t>(task);
+    pkt.hz = (*rates)[task];
+    if (auto targets = comp.sysState_.getTaskTargetHz(target))
+      pkt.target_hz = (*targets)[task];
+    return pkt;
+  }
+
+  return std::nullopt; // aucune mesure encore disponible (démarrage)
+}
+
+// Polling+diff sur les codes majeurs seulement (cf. SYSMONITORING.md §6).
+// Appelé à chaque loop(), que CODE soit "dû" ou non : détection et
+// planification sont deux choses distinctes.
 void scanCodeChanges(SysMonitoring &comp, PacketScheduler &sched,
                      std::array<std::array<uint32_t, kMajorCodeSlots>,
                                 kMonitoredComponentCount> &lastMajor,
@@ -127,11 +149,8 @@ SysMonitoring::SysMonitoring(ComponenConfig config,
   activate();
 };
 
-// NOTE: POS/VELNED/ATTITUDE/GPSFIX sont câblés sur sf_ (DynamicState/
-// GpsMagSample réels). BATTERY/ARM_STATE/MISSION_STATE/AUTOPILOT_MODE
-// restent à valeurs par défaut : ils dépendent de handlers que
-// SysMonitoring n'a pas encore (SharedFCStatus, SharedCmdMem) — cf.
-// SYSMONITORING.md §9.
+// BATTERY/ARM_STATE/MISSION_STATE/AUTOPILOT_MODE restent par défaut : les
+// handlers manquent encore — cf. SYSMONITORING.md §9.
 
 void TelMainTask::loop() {
   // Détection indépendante du scheduling : doit tourner à chaque cycle, pas
@@ -234,8 +253,10 @@ void TelMainTask::loop() {
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
-    // TODO: pas de source encore côté MavlinkInterface, cf. SYSMONITORING.md §9.
-    auto frame = TELEM::encode(TELEM::ArmStatePkt{});
+    // `reason` reste 0 : pas de table de raisons définie (SYSMONITORING.md §9).
+    TELEM::ArmStatePkt pkt{};
+    pkt.armed = comp.fc_.getArmed().value_or(false) ? 1 : 0;
+    auto frame = TELEM::encode(pkt);
     if (!comp.mainLink_.send(frame))
       comp.mainSched_.markSent(due->id, now);
     break;
@@ -338,6 +359,29 @@ void TelMainTask::loop() {
       comp.mainSched_.markSent(due->id, now);
     break;
   }
+  case TELEM::PacketID::ESC_RPM: {
+    // Régime par moteur, seule grandeur ESC transmise pour l'instant. Reste
+    // à 0 si le FC n'a jamais émis ESC_TELEMETRY (cf. SYSMONITORING.md §14).
+    TELEM::EscRpmPkt pkt{};
+    if (auto esc = comp.fc_.getEscStatus())
+      pkt.rpm = esc->rpmValue;
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame))
+      comp.mainSched_.markSent(due->id, now);
+    break;
+  }
+  case TELEM::PacketID::TASK_RATE: {
+    // markSent inconditionnel : sans mesure disponible, ne pas réessayer au
+    // cycle suivant (sinon TASK_RATE monopolise le lien au démarrage).
+    if (auto pkt = buildTaskRatePkt(comp, taskRateCycleIndex_)) {
+      auto frame = TELEM::encode(*pkt);
+      if (!comp.mainLink_.send(frame))
+        comp.mainSched_.markSent(due->id, now);
+      break;
+    }
+    comp.mainSched_.markSent(due->id, now);
+    break;
+  }
   default:
     break; // paquets montants : pas schedulés ici (cf. GCSRxTask)
   }
@@ -393,8 +437,9 @@ void TelSecTask::loop() {
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
-    // TODO: cf. même remarque que TelMainTask ci-dessus.
-    auto frame = TELEM::encode(TELEM::ArmStatePkt{});
+    TELEM::ArmStatePkt pkt{};
+    pkt.armed = comp.fc_.getArmed().value_or(false) ? 1 : 0;
+    auto frame = TELEM::encode(pkt);
     if (!comp.secLink_.send(frame))
       comp.secSched_.markSent(due->id, now);
     break;

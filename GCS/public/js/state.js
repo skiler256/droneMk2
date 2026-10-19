@@ -30,7 +30,8 @@
     mission:    4000,   // MISSION_STATE evenementiel + redondance 1 Hz
     sys:        4000,   // HEALTH ~ 1 Hz
     radio:      4000,
-    components: 4000
+    components: 4000,
+    hw:         4000   // ESC_RPM a 2 Hz + CODE evenementiel
   };
 
   GCS.createState = function createState() {
@@ -38,7 +39,7 @@
       /* ── horodatages de reception (ms, base performance.now()) ────────── */
       rx: {
         gnss: 0, attitude: 0, position: 0, battery: 0,
-        lidar: 0, mission: 0, sys: 0, radio: 0, components: 0
+        lidar: 0, mission: 0, sys: 0, radio: 0, components: 0, hw: 0
       },
       stale: {},
 
@@ -79,16 +80,23 @@
       },
 
       /* ── Batterie ─────────────────────────────────────────────────────── */
+      // Seuls pct/voltage/current viennent du drone (paquet BATTERY). Les
+      // deux estimations restent null tant que le calcul n'est pas tranche :
+      // null -> '--' a l'affichage, jamais 0 qui se lirait comme une mesure.
       battery: {
-        pct: 0,
-        voltage: 0,          // V
-        current: 0,          // A
-        tempC: 0,
-        consumed_mAh: 0,
-        cycles: 0,
-        rtlNeedPct: 0,       // reserve estimee necessaire pour rentrer
-        secondsRemaining: 0,
-        cells: []            // tension ou % par cellule
+        pct: null,
+        voltage: null,        // V
+        current: null,        // A
+        minutesRemaining: null,
+        kmRemaining: null
+      },
+
+      /* ── Etat materiel : alimente le schema drone ─────────────────────
+         faults : {forme -> 'warn'|'crit'} deduit des codes actifs (colonne
+         Schematic d'INDEX.csv). rpm : null tant qu'ESC_RPM n'a rien donne. */
+      hw: {
+        faults: {},
+        rpm: null              // [4] tr/min, ordre des sorties FC
       },
 
       /* ── Lidar, repere body, cap = 0 deg ──────────────────────────────── */
@@ -117,16 +125,14 @@
       camera: { gimbalPitch: 0, gimbalYaw: 0, zoom: 1 },
 
       /* ── Sante systeme (Pi 5) ─────────────────────────────────────────── */
+      // Seul cpuTempC a une source (paquet CPU_TEMP). Charge CPU, RAM et
+      // uptime ne sont transmis par rien : retires avec le panneau thermique.
       sys: {
-        cpuTempC: 0,
-        thermalLimitC: 85,
-        cpuLoadPct: 0,
-        ramUsedGb: 0,
-        uptimeSec: 0
+        cpuTempC: null
       },
 
       /* ── Composants (un par process) ──────────────────────────────────── */
-      components: [],        // [{ name, hz, note, health: 'NOMINAL'|'DEGRADED'|'SICK'|'DEAD' }]
+      components: [],        // [{ name, hz, note, health: 'NOMINAL'|'DEGRADED'|'SICK'|'DEAD', tasks: {id:{hz,target}} }]
 
       /* ── Liens radio ──────────────────────────────────────────────────── */
       radio: [],             // [{ name, role, active, rssi, rttMs, lossPct, downMbps, upMbps, band, quality 0..1 }]

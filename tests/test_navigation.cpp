@@ -158,13 +158,8 @@ TEST(TravelDirectionTest, FallsBackToTargetBearingBelowThreshold) {
 }
 
 TEST(TravelDirectionTest, VerticalClimbDoesNotFalselyPassHorizontalThreshold) {
-  // Bug reel trouve en SITL (session) : state.velNed.norm() est la norme 3D
-  // complete -- en montee quasi verticale (vz domine), cette norme depasse
-  // le seuil alors que vx/vy sont sous le seuil, et l'ancien code prenait
-  // la branche "vitesse" en renvoyant un vecteur horizontal ECRASE (pas
-  // unitaire) -- obstacleInBox() projetait alors des obstacles reels
-  // lointains comme s'ils etaient tout pres (fausse alerte hold_obstacle
-  // en pleine montee, sans aucun obstacle a proximite).
+  // Non-régression du bug SITL « hold_obstacle en pleine montée » : vecteur
+  // non unitaire issu de la norme 3D — cf. NAVIGATION.md §6.
   auto segment = makeWaypoint(Position{Vec3{0.0f, 10.0f, 0.0f}}, // Est
                               MetersPerSec{5.0f}, Meters{-10.0f});
   auto state = makeState(Position{Vec3{0.0f, 0.0f, 0.0f}});

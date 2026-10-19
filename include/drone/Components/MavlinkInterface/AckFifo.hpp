@@ -5,12 +5,9 @@
 #include <mutex>
 #include <optional>
 
-// FIFO borné, thread-safe, pour transmettre les ACK (COMMAND_ACK/
-// PARAM_VALUE) de TRx vers TTxACK. TRx est la SEULE Task à lire le fd
-// UART (deux lecteurs concurrents mélangeraient le flux d'octets) — ce
-// FIFO est donc l'unique canal par lequel TTxACK apprend qu'un ACK est
-// arrivé. Écrase le plus ancien si plein plutôt que d'allouer
-// dynamiquement (cohérent avec le reste du code de vol, -fno-exceptions).
+// Unique canal par lequel TTxACK apprend qu'un ACK est arrivé, TRx étant
+// seule à lire le fd UART — cf. MAVLINKINTERFACE.md §1-2. Écrase le plus
+// ancien si plein (à l'inverse de PendingAckQueue, cf. son en-tête).
 class AckFifo {
 public:
   static constexpr size_t kCapacity = 8;

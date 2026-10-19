@@ -200,3 +200,31 @@ TEST(MissionControlTest, EmergencyFromHoldReturnsToOriginalFlightMode) {
   auto out = step(MissionState::Emergency, MissionState::Mission, 9, in);
   EXPECT_EQ(out.next, MissionState::Mission);
 }
+
+// Sans réponse du GCS, la question LidarLost ne doit pas maintenir le hold
+// indéfiniment : même timeout que l'EMERGENCY.
+TEST(MissionControlTest, LidarLostQueryTimesOutToLanding) {
+  MC_CONV::Inputs in{};
+  in.lidarLost = true;
+
+  in.holdQueryElapsed = MC_CONV::kEmergencyTimeout - Ms(1);
+  auto before = MC_CONV::step(MissionState::Hold, MissionState::Mission, 1, in);
+  EXPECT_EQ(before.next, MissionState::Hold);
+  ASSERT_TRUE(before.query.has_value());
+  EXPECT_EQ(*before.query, QueryType::LidarLost);
+
+  in.holdQueryElapsed = MC_CONV::kEmergencyTimeout;
+  auto after = MC_CONV::step(MissionState::Hold, MissionState::Mission, 1, in);
+  EXPECT_EQ(after.next, MissionState::Landing);
+}
+
+// Une réponse explicite prime sur le timeout.
+TEST(MissionControlTest, LidarLostAnswerBeatsTimeout) {
+  MC_CONV::Inputs in{};
+  in.lidarLost = true;
+  in.holdQueryElapsed = MC_CONV::kEmergencyTimeout * 2;
+  in.queryAnswer = {1u, 1}; // choice 1 = MANUAL
+
+  auto out = MC_CONV::step(MissionState::Hold, MissionState::Mission, 1, in);
+  EXPECT_EQ(out.next, MissionState::Manual);
+}

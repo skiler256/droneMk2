@@ -1,22 +1,10 @@
-// GlobalWatchdog en boîte noire : run() bloque indéfiniment (publish shm +
-// fork + monitorLoop + shutdown), donc chaque scénario est lancé dans un
-// process forké dédié, contrôlé depuis le process de test via signaux, et
-// vérifié via effets de bord externes (segments shm, fichier de log écrit
-// par le binaire compagnon tests/helpers/stub_child.cpp — voir ce fichier
-// pour le contrat DRONE_TEST_LOG / DRONE_TEST_BEHAVIOR).
+// GlobalWatchdog en boîte noire : run() bloque indéfiniment, donc chaque
+// scénario tourne dans un process forké dédié, piloté par signaux et vérifié
+// par effets de bord (shm, log de tests/helpers/stub_child.cpp).
 //
-// Pourquoi un fork par test et pas des GlobalWatchdog construits
-// directement dans le process gtest : `keepRunning_` est un
-// `static inline std::atomic<bool>` — partagé entre TOUTES les instances
-// de GlobalWatchdog du même process, jamais remis à true après un premier
-// arrêt. Deux tests qui construiraient chacun leur propre GlobalWatchdog
-// dans le même process gtest se marcheraient dessus : le second verrait
-// keepRunning_ déjà à false et monitorLoop() ne s'exécuterait jamais. En
-// production ça ne se voit pas (une seule instance pour toute la vie du
-// process), mais c'est un vrai smell de conception (devrait être un membre
-// d'instance, pas un static de classe) — révélé uniquement par le test.
-// Le fork isole chaque test dans un process frais où ce static repart de
-// zéro, contournant le problème sans y toucher.
+// Le fork est nécessaire, pas cosmétique : `keepRunning_` est un static de
+// classe jamais réarmé, donc deux instances dans le même process se
+// marcheraient dessus — cf. AUDIT.md §19.
 
 #include "drone/core/GlobalWatchdog.hpp"
 #include "drone/core/WatchdogControl.hpp"
