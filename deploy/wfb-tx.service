@@ -1,0 +1,22 @@
+[Unit]
+Description=PDL (wfb-ng) : émission
+Requires=wfb-iface.service
+After=wfb-iface.service
+
+[Service]
+EnvironmentFile=/etc/default/wfb
+ExecStart=/home/jules/droneMk2/deploy/wfb-tx.sh
+# Lien critique : on relance toujours. Une coupure déclenche les procédures
+# d'urgence du drone, donc rester mort est le pire des états.
+Restart=always
+RestartSec=2
+User=jules
+# Nécessite CAP_NET_RAW pour PF_PACKET. Les binaires la portent déjà
+# (setcap cap_net_raw+ep), ce qui évite de faire tourner tout ceci en root.
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+# Avec AmbientCapabilities, le service fonctionne meme si le setcap sur les
+# binaires n'a pas ete fait : une dependance de moins a l'installation.
+
+[Install]
+WantedBy=multi-user.target

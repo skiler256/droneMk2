@@ -332,10 +332,14 @@ void afficherDirect(const Options &opt, const Stats &st, const Fenetre &f,
     return;
   }
 
+  // Perte CUMULEE, pas celle de la fenetre : des que l'aller-retour depasse
+  // la seconde, les echos arrivent dans une fenetre posterieure a celle de
+  // leur envoi, et le rapport local donne des valeurs impossibles — on a vu
+  // -166 % sur le PDL. Le cumul, lui, reste juste.
   const double perte =
-      f.sent == 0 ? 0.0
-                  : 100.0 * (1.0 - static_cast<double>(f.echoes) /
-                                       static_cast<double>(f.sent));
+      st.sent == 0 ? 0.0
+                   : 100.0 * (1.0 - static_cast<double>(st.echoes) /
+                                        static_cast<double>(st.sent));
   const double rtt =
       f.rttCount == 0 ? 0.0 : f.rttSum / static_cast<double>(f.rttCount);
 

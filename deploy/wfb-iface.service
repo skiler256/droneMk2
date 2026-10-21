@@ -1,0 +1,18 @@
+[Unit]
+Description=PDL (wfb-ng) : adaptateur en mode moniteur
+# Après NetworkManager, sinon il reprendrait l'interface juste après nous.
+After=network-pre.target NetworkManager.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/default/wfb
+ExecStart=/home/jules/droneMk2/deploy/wfb-iface.sh
+# L'adaptateur peut mettre un instant à apparaître au démarrage : on réessaie
+# plutôt que d'échouer définitivement et de laisser le lien mort.
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1720,3 +1720,68 @@ deux chaînes du PDL : `pdl_rssi` et `sdl_rssi` de `LINK_QUALITY` suffisent donc
 À noter : `main.cpp` construit encore des `UdpTelemetryDriver`, donc rien de
 tout cela n'est actif dans le logiciel de vol — la plomberie existe, le
 branchement reste à faire.
+
+## Persistance du PDL — `deploy/`
+
+Trois unités systemd, installées par `sudo ./deploy/install.sh { drone | gs }`.
+
+| unité | rôle |
+|---|---|
+| `wfb-iface.service` | oneshot : NetworkManager hors jeu, mode moniteur, canal |
+| `wfb-tx.service` | émission |
+| `wfb-rx.service` | réception, avec son relais de statistiques |
+
+### L'interface est résolue par son pilote, pas par son nom
+
+`wlan1` dépend de l'ordre d'énumération et peut devenir `wlan2` au prochain
+démarrage. `wfb-iface.sh` cherche donc l'interface dont le pilote est
+`rtl88xxau_wfb` et publie le nom résolu dans `/run/wfb.iface`, que les deux
+autres unités lisent. Une seule résolution, un seul endroit où elle peut être
+fausse — les dupliquer les ferait diverger le jour où on en corrige une seule.
+
+Un nom figé dans une unité est une panne qui n'arrive qu'une fois sur dix
+redémarrages, c'est-à-dire le pire genre.
+
+### Le canal et le mode sont vérifiés, pas supposés
+
+`wfb-iface.sh` relit `iw dev info` après configuration et **échoue** si le
+canal ou le mode ne sont pas ceux demandés. Un rechargement de module détaché
+avait déjà laissé le Pi sur le canal 116 alors que la commande demandait le
+canal 11 (cf. section 10).
+
+### Pas besoin de root, et pas besoin de `setcap`
+
+`wfb_tx` et `wfb_rx` ont besoin de `CAP_NET_RAW` pour `PF_PACKET`. Les unités
+tournent en `User=jules` avec `AmbientCapabilities=CAP_NET_RAW` : elles
+fonctionnent donc même si le `setcap` sur les binaires n'a pas été fait —
+vérifié sur la station sol, où il manquait. Une dépendance d'installation en
+moins, et le logiciel de vol n'a pas à tourner en root.
+
+`Restart=always` sur les deux : une coupure de lien déclenche les procédures
+d'urgence du drone, donc rester mort est le pire des états.
+
+### Le paramètre de puissance était déjà persistant
+
+`/etc/modprobe.d/` porte bien `options 88XXau_wfb rtw_tx_pwr_idx_override=30`
+sur les deux machines. L'installeur le **vérifie** et avertit s'il manque :
+sans lui l'étage radio est muet alors que les compteurs montent normalement,
+le symptôme le plus trompeur de tout ce bring-up.
+
+### Vérifié
+
+Les trois unités actives sur les deux machines, processus sous systemd,
+interfaces résolues (`wlan1` et `wlx54c9ff02f628`), et le lien porte toujours
+des données : **47 trames sur 47, 0 % de perte**, avec le RSSI remonté par le
+relais (`qualite ici : rssi -46 dBm`).
+
+**Le seul test valable de la persistance reste un vrai redémarrage**, qui n'a
+pas été fait.
+
+### Correction d'affichage du banc
+
+La perte affichée en direct est désormais **cumulée** et non calculée sur la
+fenêtre d'une seconde : dès que l'aller-retour dépasse la seconde — ce qui est
+le cas sur le PDL à cause du blocage FEC — les échos arrivent dans une fenêtre
+postérieure à celle de leur envoi, et le rapport local donnait des valeurs
+impossibles, jusqu'à **−166 %**. Un chiffre impossible décrédibilise tout
+l'outil.
