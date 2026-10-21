@@ -355,8 +355,9 @@ TEST(NeoM8nTest, ChecksumErrorsAreCounted) {
 // ─── WFB_NG_Driver : lecture des statistiques wfb-ng ───────────────────────
 //
 // Le transport est celui d'UdpTelemetryDriver, déjà couvert. Ce qui est
-// propre à ce driver est la lecture du socket de stats : un vrai serveur TCP
-// local joue le rôle de wfb-ng, sans radio ni matériel.
+// propre à ce driver est la lecture des statistiques : un faux relais publie
+// en UDP la même disposition que tools/wfb_stats_relay.py, sans radio ni
+// matériel.
 
 #include "drone/Components/SystemMonitoring/Driver/WFB_NG_Driver.hpp"
 #include <arpa/inet.h>
@@ -365,60 +366,78 @@ TEST(NeoM8nTest, ChecksumErrorsAreCounted) {
 
 namespace {
 
-// Serveur TCP minimal sur un port éphémère, pour tenir le rôle du socket de
-// statistiques de wfb-ng.
-class FakeStatsServer {
+// Faux relais : publie en UDP la disposition de tools/wfb_stats_relay.py.
+//
+// Le pilote ECOUTE desormais ce port au lieu de se connecter en TCP : c'est
+// le relais qui publie, et un datagramme se perd sans consequence si personne
+// n'ecoute. Le montage du test suit donc le meme sens que la production.
+class FauxRelais {
 public:
-  FakeStatsServer() {
-    listenFd_ = ::socket(AF_INET, SOCK_STREAM, 0);
-    int one = 1;
-    ::setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+  // Le pilote lie le port, donc le test doit en choisir un libre AVANT de le
+  // construire : on en fait attribuer un par le noyau, puis on le relache.
+  static uint16_t portLibre() {
+    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+    ::bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    socklen_t len = sizeof(addr);
+    ::getsockname(fd, reinterpret_cast<sockaddr *>(&addr), &len);
+    const uint16_t port = ntohs(addr.sin_port);
+    ::close(fd);
+    return port;
+  }
+
+  FauxRelais() { fd_ = ::socket(AF_INET, SOCK_DGRAM, 0); }
+  ~FauxRelais() {
+    if (fd_ >= 0)
+      ::close(fd_);
+  }
+
+  // Disposition : 0 u16 magic | 2 u8 version | 3 i8 rssi | 4 i8 snr
+  //               5 u8 antennes | 6 u32 recus | 10 u32 perdus
+  void publier(uint16_t port, int8_t rssi, uint32_t recus, uint32_t perdus,
+               uint16_t magic = 0x5751, uint8_t version = 1,
+               size_t taille = 14) {
+    std::array<std::byte, 14> t{};
+    std::memcpy(t.data() + 0, &magic, sizeof(magic));
+    std::memcpy(t.data() + 2, &version, sizeof(version));
+    std::memcpy(t.data() + 3, &rssi, sizeof(rssi));
+    const int8_t snr = 20;
+    std::memcpy(t.data() + 4, &snr, sizeof(snr));
+    const uint8_t ant = 2;
+    std::memcpy(t.data() + 5, &ant, sizeof(ant));
+    std::memcpy(t.data() + 6, &recus, sizeof(recus));
+    std::memcpy(t.data() + 10, &perdus, sizeof(perdus));
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = 0; // le noyau choisit
-    ::bind(listenFd_, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
-    ::listen(listenFd_, 1);
-
-    socklen_t len = sizeof(addr);
-    ::getsockname(listenFd_, reinterpret_cast<sockaddr *>(&addr), &len);
-    port_ = ntohs(addr.sin_port);
-  }
-
-  ~FakeStatsServer() {
-    if (clientFd_ >= 0) ::close(clientFd_);
-    if (listenFd_ >= 0) ::close(listenFd_);
-  }
-
-  uint16_t port() const { return port_; }
-
-  void accept() { clientFd_ = ::accept(listenFd_, nullptr, nullptr); }
-
-  void write(std::string_view s) {
-    if (clientFd_ >= 0) std::ignore = ::write(clientFd_, s.data(), s.size());
+    addr.sin_port = htons(port);
+    ::sendto(fd_, t.data(), taille, 0,
+             reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
   }
 
 private:
-  int listenFd_{-1};
-  int clientFd_{-1};
-  uint16_t port_{0};
+  int fd_{-1};
 };
 
-// La fenêtre de rafraîchissement du driver est d'une seconde.
+// Le pilote ne relit ses statistiques qu'une fois par kStatsPeriod : il faut
+// donc franchir la fenetre pour qu'un nouveau datagramme soit pris en compte.
 void waitForNextStatsWindow() {
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 }
 
 } // namespace
 
-TEST(WfbNgDriverTest, ParsesRssiAndLossFromStatsSocket) {
-  FakeStatsServer server;
-  WFB_NG_Driver drv(0, 0, server.port());
+TEST(WfbNgDriverTest, LitLeDatagrammeDuRelais) {
+  const uint16_t port = FauxRelais::portLibre();
+  WFB_NG_Driver drv(0, 0, port);
+  FauxRelais relais;
 
-  std::ignore = drv.poll(); // declenche le connect non bloquant
-  server.accept();
-  server.write("{\"type\": \"rx\", \"rssi\": -62, \"recv\": 980, \"lost\": 20}\n");
+  std::ignore = drv.poll(); // lie le socket de statistiques
+  relais.publier(port, -62, 980, 20);
 
   waitForNextStatsWindow();
   std::ignore = drv.poll();
@@ -429,27 +448,43 @@ TEST(WfbNgDriverTest, ParsesRssiAndLossFromStatsSocket) {
   EXPECT_NEAR(*drv.lossRatio(), 0.02f, 0.001f);
 }
 
-TEST(WfbNgDriverTest, HandlesLineSplitAcrossReads) {
-  FakeStatsServer server;
-  WFB_NG_Driver drv(0, 0, server.port());
+TEST(WfbNgDriverTest, SeulLeDernierDatagrammeCompte) {
+  // Une mesure de qualite perimee n'a aucun interet, et accumuler du retard
+  // sur le chemin RT serait pire que de perdre des echantillons : le pilote
+  // vide la file et ne garde que le dernier.
+  const uint16_t port = FauxRelais::portLibre();
+  WFB_NG_Driver drv(0, 0, port);
+  FauxRelais relais;
 
   std::ignore = drv.poll();
-  server.accept();
+  relais.publier(port, -80, 100, 0);
+  relais.publier(port, -70, 100, 0);
+  relais.publier(port, -41, 100, 0);
 
-  // Une ligne coupee en deux : le driver doit attendre le '\n' et non
-  // parser un fragment.
-  server.write("{\"rssi\": -4");
-  waitForNextStatsWindow();
-  std::ignore = drv.poll();
-  EXPECT_FALSE(drv.rssiDbm().has_value()) << "fragment parse avant la fin de ligne";
-
-  server.write("5, \"recv\": 100, \"lost\": 0}\n");
   waitForNextStatsWindow();
   std::ignore = drv.poll();
 
   ASSERT_TRUE(drv.rssiDbm().has_value());
-  EXPECT_EQ(*drv.rssiDbm(), -45);
-  EXPECT_FLOAT_EQ(*drv.lossRatio(), 0.0f);
+  EXPECT_EQ(*drv.rssiDbm(), -41) << "le pilote doit retenir le plus recent";
+}
+
+TEST(WfbNgDriverTest, DatagrammeInvalideEstIgnore) {
+  // Magic ou version faux, ou trame tronquee : on prefere rester sans valeur
+  // qu'en remonter une interpretee de travers.
+  const uint16_t port = FauxRelais::portLibre();
+  WFB_NG_Driver drv(0, 0, port);
+  FauxRelais relais;
+
+  std::ignore = drv.poll();
+  relais.publier(port, -50, 100, 0, /*magic=*/0x1234);
+  relais.publier(port, -50, 100, 0, /*magic=*/0x5751, /*version=*/99);
+  relais.publier(port, -50, 100, 0, 0x5751, 1, /*taille=*/8);
+
+  waitForNextStatsWindow();
+  std::ignore = drv.poll();
+
+  EXPECT_FALSE(drv.rssiDbm().has_value())
+      << "un datagramme invalide ne doit pas produire de valeur";
 }
 
 TEST(WfbNgDriverTest, AbsentStatsServiceIsNotFatal) {

@@ -22,32 +22,45 @@ constexpr TYPES::Ms kStatsStale{5000};
 // Cherche "<key>": <nombre> dans une ligne JSON. Pas de parseur complet :
 // une seule forme à extraire, aucune dépendance, et -fno-exceptions interdit
 // la plupart des bibliothèques.
-std::optional<float> jsonNumber(std::string_view line, std::string_view key) {
-  auto pos = line.find(key);
-  if (pos == std::string_view::npos)
-    return std::nullopt;
+// Disposition publiee par tools/wfb_stats_relay.py. Offsets fixes et memcpy,
+// meme convention que les paquets TELEM generes — pas d'attribut packed.
+//
+//   0 u16 magic | 2 u8 version | 3 i8 rssi | 4 i8 snr
+//   5 u8 antennes | 6 u32 recus | 10 u32 perdus
+//
+// Le RSSI est le PIRE des antennes : avec une diversite 2T2R le recepteur
+// utilise la meilleure chaine, donc le pire ne mesure pas la marge de liaison
+// mais la SANTE du systeme d'antennes. Une antenne debranchee se voit, la ou
+// une moyenne la masquerait.
+struct StatsRelais {
+  static constexpr uint16_t kMagic = 0x5751;
+  static constexpr uint8_t kVersion = 1;
+  static constexpr size_t kSize = 14;
 
-  pos = line.find(':', pos + key.size());
-  if (pos == std::string_view::npos)
-    return std::nullopt;
-  ++pos;
+  int8_t rssi{};
+  int8_t snr{};
+  uint8_t antennes{};
+  uint32_t recus{};
+  uint32_t perdus{};
 
-  while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t'))
-    ++pos;
-
-  auto end = pos;
-  while (end < line.size() &&
-         (line[end] == '-' || line[end] == '.' || (line[end] >= '0' && line[end] <= '9')))
-    ++end;
-  if (end == pos)
-    return std::nullopt;
-
-  float value{};
-  auto [ptr, ec] = std::from_chars(line.data() + pos, line.data() + end, value);
-  if (ec != std::errc{})
-    return std::nullopt;
-  return value;
-}
+  [[nodiscard]] static bool unpack(const std::byte *buf, size_t len,
+                                   StatsRelais &out) noexcept {
+    if (len < kSize)
+      return false;
+    uint16_t magic = 0;
+    uint8_t version = 0;
+    std::memcpy(&magic, buf + 0, sizeof(magic));
+    std::memcpy(&version, buf + 2, sizeof(version));
+    if (magic != kMagic || version != kVersion)
+      return false;
+    std::memcpy(&out.rssi, buf + 3, sizeof(out.rssi));
+    std::memcpy(&out.snr, buf + 4, sizeof(out.snr));
+    std::memcpy(&out.antennes, buf + 5, sizeof(out.antennes));
+    std::memcpy(&out.recus, buf + 6, sizeof(out.recus));
+    std::memcpy(&out.perdus, buf + 10, sizeof(out.perdus));
+    return true;
+  }
+};
 
 } // namespace
 
@@ -71,22 +84,28 @@ WFB_NG_Driver::poll() {
 }
 
 bool WFB_NG_Driver::connectStats() {
-  statsFd_ = ::socket(AF_INET, SOCK_STREAM, 0);
+  // Socket UDP en ECOUTE, pas une connexion TCP : c'est le relais qui publie,
+  // et un datagramme se perd sans consequence si personne n'ecoute. L'inverse
+  // — un tube ou un socket que le producteur doit joindre — ferait dependre la
+  // liaison radio de la presence du logiciel de vol.
+  statsFd_ = ::socket(AF_INET, SOCK_DGRAM, 0);
   if (statsFd_ < 0)
     return false;
 
-  // Non bloquant avant le connect : appelé depuis une boucle RT, aucun
-  // appel ne doit attendre un service qui n'est peut-être pas démarré.
+  // Non bloquant : appele depuis une boucle RT, aucun appel ne doit attendre
+  // un relais qui n'est peut-etre pas demarre.
   int flags = ::fcntl(statsFd_, F_GETFL, 0);
   ::fcntl(statsFd_, F_SETFL, flags | O_NONBLOCK);
+
+  int reuse = 1;
+  ::setsockopt(statsFd_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   addr.sin_port = htons(statsPort_);
 
-  int rc = ::connect(statsFd_, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
-  if (rc < 0 && errno != EINPROGRESS) {
+  if (::bind(statsFd_, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0) {
     dropStats();
     return false;
   }
@@ -97,7 +116,6 @@ void WFB_NG_Driver::dropStats() {
   if (statsFd_ >= 0)
     ::close(statsFd_);
   statsFd_ = -1;
-  statsLen_ = 0;
 }
 
 void WFB_NG_Driver::refreshStats(TYPES::TimePoint now) {
@@ -110,66 +128,36 @@ void WFB_NG_Driver::refreshStats(TYPES::TimePoint now) {
   if (statsFd_ < 0 && !connectStats())
     return;
 
+  // Vider la file et ne garder que le dernier datagramme : une mesure de
+  // qualite perimee n'a aucun interet, et accumuler un retard sur le chemin
+  // RT serait pire que de perdre des echantillons.
+  std::byte buf[64];
+  StatsRelais dernier{};
+  bool recu = false;
   for (;;) {
-    if (statsLen_ >= statsBuf_.size()) {
-      // Ligne plus longue que le tampon : on repart propre plutôt que de
-      // parser un fragment arbitraire.
-      statsLen_ = 0;
-      return;
-    }
-
-    ssize_t n = ::recv(statsFd_, statsBuf_.data() + statsLen_,
-                       statsBuf_.size() - statsLen_, 0);
+    ssize_t n = ::recv(statsFd_, buf, sizeof(buf), 0);
     if (n > 0) {
-      statsLen_ += static_cast<size_t>(n);
+      StatsRelais st{};
+      if (StatsRelais::unpack(buf, static_cast<size_t>(n), st)) {
+        dernier = st;
+        recu = true;
+      }
       continue;
     }
-    if (n == 0) { // pair fermé
-      dropStats();
-      return;
-    }
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
-      break; // plus rien à lire pour l'instant
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+      break;
+    // Toute autre erreur : on referme et on retentera au prochain tour.
     dropStats();
     return;
   }
 
-  std::string_view buf(statsBuf_.data(), statsLen_);
-  size_t consumed = 0;
-  for (;;) {
-    auto nl = buf.find('\n', consumed);
-    if (nl == std::string_view::npos)
-      break;
-    parseStatsLine(buf.substr(consumed, nl - consumed));
-    consumed = nl + 1;
-  }
+  if (!recu)
+    return;
 
-  // Conserve le reliquat partiel pour la prochaine lecture.
-  if (consumed > 0) {
-    std::memmove(statsBuf_.data(), statsBuf_.data() + consumed, statsLen_ - consumed);
-    statsLen_ -= consumed;
-  }
+  lastStatsOk_ = now;
+  rssiDbm_ = dernier.rssi;
+  const float total =
+      static_cast<float>(dernier.recus) + static_cast<float>(dernier.perdus);
+  lossRatio_ = total > 0.0f ? static_cast<float>(dernier.perdus) / total : 0.0f;
 }
 
-void WFB_NG_Driver::parseStatsLine(std::string_view line) {
-  // ATTENTION : noms de champs à confirmer contre la sortie réelle de
-  // wfb-ng sur le Pi (cf. SYSMONITORING.md §15). Tant qu'ils ne
-  // correspondent pas, rssiDbm()/lossRatio() restent vides et le driver se
-  // comporte comme un simple transport UDP — c'est voulu.
-  auto rssi = jsonNumber(line, "\"rssi\"");
-  auto lost = jsonNumber(line, "\"lost\"");
-  auto recv = jsonNumber(line, "\"recv\"");
-
-  if (!rssi && !lost)
-    return; // ligne d'un autre type, pas une erreur
-
-  lastStatsOk_ = TYPES::Clock::now();
-
-  if (rssi)
-    rssiDbm_ = static_cast<int8_t>(*rssi);
-
-  if (lost && recv) {
-    float total = *lost + *recv;
-    lossRatio_ = total > 0.0f ? *lost / total : 0.0f;
-  }
-}

@@ -24,6 +24,14 @@ public:
   [[nodiscard]] std::expected<std::span<const std::byte>, TYPES::DriverError>
   poll() override;
 
+  // Les compteurs de CRC et de FIFO n'ont pas d'équivalent ici : wfb-ng ne les
+  // expose pas, et les inventer à zéro ferait croire à une liaison parfaite.
+  [[nodiscard]] LinkQuality quality() const override {
+    return LinkQuality{.rssiDbm = rssiDbm_,
+                       .lqi = std::nullopt,
+                       .lossRatio = lossRatio_};
+  }
+
   // Qualité du lien MONTANT, telle que vue par le récepteur du drone. La
   // qualité descendante se mesure au sol, pas ici.
   [[nodiscard]] std::optional<int8_t> rssiDbm() const { return rssiDbm_; }
@@ -33,17 +41,15 @@ private:
   void refreshStats(TYPES::TimePoint now);
   bool connectStats();
   void dropStats();
-  void parseStatsLine(std::string_view line);
 
   uint16_t statsPort_;
   int statsFd_{-1};
   TYPES::TimePoint lastStatsAttempt_{};
   TYPES::TimePoint lastStatsOk_{};
 
-  // Les lignes du socket de stats arrivent par morceaux : on accumule
-  // jusqu'au '\n' plutôt que de supposer une ligne par lecture.
-  std::array<char, 4096> statsBuf_{};
-  size_t statsLen_{0};
+  // Plus de tampon de lignes : le relais publie un datagramme complet et
+  // autoporteur, ce qui supprime le reassemblage et le risque de parser un
+  // fragment.
 
   std::optional<int8_t> rssiDbm_;
   std::optional<float> lossRatio_;
