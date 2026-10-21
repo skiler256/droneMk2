@@ -123,7 +123,7 @@ restarts en Y secondes"), pas de compteurs absolus.
 3. SysMonitoring (composant le plus simple, valide le pattern process
    isolation + IPC de bout en bout — "golden path")
 4. ComponentWatchdog (validé d'abord via SysMonitoring)
-5. MavlinkInterface (pas encore implémenté)
+5. MavlinkInterface (implémenté : 905 lignes, 34 tests, banc HIL_SF_MV)
 6. SensorFusion
 7. Nav
 8. MissionControl (le plus critique, jamais de cold-start)
@@ -220,9 +220,11 @@ MavlinkInterface. Détail complet et mesures dans `BRINGUP_PDL.md`.
   révélées non reproductibles, cf. la mise en garde dans `BRINGUP_PDL.md` ;
 - latence PDL dominée par le blocage FEC (`k=8`), `-T fec_timeout` à régler.
 
-## MavlinkInterface — à faire
+## MavlinkInterface — tests restants
 
-Tests à couvrir (déjà définis) :
+Le composant est implémenté (905 lignes, 34 tests unitaires) et tourne dans
+`src/IntegrationTests/HIL_SF_MV.cpp` face au vrai FC. Ce qui suit est la liste
+de couverture d'origine, à confronter à ce qui est déjà couvert :
 
 **Unit tests (GTest, sans SITL)**
 - Parsing/sérialisation : décodage v2 valide, rejet CRC invalide, rejet
