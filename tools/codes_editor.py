@@ -155,6 +155,7 @@ def packets_to_json(packets):
             "rate_hz": p.rate_hz,
             "redundancy_hz": p.redundancy_hz,
             "links": p.links,
+            "ack": p.ack,
             "is_event": p.is_event,
             "size": p.size,
             "fields": [{"name": f.name, "type": f.type_token} for f in p.fields],
@@ -186,7 +187,7 @@ def build_packet_from_payload(payload, packets_for_dup_check):
             payload.get("packet_id"), payload.get("direction"),
             payload.get("priority"), payload.get("rate_hz"),
             payload.get("redundancy_hz"), payload.get("links"),
-            fields_raw, seen=seen,
+            payload.get("ack"), fields_raw, seen=seen,
         )
     except TelemetryValidationError as e:
         return None, str(e)

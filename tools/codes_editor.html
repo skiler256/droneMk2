@@ -209,7 +209,7 @@
         <thead>
           <tr>
             <th>ID</th><th>PacketID</th><th>Dir</th><th>Priorité</th>
-            <th>Taux</th><th>Redond.</th><th>Liens</th><th>Taille</th><th>Champs</th><th></th>
+            <th>Taux</th><th>Redond.</th><th>Liens</th><th>Acq.</th><th>Taille</th><th>Champs</th><th></th>
           </tr>
         </thead>
         <tbody id="pktTbody"></tbody>
@@ -251,6 +251,20 @@
           </div>
         </div>
         <div>
+          <label for="pktAck">Acquittement</label>
+          <select id="pktAck">
+            <option value="NONE">NONE — perte silencieuse assumée</option>
+            <option value="ACK">ACK — acquitté, retransmis sur timeout</option>
+            <option value="ACK_FORCE">ACK_FORCE — idem, et passe outre le CCA</option>
+          </select>
+          <p class="hint">
+            ACK et ACK_FORCE exigent un champ <code>seq:u32</code> : sans lui
+            l'acquittement ne peut pas être apparié à la trame, et un doublon
+            de retransmission ne peut pas être reconnu.
+            ACK_FORCE émet même si le canal paraît occupé — réservé aux cas
+            où rester muet est pire qu'une collision.
+          </p>
+
           <label for="pktLinks">Liens</label>
           <select id="pktLinks" required></select>
         </div>
@@ -630,6 +644,7 @@ function renderPacketTable() {
       <td>${p.is_event ? 'event' : p.rate_hz + 'Hz'}</td>
       <td>${p.redundancy_hz ? p.redundancy_hz + 'Hz' : '—'}</td>
       <td>${p.links}</td>
+      <td>${p.ack === 'NONE' ? '—' : p.ack}</td>
       <td>${p.size}o</td>
       <td class="mono-small">${p.fields.map(f => `${f.name}:${f.type}`).join(', ') || '—'}</td>
       <td class="actions">
@@ -661,6 +676,7 @@ function startEditPacket(packetId) {
   document.getElementById('pktRateHz').value = p.rate_hz;
   document.getElementById('pktRedundancyHz').value = p.redundancy_hz;
   document.getElementById('pktLinks').value = p.links;
+  document.getElementById('pktAck').value = p.ack || 'NONE';
   document.getElementById('pktFields').innerHTML = '';
   p.fields.forEach(f => addFieldRow(f.name, f.type));
   document.getElementById('pktError').textContent = '';
@@ -713,6 +729,7 @@ document.getElementById('pktForm').addEventListener('submit', async (e) => {
     priority: document.getElementById('pktPriority').value,
     rate_hz: document.getElementById('pktRateHz').value,
     redundancy_hz: document.getElementById('pktRedundancyHz').value,
+    ack: document.getElementById('pktAck').value,
     links: document.getElementById('pktLinks').value,
     fields,
   };

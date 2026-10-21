@@ -4,6 +4,7 @@
 
 #include "drone/Components/SystemMonitoring/Framing.hpp"
 #include "drone/Components/SystemMonitoring/PacketScheduler.hpp"
+#include "drone/Components/SystemMonitoring/SysMonitoring.hpp"
 #include "drone/generated/telemetry.hpp"
 #include <gtest/gtest.h>
 #include <thread>
@@ -74,12 +75,45 @@ TEST(TelemetryPacketTest, TaskRateIsMainLinkOnly) {
 }
 
 TEST(TelemetryPacketTest, EmptyPayloadPacketRoundTrip) {
-  // CMD_ARM n'a aucun champ : pack()/unpack() doivent rester no-op valides.
-  TELEM::CmdArmPkt in{};
+  // HEARTBEAT_GCS n'a aucun champ : pack()/unpack() doivent rester des no-op
+  // valides. C'était CMD_ARM avant que l'acquittement ne lui ajoute un seq —
+  // il reste le seul paquet sans charge utile, et le cas mérite sa couverture
+  // puisque pack() y renvoie un std::array de taille nulle.
+  TELEM::HeartbeatGcsPkt in{};
   auto bytes = in.pack();
   EXPECT_EQ(bytes.size(), 0u);
-  auto out = TELEM::CmdArmPkt::unpack(bytes);
+  auto out = TELEM::HeartbeatGcsPkt::unpack(bytes);
   (void)out;
+}
+
+TEST(TelemetryPacketTest, AckedCommandsCarrySequence) {
+  // Un acquittement sans numéro de séquence est inappariable, et un doublon
+  // de retransmission serait indétectable — donc réexécuté. Le générateur le
+  // refuse déjà, cette vérification garde le contrat côté C++ au cas où la
+  // table serait produite autrement.
+  for (const auto &m : TELEM::kTable) {
+    if (m.ack == TELEM::AckMode::None_)
+      continue;
+    EXPECT_GE(m.size, sizeof(uint32_t))
+        << m.name << " est acquitté mais trop petit pour porter un seq:u32";
+  }
+}
+
+TEST(TelemetryPacketTest, EmergencyBypassesCarrierSense) {
+  // Rester muet sur un arrêt d'urgence parce que le canal paraît occupé est
+  // pire qu'une collision : c'est le seul paquet qui doit passer outre le CCA.
+  const auto *urgence = TELEM::find(TELEM::PacketID::CMD_EMERGENCY);
+  ASSERT_NE(urgence, nullptr);
+  EXPECT_EQ(urgence->ack, TELEM::AckMode::ForceNoCca);
+
+  // Accolades explicites : les macros GTest s'étendent en if/else, et un
+  // `if` nu dans la boucle produit un else ambigu refusé par -Werror.
+  for (const auto &m : TELEM::kTable) {
+    if (m.id != TELEM::PacketID::CMD_EMERGENCY) {
+      EXPECT_NE(m.ack, TELEM::AckMode::ForceNoCca)
+          << m.name << " contourne le CCA sans raison documentée";
+    }
+  }
 }
 
 TEST(TelemetryPacketTest, UnpackTruncatedBufferReturnsDefault) {
@@ -236,4 +270,85 @@ TEST(PacketSchedulerTest, EventPacketRedundancyRefiresWithoutMarkDirty) {
   auto *due = sched.nextDue(t0 + 1100ms);
   ASSERT_NE(due, nullptr);
   EXPECT_EQ(due->id, TELEM::PacketID::MISSION_STATE);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Acquittement des commandes critiques : file d'émission et dédoublonnage.
+//
+// Logique pure, donc testable sans matériel — et elle le mérite : c'est elle
+// qui empêche une retransmission de rejouer un armement.
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST(AckQueueTest, PushPopPreservesOrder) {
+  AckQueue q;
+  EXPECT_TRUE(q.empty());
+
+  ASSERT_TRUE(q.push(AckEvent{.seq = 1, .packetId = 10, .result = kAckAccepted}));
+  ASSERT_TRUE(q.push(AckEvent{.seq = 2, .packetId = 11, .result = kAckDuplicate}));
+  EXPECT_FALSE(q.empty());
+
+  AckEvent ev{};
+  ASSERT_TRUE(q.pop(ev));
+  EXPECT_EQ(ev.seq, 1u);
+  EXPECT_EQ(ev.packetId, 10);
+  ASSERT_TRUE(q.pop(ev));
+  EXPECT_EQ(ev.seq, 2u);
+  EXPECT_EQ(ev.result, kAckDuplicate);
+
+  EXPECT_TRUE(q.empty());
+  EXPECT_FALSE(q.pop(ev));
+}
+
+TEST(AckQueueTest, FullQueueRefusesRatherThanOverwrite) {
+  // On préfère perdre un acquittement — le sol retransmettra — que d'écraser
+  // un acquittement plus ancien, donc plus urgent.
+  AckQueue q;
+  size_t acceptes = 0;
+  for (size_t i = 0; i < AckQueue::kCapacity + 4; ++i)
+    if (q.push(AckEvent{.seq = static_cast<uint32_t>(i)}))
+      ++acceptes;
+
+  EXPECT_EQ(acceptes, AckQueue::kCapacity - 1) // une case perdue par l'anneau
+      << "la file doit refuser quand elle est pleine, pas ecraser";
+
+  // Le plus ancien est toujours là : c'est bien l'ancien qui a été préservé.
+  AckEvent ev{};
+  ASSERT_TRUE(q.pop(ev));
+  EXPECT_EQ(ev.seq, 0u);
+}
+
+TEST(UplinkDedupTest, FirstArrivalIsNotDuplicate) {
+  UplinkDedup d;
+  EXPECT_FALSE(d.isDuplicate(TELEM::PacketID::CMD_ARM, 42));
+  d.remember(TELEM::PacketID::CMD_ARM, 42);
+  EXPECT_TRUE(d.isDuplicate(TELEM::PacketID::CMD_ARM, 42));
+}
+
+TEST(UplinkDedupTest, NewSequenceIsAccepted) {
+  // Un nouvel ordre doit passer, sinon on bloquerait les commandes suivantes.
+  UplinkDedup d;
+  d.remember(TELEM::PacketID::CMD_RTL, 7);
+  EXPECT_FALSE(d.isDuplicate(TELEM::PacketID::CMD_RTL, 8));
+}
+
+TEST(UplinkDedupTest, CommandsAreIndependent) {
+  // Armer puis désarmer avec le même seq sont deux ordres distincts : le
+  // dédoublonnage est par type de commande.
+  UplinkDedup d;
+  d.remember(TELEM::PacketID::CMD_ARM, 3);
+  EXPECT_FALSE(d.isDuplicate(TELEM::PacketID::CMD_DISARM, 3));
+}
+
+TEST(UplinkDedupTest, DedupIsGlobalNotPerLink) {
+  // PDL et SDL sont indépendants et les commandes sont en Links=BOTH : la même
+  // commande peut donc arriver par les deux. Une seule table, partagée par les
+  // deux liens, est ce qui empêche de l'appliquer deux fois.
+  //
+  // Ce test documente l'intention : il n'existe qu'UNE instance d'UplinkDedup,
+  // portée par la tâche de réception qui lit les deux liens.
+  UplinkDedup d;
+  EXPECT_FALSE(d.isDuplicate(TELEM::PacketID::CMD_EMERGENCY, 99));
+  d.remember(TELEM::PacketID::CMD_EMERGENCY, 99); // arrivée par le PDL
+  EXPECT_TRUE(d.isDuplicate(TELEM::PacketID::CMD_EMERGENCY, 99)) // puis par le SDL
+      << "une commande recue par les deux liens ne doit etre appliquee qu'une fois";
 }

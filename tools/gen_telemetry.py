@@ -11,6 +11,8 @@
 
 import argparse
 import sys
+
+_ACK_CPP = {"NONE": "None_", "ACK": "Ack", "ACK_FORCE": "ForceNoCca"}
 from pathlib import Path
 
 from telemetry_common import read_csv
@@ -36,6 +38,11 @@ def generate(packets, csv_path: Path) -> str:
     lines.append("namespace TELEM {")
     lines.append("")
     lines.append("enum class Direction : uint8_t { Down = 0, Up = 1 };")
+    lines.append("")
+    lines.append("// Acquittement de bout en bout. ForceNoCca signifie en plus : emettre")
+    lines.append("// meme si le canal parait occupe, parce que rester muet serait pire")
+    lines.append("// qu'une collision (arret d'urgence).")
+    lines.append("enum class AckMode : uint8_t { None_ = 0, Ack = 1, ForceNoCca = 2 };")
     lines.append("enum class Priority : uint8_t { Routine = 0, Critical = 1 };")
     lines.append("")
     lines.append("// Bitmask : quel(s) lien(s) portent ce paquet. TelSec (bas débit, secours)")
@@ -87,6 +94,7 @@ def generate(packets, csv_path: Path) -> str:
     lines.append("  uint16_t rateHz;       // 0 = événementiel")
     lines.append("  uint16_t redundancyHz; // pour événementiel : renvoi périodique même sans changement")
     lines.append("  uint8_t linkMask;      // combinaison de Link (Main | Sec)")
+    lines.append("  AckMode ack;           // cf. AckMode : acquittement et contournement CCA")
     lines.append("  uint16_t size;         // u16 : un paquet à tableau (ex: LIDAR_SCAN) dépasse 255 octets")
     lines.append("  const char *name;")
     lines.append("};")
@@ -97,7 +105,8 @@ def generate(packets, csv_path: Path) -> str:
             else "static_cast<uint8_t>(Link::Main) | static_cast<uint8_t>(Link::Sec)"
         lines.append(
             f'    Meta{{PacketID::{p.packet_id}, Direction::{p.direction.capitalize()}, '
-            f"Priority::{p.priority}, {p.rate_hz}, {p.redundancy_hz}, {mask}, {p.size}, "
+            f"Priority::{p.priority}, {p.rate_hz}, {p.redundancy_hz}, {mask}, "
+            f"AckMode::{_ACK_CPP[p.ack]}, {p.size}, "
             f'"{p.packet_id}"}},')
     lines.append("}};")
     lines.append("")

@@ -29,7 +29,22 @@ DIRECTIONS = {"DOWN", "UP"}
 PRIORITIES = {"Routine", "Critical"}
 LINKS = {"MAIN", "BOTH"}  # pas de "SEC" seul : TelSec est un sous-ensemble de TelMain
 
-CSV_FIELDS = ["PacketID", "Direction", "Priority", "RateHz", "RedundancyHz", "Links", "Fields"]
+# Acquittement. Trois valeurs plutot qu'un booleen, parce que l'urgence a
+# besoin d'un comportement a part :
+#   NONE       aucun acquittement. La perte est silencieuse et assumee.
+#   ACK        le recepteur acquitte, l'emetteur retransmet sur timeout. Le
+#              CCA est respecte : si le canal est occupe, on attend.
+#   ACK_FORCE  idem, mais passe OUTRE le CCA apres ses tentatives. Pour une
+#              commande ou rester muet est pire qu'une collision.
+#
+# ACK_FORCE regroupe deux proprietes distinctes — acquittement et
+# contournement du CCA. C'est volontairement simplifie : le seul cas qui veut
+# l'un veut l'autre. A separer en deux colonnes si un paquet venait a vouloir
+# le contournement sans l'acquittement.
+ACK_MODES = {"NONE", "ACK", "ACK_FORCE"}
+
+CSV_FIELDS = ["PacketID", "Direction", "Priority", "RateHz", "RedundancyHz", "Links",
+              "Ack", "Fields"]
 
 
 class TelemetryValidationError(Exception):
@@ -61,13 +76,15 @@ class Field:
 
 
 class TelemetryPacket:
-    def __init__(self, packet_id, direction, priority, rate_hz, redundancy_hz, links, fields):
+    def __init__(self, packet_id, direction, priority, rate_hz, redundancy_hz, links,
+                 ack, fields):
         self.packet_id = packet_id
         self.direction = direction
         self.priority = priority
         self.rate_hz = rate_hz
         self.redundancy_hz = redundancy_hz
         self.links = links
+        self.ack = ack
         self.fields = fields
 
     @property
@@ -86,6 +103,7 @@ class TelemetryPacket:
             "RateHz": self.rate_hz,
             "RedundancyHz": self.redundancy_hz,
             "Links": self.links,
+            "Ack": self.ack,
             "Fields": ",".join(f"{f.name}:{f.type_token}" for f in self.fields),
         }
 
@@ -111,7 +129,7 @@ def _parse_fields(raw, where):
 
 
 def parse_row(packet_id, direction, priority, rate_hz_raw, redundancy_hz_raw, links_raw,
-              fields_raw, *, seen=None, where=""):
+              ack_raw, fields_raw, *, seen=None, where=""):
     packet_id = (packet_id or "").strip().upper()
     if not packet_id or not packet_id.replace("_", "").isalnum():
         raise TelemetryValidationError(f"{where}PacketID '{packet_id}' invalide")
@@ -143,14 +161,31 @@ def parse_row(packet_id, direction, priority, rate_hz_raw, redundancy_hz_raw, li
         raise TelemetryValidationError(
             f"{where}Links '{links}' inconnu (attendu: {', '.join(LINKS)})")
 
+    # Defaut NONE : une colonne vide sur une ligne ancienne ne doit pas
+    # transformer un paquet en paquet acquitte a l'insu de tout le monde.
+    ack = (ack_raw or "NONE").strip().upper() or "NONE"
+    if ack not in ACK_MODES:
+        raise TelemetryValidationError(
+            f"{where}Ack '{ack}' inconnu (attendu: {', '.join(sorted(ACK_MODES))})")
+
     fields = _parse_fields(fields_raw, where)
+
+    # Un acquittement sans numero de sequence est inappariable : l'emetteur ne
+    # saurait pas QUELLE trame vient d'etre confirmee. On refuse plutot que de
+    # laisser passer une configuration qui ne peut pas fonctionner.
+    if ack != "NONE" and not any(f.name == "seq" and f.type_token == "u32"
+                                 for f in fields):
+        raise TelemetryValidationError(
+            f"{where}Ack={ack} exige un champ 'seq:u32' pour apparier "
+            f"l'acquittement a la trame")
 
     if seen is not None:
         if packet_id in seen:
             raise TelemetryValidationError(f"{where}PacketID '{packet_id}' dupliqué")
         seen.add(packet_id)
 
-    return TelemetryPacket(packet_id, direction, priority, rate_hz, redundancy_hz, links, fields)
+    return TelemetryPacket(packet_id, direction, priority, rate_hz, redundancy_hz, links,
+                           ack, fields)
 
 
 def read_csv(path: Path):
@@ -178,7 +213,7 @@ def read_csv(path: Path):
             packets.append(parse_row(
                 pid_raw, row.get("Direction"), row.get("Priority"),
                 row.get("RateHz"), row.get("RedundancyHz"), row.get("Links"),
-                row.get("Fields"),
+                row.get("Ack"), row.get("Fields"),
                 seen=seen, where=f"{path}:{lineno}: ",
             ))
         except TelemetryValidationError as e:
