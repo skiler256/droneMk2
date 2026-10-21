@@ -42,3 +42,6 @@ include/drone/generated/
 
 # Reglages Claude Code personnels (permissions, hotes SSH) -- jamais commites
 .claude/settings.local.json
+
+# Bancs matériels : arbre de compilation séparé (BUILD_HW_BENCH=ON)
+build-bench/

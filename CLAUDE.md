@@ -14,7 +14,10 @@ unitaires, puis intégration SITL.
 - **Communication FC** : MAVLink v2 sur UART
 - **Capteurs** : MPU6050 (IMU), LIS3MDL (magnéto), LD06 + TF Luna (lidars),
   GPS (UART)
-- **Télémétrie** : wfb-ng 433MHz
+- **Télémétrie** : deux liens indépendants
+  - **PDL** (principal) : wfb-ng sur RTL8812AU, 2,4 / 5 GHz — haut débit
+  - **SDL** (secours) : CC1101 en SPI, 433 MHz, ASK/OOK 9,6 kbit/s — porte
+    toutes les commandes montantes critiques
 - **Collaborateur** ("mon pote") : développe le GCS dashboard en Python
   (PySide6/Qt, pyqtgraph, Node.js/WebSocket côté serveur). Il travaille contre
   un simulateur que j'ai fourni. Je ne touche pas à son code sauf demande
@@ -120,7 +123,7 @@ restarts en Y secondes"), pas de compteurs absolus.
 3. SysMonitoring (composant le plus simple, valide le pattern process
    isolation + IPC de bout en bout — "golden path")
 4. ComponentWatchdog (validé d'abord via SysMonitoring)
-5. MavlinkInterface (composant en cours d'implémentation actuellement)
+5. MavlinkInterface (pas encore implémenté)
 6. SensorFusion
 7. Nav
 8. MissionControl (le plus critique, jamais de cold-start)
@@ -192,9 +195,34 @@ restarts en Y secondes"), pas de compteurs absolus.
   exhaustif — normal qu'il manque des détails qu'on tranche au fil de
   l'implémentation.
 
-## État actuel — prochaine tâche
+## État actuel
 
-Implémentation de **MavlinkInterface**. Tests à couvrir (déjà définis) :
+Le travail en cours porte sur la **couche liaison de SysMonitoring**, pas sur
+MavlinkInterface. Détail complet et mesures dans `BRINGUP_PDL.md`.
+
+**Acquis, mesuré sur matériel :**
+
+- liaison SDL bidirectionnelle, 8 Hz descendant à ~2 % de perte (16 Hz tenus) ;
+- liaison PDL opérationnelle, 250 trames sur 250 descendantes, 5,1 kbit/s ;
+- banc HIL multi-liens (`./tools/link_bench.sh`), les deux liens simultanément ;
+- acquittement des commandes critiques de bout en bout, avec dédoublonnage ;
+- pont SDL dans le firmware ESP32 (panneau d'alarme + radio, même carte).
+
+**Ouvert :**
+
+- rien n'est persistant : mode moniteur, canal et processus wfb-ng sont à
+  refaire à la main après chaque redémarrage (unités systemd à écrire) ;
+- `main.cpp` construit encore des `UdpTelemetryDriver` : les vrais pilotes
+  ne sont pas branchés dans le logiciel de vol ;
+- `GlobalWatchdog` ne sait spawner que lui-même avec un rôle ; superviser
+  wfb-ng demande une seconde catégorie d'enfant (binaire externe) ;
+- le sens montant du SDL n'est pas caractérisé — les mesures se sont
+  révélées non reproductibles, cf. la mise en garde dans `BRINGUP_PDL.md` ;
+- latence PDL dominée par le blocage FEC (`k=8`), `-T fec_timeout` à régler.
+
+## MavlinkInterface — à faire
+
+Tests à couvrir (déjà définis) :
 
 **Unit tests (GTest, sans SITL)**
 - Parsing/sérialisation : décodage v2 valide, rejet CRC invalide, rejet
