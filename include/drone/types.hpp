@@ -221,6 +221,9 @@ enum class DriverError : std::uint8_t {
   UARTAttrSetFailed,
   UARTReadFailed,
   UARTWriteFailed,
+  SPIOpenFailed,
+  SPIConfigFailed,
+  SPITransferFailed,
   SocketOpenFailed,
   SocketBindFailed,
   SocketReadFailed,
@@ -244,6 +247,9 @@ enum class DriverError : std::uint8_t {
   case DriverError::UARTAttrSetFailed: return "UARTAttrSetFailed";
   case DriverError::UARTReadFailed:    return "UARTReadFailed";
   case DriverError::UARTWriteFailed:   return "UARTWriteFailed";
+  case DriverError::SPIOpenFailed:     return "SPIOpenFailed";
+  case DriverError::SPIConfigFailed:   return "SPIConfigFailed";
+  case DriverError::SPITransferFailed: return "SPITransferFailed";
   case DriverError::SocketOpenFailed:  return "SocketOpenFailed";
   case DriverError::SocketBindFailed:  return "SocketBindFailed";
   case DriverError::SocketReadFailed:  return "SocketReadFailed";
