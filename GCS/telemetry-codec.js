@@ -50,7 +50,17 @@ function loadPackets(csvPath) {
       .map(parseField);
     const size = fields.reduce((s, f) => s + f.size, 0);
 
-    const pkt = { id, name: row.PacketID, direction: row.Direction, fields, size };
+    // `ack` pilote la retransmission cote sol (cf. server.js). Defaut NONE :
+    // une colonne absente ne doit pas transformer un paquet en paquet
+    // acquitte, ni l'inverse.
+    const pkt = {
+      id,
+      name: row.PacketID,
+      direction: row.Direction,
+      ack: row.Ack || "NONE",
+      fields,
+      size,
+    };
     byId[id] = pkt;
     byName[pkt.name] = pkt;
     id++;

@@ -3,6 +3,18 @@
 // Protocole (ASCII, une commande par ligne '\n') :
 //   -> ESP32 : LED:label1,label2,...\n   (état COMPLET des voyants actifs)
 //   <- ESP32 : BTN:label\n               (un appui bouton, front descendant)
+//
+// La même carte porte la radio CC1101 du lien secondaire (SDL), dont ce pont
+// est le transport. Les trames de télémétrie passent en hexadécimal : le lien
+// ne porte que ~5 trames de 50 octets par seconde, donc doubler le volume est
+// sans conséquence à 115200 bauds, et une trace reste lisible à l'œil.
+//
+//   -> ESP32 : TX:<hex>\n     émettre en respectant le CCA
+//              TXF:<hex>\n    émettre en FORÇANT (CCA contourné)
+//   <- ESP32 : RX:<hex>:<rssi>:<lqi>\n            trame reçue
+//              LQ:<rssi>:<lqi>:<crc>:<len>:<ovf>:<cca>:<forced>\n
+//              TXERR:<raison>\n                   émission refusée
+//              RADIO:ok | RADIO:absente\n         au démarrage
 
 const { SerialPort } = require("serialport");
 const { ReadlineParser } = require("@serialport/parser-readline");
@@ -20,6 +32,9 @@ class SerialBridge extends EventEmitter {
     this.port = null;
     this._retryMs = 1000;
     this._lastLeds = null; // évite de spammer le port si l'état ne change pas
+    // Prouvée par les lignes LQ reçues, pas par l'annonce de démarrage.
+    this.radioReady = false;
+    this._lastLq = 0;
     this._open();
   }
 
@@ -62,8 +77,82 @@ class SerialBridge extends EventEmitter {
   _handleLine(line) {
     if (line.startsWith("BTN:")) {
       this.emit("button", line.slice(4));
+      return;
     }
-    // Ligne inconnue : ignorée (firmware "bête", pas d'autre trafic prévu).
+    if (line.startsWith("RX:")) {
+      // RX:<hex>:<rssi>:<lqi>
+      const parts = line.slice(3).split(":");
+      const buf = Buffer.from(parts[0], "hex");
+      // Un hex tronqué donnerait un Buffer silencieusement court : on vérifie
+      // plutôt que de livrer une trame amputée au décodeur.
+      if (buf.length * 2 !== parts[0].length) {
+        console.error("GCS: trame RX hexadécimale invalide, ignorée");
+        return;
+      }
+      this.emit("frame", {
+        data: buf,
+        rssi: Number(parts[1]),
+        lqi: Number(parts[2]),
+      });
+      return;
+    }
+    if (line.startsWith("LQ:")) {
+      // Le firmware n'émet LQ que si la radio répond : recevoir cette ligne
+      // EST la preuve qu'elle est là. On ne peut pas se fier au seul RADIO:ok
+      // du démarrage — le serveur se connecte presque toujours après le boot
+      // de l'ESP32 et manquerait l'annonce, croirait la radio absente, et
+      // enverrait les commandes SDL dans le vide.
+      this.radioReady = true;
+      this._lastLq = Date.now();
+      const [rssi, lqi, crc, len, ovf, cca, forced] = line
+        .slice(3)
+        .split(":")
+        .map(Number);
+      this.emit("quality", {
+        rssi,
+        lqi,
+        crcErrors: crc,
+        lengthErrors: len,
+        overflows: ovf,
+        ccaRefusals: cca,
+        forcedSends: forced,
+      });
+      return;
+    }
+    if (line.startsWith("TXERR:")) {
+      // Jamais silencieux : une émission refusée doit se savoir, sinon on
+      // croit l'ordre parti.
+      this.emit("txerror", line.slice(6));
+      return;
+    }
+    if (line.startsWith("RADIO:")) {
+      this.radioReady = line.slice(6) === "ok";
+      this.emit("radio", this.radioReady);
+      return;
+    }
+    // Ligne inconnue : ignorée (firmware "bête").
+  }
+
+  /**
+   * Émet une trame de télémétrie par la radio SDL.
+   * @param {Buffer} frame
+   * @param {boolean} forced contourne le CCA (arrêt d'urgence)
+   * @returns {boolean} false si le port n'est pas ouvert — l'appelant doit en
+   *   tenir compte plutôt que de supposer que la trame est partie.
+   */
+  sendFrame(frame, forced = false) {
+    if (!this.port || !this.port.isOpen) return false;
+    // Le firmware publie sa santé chaque seconde : trois secondes de silence
+    // et on ne considère plus la radio comme disponible.
+    if (this._lastLq && Date.now() - this._lastLq > 3000) {
+      this.radioReady = false;
+      return false;
+    }
+    const prefixe = forced ? "TXF:" : "TX:";
+    this.port.write(`${prefixe}${frame.toString("hex")}\n`, (err) => {
+      if (err) console.error("GCS: écriture trame SDL échouée:", err.message);
+    });
+    return true;
   }
 
   /**
