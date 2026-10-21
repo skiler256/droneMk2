@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include "drone/Components/MavlinkInterface/SharedFCStatus.hpp"
 #include "drone/Components/MissionControl/SharedCmdMem.hpp"
 #include "drone/Components/Navigation/SharedNavMem.hpp"
@@ -45,6 +46,99 @@ private:
   size_t pendingCodeCount_{0};
 };
 
+// Un acquittement à émettre : de quoi remplir un CMD_ACK.
+struct AckEvent {
+  uint32_t seq{};
+  uint8_t packetId{};
+  uint8_t result{};
+};
+
+// Résultats portés par CMD_ACK.result.
+inline constexpr uint8_t kAckAccepted = 0;  // reçue et appliquée
+inline constexpr uint8_t kAckDuplicate = 1; // déjà appliquée, non rejouée
+inline constexpr uint8_t kAckRejected = 2;  // reçue mais non applicable
+
+// File d'acquittements entre la tâche de réception et une tâche d'émission.
+//
+// Un seul producteur (GCSRxTask) et un seul consommateur (la tâche du lien
+// concerné) : un anneau avec deux indices atomiques suffit, sans verrou. Ce
+// choix n'est pas de l'élégance mal placée — les tâches d'émission sont des
+// threads SCHED_FIFO, et un mutex pris par la tâche de réception les
+// bloquerait le temps d'une transaction SPI, soit plusieurs millisecondes.
+//
+// L'invariant « un PacketScheduler appartient à une seule tâche » est
+// préservé : la tâche d'émission constate elle-même que sa file n'est pas
+// vide et se marque dirty. La tâche de réception ne touche aucun scheduler.
+class AckQueue {
+public:
+  static constexpr size_t kCapacity = 8;
+
+  // Appelé par la tâche de réception uniquement. Renvoie false si la file est
+  // pleine : on préfère perdre un acquittement — le sol retransmettra — que
+  // d'écraser un acquittement plus ancien, donc plus urgent.
+  [[nodiscard]] bool push(const AckEvent &ev) {
+    const size_t t = tail_.load(std::memory_order_relaxed);
+    const size_t suivant = (t + 1) % kCapacity;
+    if (suivant == head_.load(std::memory_order_acquire))
+      return false;
+    buf_[t] = ev;
+    tail_.store(suivant, std::memory_order_release);
+    return true;
+  }
+
+  // Appelés par la tâche d'émission uniquement.
+  [[nodiscard]] bool empty() const {
+    return head_.load(std::memory_order_acquire) ==
+           tail_.load(std::memory_order_acquire);
+  }
+
+  [[nodiscard]] bool pop(AckEvent &out) {
+    const size_t h = head_.load(std::memory_order_relaxed);
+    if (h == tail_.load(std::memory_order_acquire))
+      return false;
+    out = buf_[h];
+    head_.store((h + 1) % kCapacity, std::memory_order_release);
+    return true;
+  }
+
+private:
+  std::array<AckEvent, kCapacity> buf_{};
+  std::atomic<size_t> head_{0};
+  std::atomic<size_t> tail_{0};
+};
+
+// Dédoublonnage des commandes acquittées, propre à la tâche de réception donc
+// sans partage ni synchronisation.
+//
+// Un seul seq retenu par type de commande : le sol attend l'acquittement
+// avant d'envoyer la commande suivante du même type, il n'y en a donc qu'une
+// en vol à la fois. Le dédoublonnage est GLOBAL et non par lien : PDL et SDL
+// étant indépendants, la même commande peut arriver par les deux, et armer
+// deux fois n'est pas armer une fois.
+class UplinkDedup {
+public:
+  // Renvoie true si cette trame est un doublon déjà appliqué.
+  [[nodiscard]] bool isDuplicate(TELEM::PacketID id, uint32_t seq) const {
+    const size_t i = static_cast<size_t>(id);
+    if (i >= kSlots)
+      return false;
+    return vu_[i] && dernier_[i] == seq;
+  }
+
+  void remember(TELEM::PacketID id, uint32_t seq) {
+    const size_t i = static_cast<size_t>(id);
+    if (i >= kSlots)
+      return;
+    dernier_[i] = seq;
+    vu_[i] = true;
+  }
+
+private:
+  static constexpr size_t kSlots = TELEM::kTable.size();
+  std::array<uint32_t, kSlots> dernier_{};
+  std::array<bool, kSlots> vu_{};
+};
+
 // Lien de secours (CC1101) : sous-ensemble léger (Links=BOTH uniquement).
 class TelSecTask : public Task {
 public:
@@ -74,6 +168,7 @@ private:
   void loop() override;
   bool mainLostActive_{false};
   bool secLostActive_{false};
+  UplinkDedup dedup_;
 };
 
 // Relai vidéo (WFB-NG uniquement), tolérant à la perte.
@@ -112,6 +207,11 @@ public:
 
   PacketScheduler mainSched_{TELEM::Link::Main};
   PacketScheduler secSched_{TELEM::Link::Sec};
+
+  // Une file par lien : l'acquittement repart sur le lien qui a porté la
+  // requête, PDL et SDL étant indépendants.
+  AckQueue ackMain_;
+  AckQueue ackSec_;
 
 private:
   TelMainTask TTelMain;

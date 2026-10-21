@@ -152,11 +152,43 @@ SysMonitoring::SysMonitoring(ComponenConfig config,
 // BATTERY/ARM_STATE/MISSION_STATE/AUTOPILOT_MODE restent par défaut : les
 // handlers manquent encore — cf. SYSMONITORING.md §9.
 
+// Assemble LINK_QUALITY depuis les deux liens, sans connaître leur type
+// concret : chaque pilote répond par quality(), et un champ non mesurable
+// reste à sa valeur neutre plutôt que d'être inventé.
+[[nodiscard]] TELEM::LinkQualityPkt buildLinkQuality(const SysMonitoring &comp) {
+  TELEM::LinkQualityPkt pkt{};
+
+  const LinkQuality pdl = comp.mainLink_.quality();
+  pkt.pdl_rssi = pdl.rssiDbm.value_or(0);
+  pkt.pdl_loss_pct = pdl.lossRatio
+                         ? static_cast<uint8_t>(
+                               std::clamp(*pdl.lossRatio * 100.0f, 0.0f, 100.0f))
+                         : 0;
+
+  const LinkQuality sdl = comp.secLink_.quality();
+  pkt.sdl_rssi = sdl.rssiDbm.value_or(0);
+  pkt.sdl_lqi = sdl.lqi.value_or(0);
+  // Compteurs cumulés depuis le démarrage, tronqués à 16 bits : à quelques
+  // rejets par seconde la saturation n'arrive qu'après des heures de vol.
+  pkt.sdl_crc_err = static_cast<uint16_t>(std::min<uint32_t>(sdl.crcErrors, 0xFFFF));
+  pkt.sdl_len_err = static_cast<uint16_t>(std::min<uint32_t>(sdl.lengthErrors, 0xFFFF));
+  pkt.sdl_overflow = static_cast<uint16_t>(std::min<uint32_t>(sdl.overflows, 0xFFFF));
+  pkt.sdl_cca_refus = static_cast<uint16_t>(std::min<uint32_t>(sdl.ccaRefusals, 0xFFFF));
+  return pkt;
+}
+
 void TelMainTask::loop() {
   // Détection indépendante du scheduling : doit tourner à chaque cycle, pas
   // seulement quand CODE se trouve être "dû" (cf. scanCodeChanges).
   scanCodeChanges(comp, comp.mainSched_, lastMajorCodes_, codePrimed_, pendingCodes_,
                   pendingCodeCount_);
+
+  // La file d'acquittements est alimentée par la tâche de réception, mais
+  // c'est CETTE tâche qui constate qu'elle n'est pas vide et se marque dirty.
+  // Ainsi le PacketScheduler reste la propriété exclusive d'un seul thread,
+  // invariant du composant qu'aucun mutex ne vient protéger.
+  if (!comp.ackMain_.empty())
+    comp.mainSched_.markDirty(TELEM::PacketID::CMD_ACK);
 
   auto now = Clock::now();
   const auto *due = comp.mainSched_.nextDue(now);
@@ -250,6 +282,29 @@ void TelMainTask::loop() {
       if (pendingCodeCount_ > 0) // il en reste : re-planifie sans attendre un nouveau changement
         comp.mainSched_.markDirty(TELEM::PacketID::CODE);
     }
+    break;
+  }
+  case TELEM::PacketID::CMD_ACK: {
+    AckEvent ev{};
+    if (!comp.ackMain_.pop(ev))
+      break; // file vidée entre-temps : rien à émettre
+    TELEM::CmdAckPkt pkt{};
+    pkt.seq = ev.seq;
+    pkt.packet_id = ev.packetId;
+    pkt.result = ev.result;
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame)) {
+      comp.mainSched_.markSent(due->id, now);
+      if (!comp.ackMain_.empty()) // il en reste : replanifie sans attendre
+        comp.mainSched_.markDirty(TELEM::PacketID::CMD_ACK);
+    }
+    break;
+  }
+  case TELEM::PacketID::LINK_QUALITY: {
+    auto pkt = buildLinkQuality(comp);
+    auto frame = TELEM::encode(pkt);
+    if (!comp.mainLink_.send(frame))
+      comp.mainSched_.markSent(due->id, now);
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
@@ -391,6 +446,13 @@ void TelSecTask::loop() {
   scanCodeChanges(comp, comp.secSched_, lastMajorCodes_, codePrimed_, pendingCodes_,
                   pendingCodeCount_);
 
+  // La file d'acquittements est alimentée par la tâche de réception, mais
+  // c'est CETTE tâche qui constate qu'elle n'est pas vide et se marque dirty.
+  // Ainsi le PacketScheduler reste la propriété exclusive d'un seul thread,
+  // invariant du composant qu'aucun mutex ne vient protéger.
+  if (!comp.ackSec_.empty())
+    comp.secSched_.markDirty(TELEM::PacketID::CMD_ACK);
+
   auto now = Clock::now();
   const auto *due = comp.secSched_.nextDue(now);
   if (!due)
@@ -434,6 +496,29 @@ void TelSecTask::loop() {
       if (pendingCodeCount_ > 0)
         comp.secSched_.markDirty(TELEM::PacketID::CODE);
     }
+    break;
+  }
+  case TELEM::PacketID::CMD_ACK: {
+    AckEvent ev{};
+    if (!comp.ackSec_.pop(ev))
+      break; // file vidée entre-temps : rien à émettre
+    TELEM::CmdAckPkt pkt{};
+    pkt.seq = ev.seq;
+    pkt.packet_id = ev.packetId;
+    pkt.result = ev.result;
+    auto frame = TELEM::encode(pkt);
+    if (!comp.secLink_.send(frame)) {
+      comp.secSched_.markSent(due->id, now);
+      if (!comp.ackSec_.empty()) // il en reste : replanifie sans attendre
+        comp.secSched_.markDirty(TELEM::PacketID::CMD_ACK);
+    }
+    break;
+  }
+  case TELEM::PacketID::LINK_QUALITY: {
+    auto pkt = buildLinkQuality(comp);
+    auto frame = TELEM::encode(pkt);
+    if (!comp.secLink_.send(frame))
+      comp.secSched_.markSent(due->id, now);
     break;
   }
   case TELEM::PacketID::ARM_STATE: {
@@ -485,11 +570,50 @@ enum class UplinkSource { Main, Sec };
 // Dispatch commun aux deux liens montants, factorisé plutôt que dupliqué
 // dans chaque branche de GCSRxTask::loop(). CMD_EMERGENCY court-circuite
 // gcsCmds, cf. SYSMONITORING.md §10.
-void handleUplink(SysMonitoring &comp, UplinkSource src,
+// Lit le numéro de séquence d'une commande acquittée. Le générateur impose
+// que `seq:u32` soit présent, et il est placé en tête des champs : il se lit
+// donc dans les quatre premiers octets de la charge utile, sans décoder le
+// reste ni connaître le type de la commande.
+[[nodiscard]] bool readSeq(std::span<const std::byte> payload, uint32_t &out) {
+  if (payload.size() < sizeof(uint32_t))
+    return false;
+  std::memcpy(&out, payload.data(), sizeof(uint32_t));
+  return true;
+}
+
+void handleUplink(SysMonitoring &comp, UplinkSource src, UplinkDedup &dedup,
                   std::span<const std::byte> bytes) {
   auto frame = TELEM::decode(bytes);
   if (!frame)
     return;
+
+  // L'acquittement repart sur le lien qui a porté la requête : PDL et SDL
+  // sont indépendants, chacun a sa propre boucle de retransmission au sol.
+  AckQueue &fileAck = (src == UplinkSource::Main) ? comp.ackMain_ : comp.ackSec_;
+  const TELEM::Meta *meta = TELEM::find(frame->id);
+  const bool acquitte = meta != nullptr && meta->ack != TELEM::AckMode::None_;
+
+  uint32_t seq = 0;
+  if (acquitte) {
+    if (!readSeq(frame->payload, seq)) {
+      // Commande acquittée mais trop courte pour porter son seq : trame
+      // tronquée. On ne l'applique pas — on ne saurait pas l'acquitter, et
+      // appliquer une commande critique sur une trame douteuse est pire que
+      // de la laisser retransmettre.
+      comp.sysState_.raiseCode(CODES::SMC001);
+      return;
+    }
+
+    // Doublon de retransmission : le sol n'a pas reçu notre acquittement.
+    // On réacquitte SANS rejouer la commande — sinon la retransmission, qui
+    // existe pour la fiabilité, deviendrait un danger.
+    if (dedup.isDuplicate(frame->id, seq)) {
+      (void)fileAck.push(AckEvent{.seq = seq,
+                                  .packetId = static_cast<uint8_t>(frame->id),
+                                  .result = kAckDuplicate});
+      return;
+    }
+  }
 
   auto push = [&](GCSCommand c) {
     if (!comp.com_.pushGCSCommand(c))
@@ -554,15 +678,24 @@ void handleUplink(SysMonitoring &comp, UplinkSource src,
   default:
     break; // paquet descendant reçu par erreur : ignoré
   }
+  // La commande a été traitée : on retient son seq pour reconnaître une
+  // retransmission, puis on acquitte sur le lien d'arrivée.
+  if (acquitte) {
+    dedup.remember(frame->id, seq);
+    (void)fileAck.push(AckEvent{.seq = seq,
+                                .packetId = static_cast<uint8_t>(frame->id),
+                                .result = kAckAccepted});
+  }
+
 }
 
 } // namespace
 
 void GCSRxTask::loop() {
   if (auto bytes = comp.mainLink_.poll())
-    handleUplink(comp, UplinkSource::Main, bytes.value());
+    handleUplink(comp, UplinkSource::Main, dedup_, bytes.value());
   if (auto bytes = comp.secLink_.poll())
-    handleUplink(comp, UplinkSource::Sec, bytes.value());
+    handleUplink(comp, UplinkSource::Sec, dedup_, bytes.value());
 
   auto now = Clock::now();
 
