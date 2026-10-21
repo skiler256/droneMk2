@@ -154,6 +154,7 @@ add_library(drone_lib STATIC
     src/SystemMonitoring/SystemMonitoring.cpp
     src/SystemMonitoring/UdpTelemetryDriver.cpp
     src/SystemMonitoring/WFB_NG_Driver.cpp
+    src/SystemMonitoring/CC1101_Driver.cpp
     src/SystemMonitoring/UdpVideoDriver.cpp
     src/SystemMonitoring/LinuxThermalZoneDriver.cpp
     # src/Watchdog/GlobalWatchdog.cpp
