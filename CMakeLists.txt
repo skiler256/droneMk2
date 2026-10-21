@@ -237,13 +237,13 @@ option(BUILD_ITESTS "Compiler les binaires de test d'intégration SITL/HIL (dev 
 # scripts de tools/hw_debug/. Utiles au bring-up matériel.
 option(BUILD_HW_BENCH "Compiler les bancs de test matériel (bench_gps, ...)" OFF)
 if(BUILD_HW_BENCH)
-    foreach(BENCH gps lidar mag)
+    foreach(BENCH gps lidar mag cc1101 link)
         add_executable(bench_${BENCH} src/HwBench/bench_${BENCH}.cpp)
         target_link_libraries(bench_${BENCH} PRIVATE drone_lib)
         add_dependencies(bench_${BENCH} generate_codes generate_telemetry
                                         generate_missionplan)
     endforeach()
-    message(STATUS "✓ bancs matériels : bench_gps, bench_lidar, bench_mag")
+    message(STATUS "✓ bancs matériels : bench_gps, bench_lidar, bench_mag, bench_cc1101, bench_link")
 endif()
 
 if(BUILD_ITESTS)
