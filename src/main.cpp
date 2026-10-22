@@ -68,6 +68,27 @@ constexpr uint16_t kSitlGpsUdpPort = 15100;
 constexpr uint16_t kSitlLidarUdpPort = 15101;
 #endif
 
+// Repartition sur les coeurs, cf. HIL.md 5.0 et CLAUDE.md.
+//
+//   0  NON isole  Linux, IRQ USB/wifi, wfb_tx/wfb_rx, encodeur video
+//   1  isole      SensorFusion         160 Hz  (la boucle la plus rapide)
+//   2  isole      Navigation + MissionControl   150 Hz
+//   3  isole      MavlinkInterface + SysMonitoring  380 Hz
+//
+// SensorFusion est seule sur son coeur parce que tout le reste depend de sa
+// sortie : si elle jitter, tout jitter en aval. Navigation et MissionControl
+// sont groupees parce qu'elles se parlent, ce qui evite de faire voyager leur
+// memoire partagee entre coeurs.
+//
+// L'encodeur video reste sur le coeur 0, avec Linux : il ne coute qu'un demi
+// coeur (mesure : 50,6 % pour du 720p30) et il n'est PAS critique. Le laisser
+// se faire bousculer est exactement le comportement voulu quand ca sature --
+// la video doit se degrader, jamais le logiciel de vol.
+//
+// Doit rester d'accord avec isolcpus= dans /boot/firmware/cmdline.txt. Rien
+// ne le verifie au demarrage aujourd'hui, et l'isolation a deja ete inactive
+// pendant des mois sans que personne ne le voie.
+
 int runNavigation(bool firstBoot) {
   auto nav = attachSharedMemory<SharedNavMem>(kNavShmPath);
   auto sf = attachSharedMemory<SharedSFMem>(kSFShmPath);
@@ -85,7 +106,7 @@ int runNavigation(bool firstBoot) {
                                       Us(2000));
   SharedCmdMemHandler cmdHandler(ComponentID::Navigation, Us(2000), *cmd->ptr);
 
-  ComponenConfig config{.id = ComponentID::Navigation, .CompCore = 0, .firstBoot = firstBoot};
+  ComponenConfig config{.id = ComponentID::Navigation, .CompCore = 2, .firstBoot = firstBoot};
   Navigation composant(config, sysHandler, navHandler, sfHandler, cmdHandler);
 
   if (auto err = composant.startupError()) {
@@ -129,7 +150,7 @@ int runSensorFusion(bool firstBoot) {
     return 1;
   }
 
-  ComponenConfig config{.id = ComponentID::SensorFusion, .CompCore = 0, .firstBoot = firstBoot};
+  ComponenConfig config{.id = ComponentID::SensorFusion, .CompCore = 1, .firstBoot = firstBoot};
   SensorFusions composant(config, sysHandler, sfHandler, gps, fcHandler, lidar);
 
   if (auto err = composant.startupError()) {
@@ -236,7 +257,7 @@ int runMavlinkInterface(bool firstBoot) {
   UartMavlinkLink link(kFcUartPort);
 #endif
 
-  ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 2, .firstBoot = firstBoot};
+  ComponenConfig config{.id = ComponentID::MavlinkInterface, .CompCore = 3, .firstBoot = firstBoot};
   MavlinkInterface composant(config, sysHandler, fcHandler, navHandler, sfHandler,
                              cmdHandler, comHandler, link);
 
@@ -270,7 +291,7 @@ int runMissionControl(bool firstBoot) {
   SharedSFMemHandler sfHandler(ComponentID::MissionControl, Us(2000), *sf->ptr);
   SharedComMemHandler comHandler(ComponentID::MissionControl, Us(2000), *com->ptr);
 
-  ComponenConfig config{.id = ComponentID::MissionControl, .CompCore = 1, .firstBoot = firstBoot};
+  ComponenConfig config{.id = ComponentID::MissionControl, .CompCore = 2, .firstBoot = firstBoot};
   MissionControl composant(config, sysHandler, cmdHandler, fcHandler, navHandler,
                            sfHandler, comHandler);
 

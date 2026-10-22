@@ -282,6 +282,38 @@ vidéo n'est pas critique, le logiciel de vol l'est. Si l'encodage sature, ce
 qu'on veut c'est que la vidéo se dégrade — donc priorité basse et droit de
 jeter des images, jamais l'inverse.
 
+### 5.0bis Repartition sur les coeurs, mesuree en charge
+
+Appliquee et mesuree le 22/10/2026, drone complet en marche : logiciel de vol
+(5 composants), wfb-ng telemetrie, wfb-ng video sur son propre port radio, et
+l'encodeur 720p30 epingle sur le coeur 0 en `nice -n 10`.
+
+| coeur | isole | contenu | charge mesuree |
+|-------|-------|---------|----------------|
+| 0 | non | Linux, IRQ USB/wifi, wfb_tx/wfb_rx, encodeur video | **57,9 %** (dont 4,6 % systeme/IRQ) |
+| 1 | oui | SensorFusion | 0,00 % |
+| 2 | oui | Navigation + MissionControl | 0,00 % |
+| 3 | oui | MavlinkInterface + SysMonitoring | 0,07 % |
+
+Deux enseignements, dont un qui n'etait pas attendu.
+
+**Le logiciel de vol ne coute rien.** 140 Hz de boucles pour SysMonitoring,
+plus 40 trames de telemetrie par seconde, pour 0,07 % d'un coeur : environ
+5 us par iteration. L'isolation des coeurs ne sert donc PAS a trouver du
+temps CPU, elle sert a la regularite. C'est utile de le savoir avant de
+sur-dimensionner : il n'y a pas de probleme de debit a resoudre.
+
+**Le coeur 0 tient, avec de la marge.** 57,9 %, dont l'encodeur seul compte
+pour 50,6 %. Linux, wfb-ng et les threads principaux non epingles ne valent
+que ~7 %, interruptions wifi comprises alors que la video partait reellement
+par les ondes : 567 962 o/s en entree de wfb_tx, 885 302 o/s en sortie apres
+expansion FEC (8 -> 12, soit 1,5x). Le pilote RTL8812AU est efficace.
+
+Reserve qui n'est pas du CPU : 885 302 o/s font **7,1 Mbit/s sur le fil**, sur
+un lien a 13 Mbit/s bruts en MCS 1. Plus de la moitie de l'occupation d'air
+pour la seule video, avant la telemetrie. On sait deja du SDL que l'occupation
+d'air compte autant que le debit. A surveiller.
+
 ### 5.1 Le contournement ne gêne pas le HUD
 
 Question posée, et la réponse lève l'objection : **le HUD se fait côté GCS**,
