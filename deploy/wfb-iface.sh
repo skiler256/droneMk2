@@ -24,10 +24,25 @@ trouver_interface() {
   return 1
 }
 
-IFACE="$(trouver_interface)" || {
-  echo "aucune interface avec le pilote $PILOTE : adaptateur absent ?" >&2
+# L'adaptateur USB n'est pas forcement enumere quand systemd lance ce service.
+# Echouer ici est bien plus grave qu'il n'y parait : wfb-tx et wfb-rx sont
+# alors abandonnes en « dependency failed » et, leur job de demarrage n'ayant
+# jamais abouti, leur Restart= ne les rappelle JAMAIS. Constate au demarrage du
+# 22/10/2026 : cette unite a echoue a 01:02:55, reussi a 01:02:59 sur son
+# propre Restart, et le PDL est reste mort derriere. On attend donc.
+ATTENTE_MAX="${WFB_IFACE_ATTENTE:-30}"
+IFACE=""
+for ((i = 0; i < ATTENTE_MAX; i++)); do
+  if IFACE="$(trouver_interface)"; then
+    break
+  fi
+  sleep 1
+done
+if [ -z "$IFACE" ]; then
+  echo "aucune interface avec le pilote $PILOTE apres ${ATTENTE_MAX}s :" \
+       "adaptateur absent ?" >&2
   exit 1
-}
+fi
 echo "interface PDL : $IFACE"
 
 # NetworkManager gère l'interface par défaut : il la scanne, la remet en mode

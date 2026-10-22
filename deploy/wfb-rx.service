@@ -1,7 +1,15 @@
 [Unit]
 Description=PDL (wfb-ng) : réception, avec relais de statistiques
-Requires=wfb-iface.service
+# Wants et non Requires : avec Requires, un echec de wfb-iface abandonne le job
+# de demarrage de celui-ci, et Restart= ne s'applique qu'APRES un demarrage
+# reussi — donc l'unite ne revient jamais. Avec Wants, elle demarre quand meme,
+# echoue tant que l'interface n'est pas prete, et son Restart la ramene seule.
+Wants=wfb-iface.service
 After=wfb-iface.service
+# Un lien critique ne doit pas pouvoir s'abandonner lui-meme. Sans ceci, cinq
+# echecs en dix secondes (soit deux a trois minutes de boot difficile avec
+# RestartSec=2) suffisent a mettre l'unite en echec DEFINITIF.
+StartLimitIntervalSec=0
 
 [Service]
 EnvironmentFile=/etc/default/wfb

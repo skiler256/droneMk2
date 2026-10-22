@@ -12,8 +12,13 @@
 #include "drone/Components/Navigation/Navigation.hpp"
 #include "drone/Components/SensorFusions/SensorsFusion.hpp"
 #include "drone/Components/SystemMonitoring/Driver/LinuxThermalZoneDriver.hpp"
-#include "drone/Components/SystemMonitoring/Driver/UdpTelemetryDriver.hpp"
 #include "drone/Components/SystemMonitoring/Driver/UdpVideoDriver.hpp"
+#ifdef DRONE_USE_SITL_DRIVERS
+#include "drone/Components/SystemMonitoring/Driver/UdpTelemetryDriver.hpp"
+#else
+#include "drone/Components/SystemMonitoring/Driver/CC1101_Driver.hpp"
+#include "drone/Components/SystemMonitoring/Driver/WFB_NG_Driver.hpp"
+#endif
 #include "drone/Components/SystemMonitoring/SysMonitoring.hpp"
 #include "drone/core/GlobalWatchdog.hpp"
 #include "drone/shm.hpp"
@@ -27,19 +32,35 @@ using namespace TYPES;
 
 namespace {
 
-// Ports UDP loopback des drivers factices SysMonitoring (dev uniquement —
-// remplacés par WFB_NG_Driver/CC1101_Driver quand le hardware RF sera prêt).
-constexpr uint16_t kUdpTelMainLocalPort = 5601;
-constexpr uint16_t kUdpTelMainPeerPort = 5602;
-constexpr uint16_t kUdpTelSecLocalPort = 5611;
-constexpr uint16_t kUdpTelSecPeerPort = 5612;
+// Le PDL garde les mêmes ports en SITL et en vol : wfb-ng EST un transport
+// UDP, et c'est tout l'intérêt du montage — wfb_tx lit 5602 et diffuse,
+// wfb_rx livre sur 5601. Cf. deploy/wfb.conf.drone, qui doit rester d'accord
+// avec ces deux nombres.
+constexpr uint16_t kTelMainLocalPort = 5601;
+constexpr uint16_t kTelMainPeerPort = 5602;
 constexpr uint16_t kUdpVideoLocalPort = 5621;
 
 #ifndef DRONE_USE_SITL_DRIVERS
 // Port UART réel vers le FC — placeholder, cohérent avec les autres
 // drivers UART du projet (GPS sur ttyAMA1, LD06 sur ttyAMA2).
 constexpr const char *kFcUartPort = "/dev/ttyAMA0";
+
+// Santé du PDL : le relais de statistiques publie ici (tools/wfb_stats_relay.py).
+// 0 désactiverait la lecture ; le driver se dégraderait alors en UDP nu, donc
+// en lien dont le drone ne sait plus s'il émet dans le vide.
+constexpr uint16_t kWfbStatsPort = 5699;
+
+// SDL : pas de ports, un bus SPI. 500 kHz est la vitesse à laquelle le lien a
+// été CARACTÉRISÉ (8 Hz, 1,7 à 2,5 % de perte, cf. BRINGUP_PDL.md) ; la monter
+// sans remesurer remplacerait un chiffre connu par une supposition. À ne pas
+// confondre avec le côté ESP32, lui défectueux en dessous de 1 MHz.
+constexpr const char *kSdlSpiDevice = "/dev/spidev0.0";
+constexpr uint32_t kSdlSpiHz = 500000;
 #else
+// Ports UDP du lien secondaire, factices : en SITL les deux liens sont deux
+// paires de ports loopback.
+constexpr uint16_t kUdpTelSecLocalPort = 5611;
+constexpr uint16_t kUdpTelSecPeerPort = 5612;
 // Ports des drivers SITL ; 14550 = port MAVLink conventionnel, cf.
 // sitl/SITL.md §2.
 constexpr uint16_t kSitlMavlinkUdpPort = 14550;
@@ -144,10 +165,30 @@ int runSysMonitoring(bool firstBoot) {
   SharedFCStatusHandler fcHandler(ComponentID::SysMonitoring, Us(2000), *fc->ptr);
   SharedCmdMemHandler cmdHandler(ComponentID::SysMonitoring, Us(2000), *cmd->ptr);
 
-  // À remplacer par WFB_NG_Driver/CC1101_Driver : SysMonitoring ne connaît
-  // que les interfaces, le remplacement ne le touchera pas.
-  UdpTelemetryDriver mainLink(kUdpTelMainLocalPort, kUdpTelMainPeerPort);
+#ifdef DRONE_USE_SITL_DRIVERS
+  UdpTelemetryDriver mainLink(kTelMainLocalPort, kTelMainPeerPort);
   UdpTelemetryDriver secLink(kUdpTelSecLocalPort, kUdpTelSecPeerPort);
+#else
+  WFB_NG_Driver mainLink(kTelMainLocalPort, kTelMainPeerPort, kWfbStatsPort);
+  CC1101_Driver secLink(kSdlSpiDevice, kSdlSpiHz);
+
+  // Un SDL absent ne doit PAS empêcher SysMonitoring de démarrer : le drone a
+  // deux liens justement pour survivre à la perte d'un seul, et refuser de
+  // démarrer ferait boucler le GlobalWatchdog en respawn, ce qui coûterait
+  // aussi le PDL. On démarre donc dégradé — mais bruyamment.
+  //
+  // Le signalement reste imparfait et c'est su : quality() rendra des
+  // compteurs à zéro et un RSSI vide, que buildLinkQuality() écrit en
+  // sdl_rssi = 0. Au sol, 0 dBm n'est pas une mesure plausible sur ce lien
+  // (le réel va de -44 à -90), donc le tableau de bord peut le lire comme
+  // « pas de mesure » — mais rien ne l'impose encore dans le format.
+  if (auto err = secLink.init()) {
+    std::cerr << "SysMonitoring: ATTENTION, init SDL (CC1101) echouee -- "
+                 "demarrage avec le seul PDL, plus aucune redondance de lien\n";
+  }
+#endif
+  // Pas de vraie source vidéo pour l'instant : la chaîne vidéo n'est pas
+  // tranchée (HIL.md §5). Ce driver reste donc factice dans les deux cas.
   UdpVideoDriver videoSource(kUdpVideoLocalPort);
   // Pas de variante factice : /sys/class/thermal existe sur toute machine
   // Linux avec capteur (dev x86 compris), cf. LinuxThermalZoneDriver.hpp.

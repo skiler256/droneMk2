@@ -3,6 +3,8 @@ Description=PDL (wfb-ng) : adaptateur en mode moniteur
 # Après NetworkManager, sinon il reprendrait l'interface juste après nous.
 After=network-pre.target NetworkManager.service
 Wants=network-pre.target
+# Cf. wfb-tx.service : pas d'auto-abandon sur un chemin critique.
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
