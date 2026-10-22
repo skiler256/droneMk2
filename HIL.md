@@ -229,18 +229,53 @@ capture, le transport et l'affichage.
 > l'observabilité est un mauvais échange, et l'observabilité se récupère
 > autrement. Mais c'est une décision d'architecture, donc à trancher.
 
-### 5.1 HUD
+### 5.1 Le contournement ne gêne pas le HUD
+
+Question posée, et la réponse lève l'objection : **le HUD se fait côté GCS**,
+en superposition dans le navigateur. Il n'affiche pas des informations issues
+de la vidéo, il affiche de la **télémétrie** — qui arrive par `SysMonitoring`
+quoi qu'il arrive. Les deux flux ne se rencontrent que dans le navigateur.
+
+Le contournement est même un avantage pour le HUD :
+
+- il reste lisible quand la vidéo décroche, et continue d'afficher la
+  télémétrie qui, elle, arrive encore ;
+- il ne coûte aucun calcul au Pi ;
+- il se modifie sans toucher au drone ni redéployer un binaire de vol.
+
+### 5.2 HUD
 
 Superposition d'informations sur l'image dans la page du GCS : attitude,
 altitude, vitesse, mode, état des liens, et **le bandeau du mode HIL**.
 
 Côté navigateur, en SVG par-dessus l'élément vidéo — pas incrusté dans le
-flux. Deux raisons : l'incrustation coûte du calcul sur le Pi et fige les
-informations dans les pixels, alors qu'un HUD superposé reste lisible même
-quand la vidéo décroche, et continue d'afficher la télémétrie qui, elle,
-arrive encore.
+flux, pour les raisons données juste au-dessus.
 
 ---
+
+### 5.3 Le vrai piège : les deux flux n'ont pas la même latence
+
+C'est ce qu'il faut garder en tête, et ce n'est pas un détail d'affichage.
+
+La télémétrie est faite de petits paquets et arrive vite. La vidéo subit
+l'encodage, la mise en tampon réseau et le décodage du navigateur : plusieurs
+centaines de millisecondes sont courantes. **Le HUD affichera donc une
+attitude en AVANCE sur l'image.**
+
+Tant que l'écart reste faible, c'est imperceptible. Au-delà de ~200 ms, un
+HUD qui annonce un virage que l'image n'a pas encore montré est trompeur —
+et pour quelqu'un qui pilote en regardant l'écran, trompeur veut dire
+dangereux.
+
+La correction est simple mais demande une mesure : retarder les valeurs du
+HUD de la latence vidéo, pour qu'elles décrivent l'instant que l'image
+montre. Encore faut-il connaître cette latence.
+
+> **À faire, et pas en dernier** : mesurer la latence vidéo bout en bout
+> (verre à verre). Le moyen le plus simple reste de filmer un chronomètre
+> affiché sur l'écran du GCS et de comparer les deux valeurs sur une même
+> image. Sans ce chiffre, on ne sait pas si le HUD doit être retardé, ni de
+> combien — donc on ne sait pas s'il est honnête.
 
 ## 6. Injection de pannes
 
@@ -260,16 +295,42 @@ Ce qu'il doit permettre de provoquer :
 - dégrader plutôt que couper : bruit, latence, perte partielle ;
 - tuer un composant, pour voir le `GlobalWatchdog` le reprendre.
 
-> **Questions ouvertes** : par quel mécanisme ? Un socket de contrôle dans
-> chaque composant est intrusif et ajoute une surface d'attaque dans le
-> logiciel de vol. Agir depuis l'extérieur — couper une alimentation USB,
-> tuer un process, bloquer un port — est moins intrusif mais ne permet pas de
-> dégrader finement.
->
-> Et surtout : ce mécanisme doit-il exister dans le binaire de vol, ou
-> seulement sous le même drapeau de compilation que la sûreté moteur ? Je
-> penche fortement pour le second — un point d'injection de pannes dans un
-> binaire de vol est un risque qui ne se justifie pas.
+**Décision : deux étages, et on s'arrête au premier tant qu'il suffit.**
+L'approche intrusive a été jugée trop coûteuse, à raison.
+
+### 6.1 Étage 1 — aucune ligne de code dans le logiciel de vol
+
+Tout se fait depuis l'extérieur, sur un système qui ne sait même pas qu'on
+l'éprouve. Rien à ajouter, rien à désactiver ensuite, aucune surface
+d'attaque créée.
+
+| panne | moyen |
+|---|---|
+| mort d'un composant | tuer le process — éprouve `GlobalWatchdog` |
+| perte d'un capteur | détacher le périphérique USB, ou fermer l'UART |
+| perte d'un lien radio | arrêter `wfb-tx` / `wfb-rx`, ou le pont SDL |
+| perte du FC | couper son UART |
+| lien dégradé | bloquer une fraction des paquets avec `nftables` |
+
+Cet étage couvre déjà **tous les failsafes que le drone doit survivre** :
+perte de lien, perte de FC, perte de capteur, mort de composant. C'est
+l'essentiel de ce qu'on veut éprouver.
+
+### 6.2 Étage 2 — dégradation fine, seulement si l'étage 1 ne suffit pas
+
+Ce que l'extérieur ne sait pas faire : ajouter du bruit sur une mesure,
+décaler une latence, perdre un paquet sur dix de façon contrôlée. Cela
+demande un point d'injection **dans** les pilotes.
+
+S'il faut en venir là, il vit **sous le même drapeau de compilation que la
+sûreté moteur**, jamais dans le binaire de vol. Un point d'injection de
+pannes dans un binaire qui vole est un risque qui ne se justifie pas, et le
+drapeau garantit qu'il ne peut pas s'y trouver par accident.
+
+> **À ne pas faire avant d'en avoir besoin.** L'étage 1 ne coûte rien et
+> couvre les cas qui comptent. Construire l'étage 2 « au cas où » ajouterait
+> de la complexité dans les pilotes pour des pannes qu'on n'a pas encore
+> cherché à reproduire.
 
 ---
 
@@ -285,8 +346,12 @@ Du plus utile au moins urgent, et chaque étape est testable seule.
    cessent de pouvoir diverger en silence.
 4. **La chaîne vidéo**, une fois l'architecture tranchée.
 5. **Le HUD**, qui dépend de la vidéo.
-6. **L'injection de pannes**, en dernier : c'est l'outil qui sert à éprouver
-   tout le reste, donc il vient après.
+6. **L'injection de pannes**, étage 1 uniquement : rien à écrire dans le
+   logiciel de vol, donc c'est surtout un mode opératoire à consigner.
+
+Et une étape qui ne peut pas attendre la fin : **mesurer la latence vidéo**
+dès que le flux arrive, parce que c'est elle qui dit si le HUD doit être
+retardé — donc s'il est honnête (cf. 5.3).
 
 Et la première séance utile, dès l'étape 1 faite : marcher dans le jardin et
 regarder le pion bouger. C'est le critère de réussite qui compte.

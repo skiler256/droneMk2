@@ -215,8 +215,8 @@ de travail dans `HIL.md`.
 
 **Ouvert :**
 
-- rien n'est persistant : mode moniteur, canal et processus wfb-ng sont à
-  refaire à la main après chaque redémarrage (unités systemd à écrire) ;
+- la persistance wfb-ng est installée (`deploy/`, unités systemd sur les deux
+  machines) mais n'a pas encore été vérifiée après un vrai redémarrage ;
 - `main.cpp` construit encore des `UdpTelemetryDriver` : les vrais pilotes
   ne sont pas branchés dans le logiciel de vol ;
 - `GlobalWatchdog` ne sait spawner que lui-même avec un rôle ; superviser
