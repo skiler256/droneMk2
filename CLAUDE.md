@@ -200,6 +200,11 @@ restarts en Y secondes"), pas de compteurs absolus.
 Le travail en cours porte sur la **couche liaison de SysMonitoring**, pas sur
 MavlinkInterface. Détail complet et mesures dans `BRINGUP_PDL.md`.
 
+Prochain gros chantier : le **test HIL « chaîne d'information »** — tout le
+matériel qui tourne sans sortie moteur, pour valider capteurs, EKF, les deux
+liens, la vidéo, le dashboard et les failsafes d'un coup. Conception et ordre
+de travail dans `HIL.md`.
+
 **Acquis, mesuré sur matériel :**
 
 - liaison SDL bidirectionnelle, 8 Hz descendant à ~2 % de perte (16 Hz tenus) ;
