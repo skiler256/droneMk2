@@ -215,14 +215,21 @@ de travail dans `HIL.md`.
 
 **Ouvert :**
 
-- la persistance wfb-ng est installée et trois défauts de boot sont corrigés
-  (attente de l'adaptateur, `Wants=` au lieu de `Requires=`,
-  `StartLimitIntervalSec=0`), mais la correction n'a pas encore été vérifiée
-  par un vrai redémarrage — seul test valable ;
-- les vrais pilotes radio sont branchés dans `main.cpp` (`WFB_NG_Driver` +
-  `CC1101_Driver` hors `DRONE_USE_SITL_DRIVERS`), mais SysMonitoring n'a
-  jamais tourné avec eux : la vérification exige le `GlobalWatchdog` complet,
-  donc le FC, donc le test HIL ;
+- la persistance wfb-ng est vérifiée par un vrai redémarrage (22/10/2026) :
+  les trois unités remontent seules. La cause du blocage n'était pas
+  l'adaptateur mais le canal, appliqué de travers à la première tentative
+  (`channel 11` au lieu de 1) — à traiter dans le script plutôt que de
+  compter sur le `Restart=`, qui laisse une FAILURE dans le journal à chaque
+  démarrage et apprend à ignorer les échecs ;
+- le SDL rejette plus que prévu : +30 erreurs de CRC vues au sol pour 282
+  trames livrées en 40 s, soit ~10 %, contre 1,7 à 2,5 % mesurés au banc.
+  À reprendre — le banc et le logiciel de vol n'émettent pas à la même
+  cadence, c'est la première piste ;
+- le lien MONTANT n'est caractérisé sur aucun des deux liens : les champs
+  `sdl_*` de `LINK_QUALITY` restent à zéro parce que rien n'émet vers le
+  drone. 0 n'est pas distinguable d'une mesure dans le format ;
+- le port série de l'ESP32 a demandé un `stty` pour que `gcs-server` lise les
+  lignes `LQ` ; cause non établie, à revoir avant de s'y fier ;
 - `GlobalWatchdog` ne sait spawner que lui-même avec un rôle ; superviser
   wfb-ng demande une seconde catégorie d'enfant (binaire externe) ;
 - le sens montant du SDL n'est pas caractérisé — les mesures se sont
