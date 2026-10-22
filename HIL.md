@@ -229,6 +229,59 @@ capture, le transport et l'affichage.
 > l'observabilité est un mauvais échange, et l'observabilité se récupère
 > autrement. Mais c'est une décision d'architecture, donc à trancher.
 
+### 5.0 Ce que le matériel sait faire, mesuré
+
+Mesuré le 22/10/2026 sur le drone, caméra réelle, pas estimé.
+
+La caméra est une barrette USB **HP Truevision HD** (Foxlink `05c8:0348`) sur
+`/dev/video0`. Elle sort du **MJPEG nativement**, jusqu'à 1280x720 à 30 fps.
+
+Sa cadence dépend de la lumière, et ce n'est pas une limite de débit : 17 fps
+en intérieur sombre à TOUTES les résolutions — 720p comme 320x240 — ce qui
+exclut le débit USB. C'est `exposure_dynamic_framerate`, qui autorise la
+caméra à ralentir pour allonger son exposition. Désactivé : 30,00 fps aux deux
+résolutions. Dehors, en plein jour, 30 fps sans rien changer.
+
+Le MJPEG brut ne passe pas sur le lien. Il ne compresse pas entre images :
+
+| résolution | par image | à 30 fps |
+|------------|-----------|----------|
+| 1280x720   | 239 Ko    | 58,7 Mbit/s |
+| 640x480    | 98 Ko     | 24,0 Mbit/s |
+| 320x240    | 31 Ko     | 7,5 Mbit/s |
+
+Le PDL tourne en MCS 1 / 20 MHz (lu dans les lignes `RX_ANT` : `2412:1:20`),
+soit ~13 Mbit/s bruts avant FEC. Aucune de ces lignes ne passe, sauf la
+dernière — qui mangerait alors tout le lien, télémétrie comprise. Il faut donc
+encoder.
+
+**Et le Pi 5 n'a pas d'encodeur matériel.** Le seul nœud codec présent est
+`rpi-hevc-dec`, un décodeur. L'encodage sera logiciel, sur une machine qui
+fait tourner le logiciel de vol.
+
+Reste à savoir ce que ça coûte. Mesuré, chaîne complète caméra -> MJPEG ->
+décodage -> x264 -> RTP, épinglée sur UN cœur isolé, `-threads 1` :
+
+| preset    | 720p   | 640x480 |
+|-----------|--------|---------|
+| ultrafast | 56 fps | 82 fps  |
+| superfast | 36 fps | 64 fps  |
+| veryfast  | 25 fps | 51 fps  |
+
+Et en conditions réelles, depuis la caméra, 20 s de flux à 720p30 en
+`ultrafast` : 600 images, 30 fps tenus, `speed=1x`, 4,04 Mbit/s en sortie,
+pour **10,37 s de CPU sur 20,48 s écoulées, soit 50,6 % d'un cœur**.
+
+Conclusion : **un demi-cœur suffit pour 720p30 en H.264 à 4 Mbit/s.** Un cœur
+entier dédié à l'encodage serait du gaspillage sur une machine qui n'en a que
+quatre. La scène mesurée était sombre et bruitée, donc chère à encoder : le
+chiffre est plutôt pessimiste.
+
+Corollaire sur la priorité : l'encodeur n'a pas besoin d'être prioritaire. La
+vidéo n'est pas critique, le logiciel de vol l'est. Si l'encodage sature, ce
+qu'on veut c'est que la vidéo se dégrade — donc priorité basse et droit de
+jeter des images, jamais l'inverse.
+
 ### 5.1 Le contournement ne gêne pas le HUD
 
 Question posée, et la réponse lève l'objection : **le HUD se fait côté GCS**,
