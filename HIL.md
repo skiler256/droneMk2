@@ -355,3 +355,24 @@ retardé — donc s'il est honnête (cf. 5.3).
 
 Et la première séance utile, dès l'étape 1 faite : marcher dans le jardin et
 regarder le pion bouger. C'est le critère de réussite qui compte.
+
+## 8. Une contrainte constatée : en intérieur, le drone est en Emergency
+
+Observé au premier essai complet, le 22/10/2026. Sans fix GPS, SensorFusion
+émet `SFS002 GPS_lost`, de criticité **Emergency** — ce qui allume GPS, EKF et
+EMG au panneau avec le master warning, et son alarme `airbus_caution` tourne
+en boucle. C'est le comportement JUSTE, pas un défaut : le panneau a fait son
+travail, et c'est même la première preuve que la chaîne d'alarme fonctionne de
+bout en bout, du capteur jusqu'aux LED de l'ESP32.
+
+La conséquence est pratique et vaut d'être écrite avant de s'y heurter : en
+intérieur, le test HIL ne peut rien exercer au-delà du pré-vol, puisque le
+contrôle de santé du PRE_FLIGHT (`MCA009`) refusera l'armement. Tout ce qui
+concerne l'armement, les modes de vol et les failsafes de mission se teste
+dehors, avec vue du ciel. En intérieur, on valide les liens, la télémétrie, le
+panneau, le dashboard et la vidéo — ce qui est déjà l'essentiel du câblage.
+
+Corollaire à ne pas oublier : l'alarme sonore tourne en boucle pendant toute
+une séance d'intérieur. Prévoir de la couper au dashboard plutôt que de
+prendre l'habitude de travailler avec le son éteint, ce qui ferait manquer la
+prochaine alarme — celle qui compte.
