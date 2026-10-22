@@ -26,8 +26,8 @@ les paquets TELEM (offsets fixes, pas d'attribut packed) :
       3  i8   rssi     le PIRE des antennes, en dBm
       4  i8   snr      le PIRE des antennes, en dB
       5  u8   antennes nombre d'antennes vues dans le dernier rapport
-      6  u32  recus
-     10  u32  perdus
+      6  u32  recus    count_p_uniq de wfb_rx
+     10  u32  perdus   count_p_lost de wfb_rx (non recuperes par la FEC)
 
 Le RSSI publie est le PIRE des antennes, pas le meilleur. Choix assume : avec
 une diversite 2T2R le recepteur utilise la meilleure chaine, donc le pire
@@ -88,15 +88,33 @@ def main():
         if len(champs) < 3:
             continue
 
-        # PKT <ts> : compteurs globaux. Format :
-        #   count_all:count_all_bytes:count_dec_ok:...:count_bad:...
-        # On ne retient que ce qui a un sens ici : recus et perdus.
+        # PKT <ts> : compteurs de l'intervalle de rapport. Les treize champs,
+        # dans l'ordre exact de wfb-ng/src/rx.cpp (IPC_MSG, ~ligne 694) :
+        #
+        #   0 count_p_all        7 count_p_lost
+        #   1 count_b_all        8 count_p_bad
+        #   2 count_p_dec_err    9 count_p_outgoing
+        #   3 count_p_session   10 count_b_outgoing
+        #   4 count_p_data      11 count_p_frags
+        #   5 count_p_uniq      12 count_p_frags_lost
+        #   6 count_p_fec_recovered
+        #
+        # On prend la paire du MEME etage, celui de la FEC : count_p_uniq
+        # (paquets uniques recus) et count_p_lost (paquets que la FEC n'a pas
+        # pu reconstruire). C'est la seule paire qui ait un sens ensemble.
+        #
+        # Les deux champs lus auparavant etaient faux et le resultat ne pouvait
+        # valoir que 0 % ou 100 %. Mesure du 22/10/2026 :
+        #   33:1496:0:1:32:32:2:0:0:23:368:36:2
+        # soit 2 fragments perdus, 2 RECUPERES par la FEC, 0 paquet perdu --
+        # et l'ancien calcul en tirait 100 % de perte. Sur un lien critique,
+        # cette valeur declenche les failsafes pour rien.
         if champs[1] == "PKT":
             vals = champs[2].split(":")
-            if len(vals) >= 3:
+            if len(vals) >= 8:
                 try:
-                    recus = int(vals[2])   # paquets dechiffres correctement
-                    perdus = int(vals[-1]) if vals[-1].isdigit() else perdus
+                    recus = int(vals[5])
+                    perdus = int(vals[7])
                 except ValueError:
                     pass
             continue

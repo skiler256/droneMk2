@@ -33,9 +33,11 @@ for a in "$@"; do
   esac
 done
 
-# La disposition DIFFÈRE entre le dépôt et la copie de service : les CSV sont
-# dans data/ ici, à plat là-bas. C'est cette traduction qui a été faite à la
-# main une fois, puis oubliée.
+# Les CSV vont dans data/, des DEUX côtés. Ce script les déposait à plat, sur
+# la foi d'un ancien agencement : telemetry-codec.js résout `../data/` depuis
+# GCS/, donc le dashboard ne trouvait plus ses tables et gcs-server bouclait
+# en échec. Constaté le 22/10/2026, après un déploiement réussi — la copie
+# était juste, l'agencement non, et personne n'avait redémarré le service.
 FICHIERS_GCS=(
   server.js serial-bridge.js telemetry-codec.js codes-table.js
   debug-injector.js package.json package-lock.json
@@ -103,8 +105,15 @@ for d in "${DOSSIERS_GCS[@]}"; do
   rm -rf "$CIBLE/GCS/$d"
   cp -a "GCS/$d" "$CIBLE/GCS/$d"
 done
+install -d -m 0755 "$CIBLE/data"
 for c in "${CSV[@]}"; do
-  install -m 0644 "data/$c" "$CIBLE/$c"
+  install -m 0644 "data/$c" "$CIBLE/data/$c"
+done
+# On signale les restes de l'ancien agencement sans les supprimer : un script
+# de déploiement qui efface des fichiers qu'il n'a pas posés est un script
+# qu'on finit par ne plus oser lancer.
+for c in "${CSV[@]}"; do
+  [ -e "$CIBLE/$c" ] && echo "note : $CIBLE/$c est un reste à plat, plus lu par personne" >&2
 done
 echo "copié : ${#FICHIERS_GCS[@]} fichiers, ${#DOSSIERS_GCS[@]} dossiers, ${#CSV[@]} CSV"
 
