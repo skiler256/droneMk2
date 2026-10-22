@@ -215,10 +215,14 @@ de travail dans `HIL.md`.
 
 **Ouvert :**
 
-- la persistance wfb-ng est installée (`deploy/`, unités systemd sur les deux
-  machines) mais n'a pas encore été vérifiée après un vrai redémarrage ;
-- `main.cpp` construit encore des `UdpTelemetryDriver` : les vrais pilotes
-  ne sont pas branchés dans le logiciel de vol ;
+- la persistance wfb-ng est installée et trois défauts de boot sont corrigés
+  (attente de l'adaptateur, `Wants=` au lieu de `Requires=`,
+  `StartLimitIntervalSec=0`), mais la correction n'a pas encore été vérifiée
+  par un vrai redémarrage — seul test valable ;
+- les vrais pilotes radio sont branchés dans `main.cpp` (`WFB_NG_Driver` +
+  `CC1101_Driver` hors `DRONE_USE_SITL_DRIVERS`), mais SysMonitoring n'a
+  jamais tourné avec eux : la vérification exige le `GlobalWatchdog` complet,
+  donc le FC, donc le test HIL ;
 - `GlobalWatchdog` ne sait spawner que lui-même avec un rôle ; superviser
   wfb-ng demande une seconde catégorie d'enfant (binaire externe) ;
 - le sens montant du SDL n'est pas caractérisé — les mesures se sont
